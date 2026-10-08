@@ -111,4 +111,22 @@ describe('createBookingsApi', () => {
     expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
     expect(booking.id).toBe(bookingPayload.id);
   });
+
+  it('posts the new slot to the reschedule endpoint of the booking', async () => {
+    const requests: { readonly url: string; readonly init: RequestInit | undefined }[] = [];
+    const client = createHttpClient('https://api.example.test', {
+      fetchFn: (url, init) => {
+        requests.push({ url, init });
+        return Promise.resolve(jsonResponse(200, bookingPayload));
+      },
+    });
+    const request = { sessionStart: '2026-10-20T15:00:00.000Z', sessionEnd: '2026-10-20T19:00:00.000Z' };
+
+    const booking = await createBookingsApi(client).rescheduleBooking(bookingPayload.id, request);
+
+    expect(requests[0]?.url).toBe(`https://api.example.test/api/bookings/${bookingPayload.id}/reschedule`);
+    expect(requests[0]?.init?.method).toBe('POST');
+    expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    expect(booking.id).toBe(bookingPayload.id);
+  });
 });

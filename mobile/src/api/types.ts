@@ -155,3 +155,11 @@ export interface CreateBookingRequest {
   /** Session end (ISO 8601). */
   readonly sessionEnd: string;
 }
+
+/** Body to move a confirmed booking to another slot (backend `RescheduleBookingRequest`). */
+export interface RescheduleBookingRequest {
+  /** New session start (ISO 8601). */
+  readonly sessionStart: string;
+  /** New session end (ISO 8601). */
+  readonly sessionEnd: string;
+}

@@ -21,6 +21,7 @@ import {
   type CreateBookingRequest,
   type MoneyResponse,
   type PaymentResponse,
+  type RescheduleBookingRequest,
 } from './types';
 
 /**
@@ -150,6 +151,15 @@ export interface BookingsApi {
   createBooking(request: CreateBookingRequest, signal?: AbortSignal): Promise<BookingResponse>;
 
   /**
+   * Moves a confirmed booking to another slot.
+   * @param id Booking identifier.
+   * @param request New session start and end.
+   * @param signal Optional signal to cancel the request.
+   * @returns The updated booking.
+   */
+  rescheduleBooking(id: string, request: RescheduleBookingRequest, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
    * Lists the photographer's bookings, earliest session first.
    * @param photographerId Photographer (tenant) identifier.
    * @param signal Optional signal to cancel the request.
@@ -174,6 +184,8 @@ export interface BookingsApi {
 export function createBookingsApi(client: HttpClient): BookingsApi {
   return {
     createBooking: (request, signal) => client.post('/api/bookings', request, parseBooking, signal),
+    rescheduleBooking: (id, request, signal) =>
+      client.post(`/api/bookings/${encodeURIComponent(id)}/reschedule`, request, parseBooking, signal),
     listBookings: (photographerId, signal) =>
       client.get(`/api/bookings?photographerId=${encodeURIComponent(photographerId)}`, parseBookingSummaries, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
