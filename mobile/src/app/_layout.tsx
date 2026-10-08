@@ -25,7 +25,7 @@ export default function RootLayout(): ReactElement {
       >
         <Stack.Screen
           name="index"
-          options={{ title: 'PhotoStud.io', headerRight: () => <NewBookingButton /> }}
+          options={{ title: 'PhotoStud.io', headerRight: NewBookingButton }}
         />
         <Stack.Screen name="bookings/new" options={{ title: 'Nueva reserva' }} />
         <Stack.Screen name="bookings/[id]" options={{ title: 'Reserva' }} />
