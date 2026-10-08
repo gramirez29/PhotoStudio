@@ -1,6 +1,8 @@
+using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
 using PhotoStudio.Application.Bookings.RescheduleBooking;
+using PhotoStudio.Application.Bookings.RevertClientAbsent;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
 using PhotoStudio.Domain.Bookings;
 
@@ -50,6 +52,18 @@ public sealed record RecordInPersonPaymentRequest(decimal Amount, string Currenc
 /// <param name="SessionStart">New session start, with offset.</param>
 /// <param name="SessionEnd">New session end, with offset.</param>
 public sealed record RescheduleBookingRequest(DateTimeOffset SessionStart, DateTimeOffset SessionEnd);
+
+/// <summary>
+/// HTTP body to cancel a booking.
+/// </summary>
+/// <param name="Reason">Cancellation reason; required once the booking is confirmed.</param>
+public sealed record CancelBookingRequest(string? Reason);
+
+/// <summary>
+/// HTTP body to revert a client-absent mark.
+/// </summary>
+/// <param name="Reason">Why the mark is reverted; required.</param>
+public sealed record RevertClientAbsentRequest(string Reason);
 
 /// <summary>
 /// Maps HTTP request DTOs to application commands.
@@ -109,5 +123,29 @@ public static class BookingRequestMappings
     {
         ArgumentNullException.ThrowIfNull(request);
         return new RescheduleBookingCommand(bookingId, request.SessionStart, request.SessionEnd);
+    }
+
+    /// <summary>
+    /// Maps the cancel request to its command.
+    /// </summary>
+    /// <param name="request">HTTP body.</param>
+    /// <param name="bookingId">Booking identifier from the route.</param>
+    /// <returns>The command.</returns>
+    public static CancelBookingCommand ToCommand(this CancelBookingRequest request, Guid bookingId)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return new CancelBookingCommand(bookingId, request.Reason);
+    }
+
+    /// <summary>
+    /// Maps the revert-client-absent request to its command.
+    /// </summary>
+    /// <param name="request">HTTP body.</param>
+    /// <param name="bookingId">Booking identifier from the route.</param>
+    /// <returns>The command.</returns>
+    public static RevertClientAbsentCommand ToCommand(this RevertClientAbsentRequest request, Guid bookingId)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return new RevertClientAbsentCommand(bookingId, request.Reason);
     }
 }

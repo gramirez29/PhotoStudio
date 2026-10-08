@@ -12,8 +12,7 @@ namespace PhotoStudio.Application.UnitTests.Bookings;
 /// </summary>
 public sealed class RescheduleBookingHandlerTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset OriginalStart = Now.AddDays(10);
+    private static readonly DateTimeOffset Now = BookingFactory.CreatedAt;
     private static readonly DateTimeOffset NewStart = Now.AddDays(12);
 
     private readonly IBookingRepository _repository = Substitute.For<IBookingRepository>();
@@ -47,7 +46,7 @@ public sealed class RescheduleBookingHandlerTests
     [Fact]
     public async Task HandleAsync_WithConfirmedBooking_MovesItAndReservesTheNewSlot()
     {
-        var booking = ConfirmedBooking();
+        var booking = BookingFactory.Confirmed();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var response = await _handler.HandleAsync(Command(booking.Id), TestContext.Current.CancellationToken);
@@ -66,7 +65,7 @@ public sealed class RescheduleBookingHandlerTests
     [Fact]
     public async Task HandleAsync_WithTentativeBooking_ThrowsInvalidTransition()
     {
-        var booking = NewBooking();
+        var booking = BookingFactory.Tentative();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var exception = await Should.ThrowAsync<DomainException>(
@@ -83,7 +82,7 @@ public sealed class RescheduleBookingHandlerTests
     [Fact]
     public async Task HandleAsync_WithNewSlotInThePast_ThrowsSessionInPast()
     {
-        var booking = ConfirmedBooking();
+        var booking = BookingFactory.Confirmed();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
         var command = new RescheduleBookingCommand(booking.Id, Now.AddDays(-1), Now.AddDays(-1).AddHours(2));
 
@@ -101,7 +100,7 @@ public sealed class RescheduleBookingHandlerTests
     [Fact]
     public async Task HandleAsync_WhenTheNewSlotIsTaken_PropagatesTheConflict()
     {
-        var booking = ConfirmedBooking();
+        var booking = BookingFactory.Confirmed();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
         _repository
             .UpdateReservingSlotAsync(Arg.Any<Booking>(), Arg.Any<CancellationToken>())
@@ -120,30 +119,4 @@ public sealed class RescheduleBookingHandlerTests
     /// <returns>The command.</returns>
     private static RescheduleBookingCommand Command(Guid bookingId) =>
         new(bookingId, NewStart, NewStart.AddHours(2));
-
-    /// <summary>
-    /// Creates a tentative booking for <see cref="OriginalStart"/>.
-    /// </summary>
-    /// <returns>The booking.</returns>
-    private static Booking NewBooking() => Booking.Create(
-        Guid.CreateVersion7(),
-        Guid.CreateVersion7(),
-        ClientContact.Create("María Pérez", "+506 8888-8888"),
-        "Retrato familiar",
-        Money.Create(100_000m, "CRC"),
-        TimeSlot.Create(OriginalStart, OriginalStart.AddHours(2)),
-        BookingPolicy.Default,
-        Now);
-
-    /// <summary>
-    /// Creates a confirmed booking: contract signed and the deposit paid in person.
-    /// </summary>
-    /// <returns>The booking.</returns>
-    private static Booking ConfirmedBooking()
-    {
-        var booking = NewBooking();
-        booking.SignContract("María Pérez", "v1", Actor.Photographer, Channel.InPerson, Now);
-        booking.RecordInPersonPayment(Guid.CreateVersion7(), Money.Create(50_000m, "CRC"), PaymentMethod.Cash, "deposit-1", Now);
-        return booking;
-    }
 }
