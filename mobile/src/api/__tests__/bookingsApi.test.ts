@@ -83,4 +83,32 @@ describe('createBookingsApi', () => {
     expect(urls).toEqual(['https://api.example.test/api/bookings?photographerId=a%20b']);
     expect(bookings).toHaveLength(1);
   });
+
+  it('posts the booking request as JSON and parses the created booking', async () => {
+    const requests: { readonly url: string; readonly init: RequestInit | undefined }[] = [];
+    const client = createHttpClient('https://api.example.test', {
+      fetchFn: (url, init) => {
+        requests.push({ url, init });
+        return Promise.resolve(jsonResponse(201, bookingPayload));
+      },
+    });
+    const request = {
+      photographerId: bookingPayload.photographerId,
+      clientName: 'María Pérez',
+      clientPhone: '+50688881111',
+      packageName: 'Retrato familiar',
+      packagePrice: 100000,
+      currency: 'CRC',
+      sessionStart: '2026-10-11T12:00:00.000Z',
+      sessionEnd: '2026-10-11T14:00:00.000Z',
+    };
+
+    const booking = await createBookingsApi(client).createBooking(request);
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.url).toBe('https://api.example.test/api/bookings');
+    expect(requests[0]?.init?.method).toBe('POST');
+    expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    expect(booking.id).toBe(bookingPayload.id);
+  });
 });

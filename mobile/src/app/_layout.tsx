@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState, type ReactElement } from 'react';
 import { createQueryClient } from '../api/queryClient';
+import { NewBookingButton } from '../components/NewBookingButton';
 import { colors } from '../theme/tokens';
 
 /**
@@ -22,7 +23,11 @@ export default function RootLayout(): ReactElement {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'PhotoStud.io' }} />
+        <Stack.Screen
+          name="index"
+          options={{ title: 'PhotoStud.io', headerRight: () => <NewBookingButton /> }}
+        />
+        <Stack.Screen name="bookings/new" options={{ title: 'Nueva reserva' }} />
         <Stack.Screen name="bookings/[id]" options={{ title: 'Reserva' }} />
       </Stack>
     </QueryClientProvider>
