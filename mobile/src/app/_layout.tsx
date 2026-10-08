@@ -29,6 +29,7 @@ export default function RootLayout(): ReactElement {
         />
         <Stack.Screen name="bookings/new" options={{ title: 'Nueva reserva' }} />
         <Stack.Screen name="bookings/reschedule" options={{ title: 'Reprogramar' }} />
+        <Stack.Screen name="bookings/reason" options={{ title: 'Motivo' }} />
         <Stack.Screen name="bookings/[id]" options={{ title: 'Reserva' }} />
       </Stack>
     </QueryClientProvider>

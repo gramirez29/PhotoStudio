@@ -1,11 +1,10 @@
 import type { ReactElement } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { openReschedule } from '../navigation/appNavigation';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../theme/tokens';
 import type { BookingDetailsProps } from '../types/components/BookingDetails.types';
 import { formatDateTime } from '../utils/format';
-import { BOOKING_ACTION_LABELS } from '../utils/labels';
 import { AmountRow } from './AmountRow';
+import { BookingActions } from './BookingActions';
 import { StatusBadge } from './StatusBadge';
 
 /**
@@ -40,28 +39,7 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
         </Text>
       </View>
 
-      {booking.allowedActions.includes('Reschedule') && (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => openReschedule(booking.id)}
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-        >
-          <Text style={styles.actionLabel}>{BOOKING_ACTION_LABELS.Reschedule}</Text>
-        </Pressable>
-      )}
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Acciones disponibles</Text>
-        {booking.allowedActions.length === 0 ? (
-          <Text style={styles.body}>No hay acciones disponibles en este estado.</Text>
-        ) : (
-          booking.allowedActions.map((action) => (
-            <Text key={action} style={styles.body}>
-              • {BOOKING_ACTION_LABELS[action]}
-            </Text>
-          ))
-        )}
-      </View>
+      <BookingActions booking={booking} />
     </ScrollView>
   );
 }
@@ -101,20 +79,5 @@ const styles = StyleSheet.create({
   body: {
     color: colors.textPrimary,
     fontSize: 15,
-  },
-  action: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    marginTop: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  actionPressed: {
-    opacity: 0.8,
-  },
-  actionLabel: {
-    color: colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
