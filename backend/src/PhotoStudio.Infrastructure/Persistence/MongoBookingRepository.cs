@@ -4,6 +4,7 @@ using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Common;
 using PhotoStudio.Infrastructure.Persistence.Documents;
+using PhotoStudio.Infrastructure.Persistence.Outbox;
 
 namespace PhotoStudio.Infrastructure.Persistence;
 
@@ -11,7 +12,9 @@ namespace PhotoStudio.Infrastructure.Persistence;
 /// MongoDB implementation of <see cref="IBookingRepository"/>. Each booking is a single document, and concurrent writes to
 /// the same booking are detected through the version field. Double booking is prevented by the photographer's calendar
 /// document: reserving a slot and storing the booking happen in one transaction (the replica set of Atlas and of the
-/// local compose file supports it), so a booking never exists without its reservation or the other way around.
+/// local compose file supports it), so a booking never exists without its reservation or the other way around. The domain
+/// events raised by the booking are stored in the outbox collection inside the same transaction as the change, so an event
+/// is published if and only if the change is committed.
 /// </summary>
 /// <param name="database">MongoDB database.</param>
 public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRepository
@@ -32,6 +35,9 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
 
     private readonly IMongoCollection<PhotographerCalendarDocument> _calendars =
         database.GetCollection<PhotographerCalendarDocument>(CalendarCollectionName);
+
+    private readonly IMongoCollection<OutboxMessageDocument> _outbox =
+        database.GetCollection<OutboxMessageDocument>(OutboxProcessor.CollectionName);
 
     /// <inheritdoc />
     public async Task<Booking?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -61,6 +67,22 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Booking>> ListExpiredTentativeAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken)
+    {
+        // Served by the (status, expiresAt) index created at startup. Bookings with a proof of payment waiting for review are
+        // left out because the domain refuses to expire them; keeping them here would crowd the batch on every run.
+        var documents = await _collection
+            .Find(booking => booking.Status == nameof(BookingStatus.Tentative)
+                && booking.ExpiresAt <= now.UtcDateTime
+                && !booking.Payments.Any(payment => payment.Status == nameof(PaymentStatus.PendingVerification)))
+            .SortBy(booking => booking.ExpiresAt)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+
+        return [.. documents.Select(document => document.ToDomain())];
+    }
+
+    /// <inheritdoc />
     public Task<bool> HasOverlappingActiveBookingAsync(Guid photographerId, TimeSlot slot, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(slot);
@@ -82,6 +104,7 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
         ArgumentNullException.ThrowIfNull(booking);
 
         var document = booking.ToDocument(booking.Version + 1);
+        var messages = PendingMessages(booking);
         await EnsureCalendarExistsAsync(booking.PhotographerId, cancellationToken);
 
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
@@ -99,10 +122,13 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
 
                 await ReserveSlotAsync(transactionSession, document, token);
                 await _collection.InsertOneAsync(transactionSession, document, cancellationToken: token);
+                await StoreMessagesAsync(transactionSession, messages, token);
                 return true;
             },
             MajorityTransaction,
             cancellationToken);
+
+        booking.ClearDomainEvents();
     }
 
     /// <inheritdoc />
@@ -117,6 +143,7 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
 
         var expectedVersion = booking.Version;
         var document = booking.ToDocument(expectedVersion + 1);
+        var messages = PendingMessages(booking);
         await EnsureCalendarExistsAsync(booking.PhotographerId, cancellationToken);
 
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
@@ -135,10 +162,13 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
                 // new range is taken the exception aborts the transaction and the old range stays reserved.
                 await ReleaseSlotAsync(transactionSession, booking.PhotographerId, booking.Id, token);
                 await ReserveSlotAsync(transactionSession, document, token);
+                await StoreMessagesAsync(transactionSession, messages, token);
                 return true;
             },
             MajorityTransaction,
             cancellationToken);
+
+        booking.ClearDomainEvents();
     }
 
     /// <inheritdoc />
@@ -148,24 +178,14 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
 
         var expectedVersion = booking.Version;
         var document = booking.ToDocument(expectedVersion + 1);
+        var messages = PendingMessages(booking);
 
         // Booking still holds its slot: only the booking document changes. The stored slot must equal the new one, so a
         // caller that moved the booking and used this method by mistake fails loudly instead of leaving the calendar stale.
         if (IsActive(booking.Status))
         {
-            var result = await _collection.ReplaceOneAsync(
-                stored => stored.Id == booking.Id
-                    && stored.Version == expectedVersion
-                    && stored.SlotStart == document.SlotStart
-                    && stored.SlotEnd == document.SlotEnd,
-                document,
-                cancellationToken: cancellationToken);
-
-            if (result.MatchedCount == 0)
-            {
-                await ThrowForUnmatchedActiveUpdateAsync(booking.Id, expectedVersion, cancellationToken);
-            }
-
+            await ReplaceKeepingSlotAsync(booking, document, messages, cancellationToken);
+            booking.ClearDomainEvents();
             return;
         }
 
@@ -183,11 +203,97 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
                 EnsureMatched(result, booking.Id);
 
                 await ReleaseSlotAsync(transactionSession, booking.PhotographerId, booking.Id, token);
+                await StoreMessagesAsync(transactionSession, messages, token);
+                return true;
+            },
+            MajorityTransaction,
+            cancellationToken);
+
+        booking.ClearDomainEvents();
+    }
+
+    /// <summary>
+    /// Replaces the document of a booking that keeps its slot. Without pending events this is a single-document write;
+    /// with events it runs in a transaction together with their outbox messages.
+    /// </summary>
+    /// <param name="booking">Booking being saved.</param>
+    /// <param name="document">New state of the booking document.</param>
+    /// <param name="messages">Outbox messages of the events raised by the booking.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the booking is stored.</returns>
+    /// <exception cref="ConflictException">When another write changed the booking first.</exception>
+    /// <exception cref="InvalidOperationException">When only the slot differs.</exception>
+    private async Task ReplaceKeepingSlotAsync(
+        Booking booking,
+        BookingDocument document,
+        IReadOnlyList<OutboxMessageDocument> messages,
+        CancellationToken cancellationToken)
+    {
+        var expectedVersion = booking.Version;
+
+        if (messages.Count == 0)
+        {
+            var result = await _collection.ReplaceOneAsync(
+                stored => stored.Id == booking.Id
+                    && stored.Version == expectedVersion
+                    && stored.SlotStart == document.SlotStart
+                    && stored.SlotEnd == document.SlotEnd,
+                document,
+                cancellationToken: cancellationToken);
+
+            if (result.MatchedCount == 0)
+            {
+                await ThrowForUnmatchedActiveUpdateAsync(booking.Id, expectedVersion, cancellationToken);
+            }
+
+            return;
+        }
+
+        using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+        await session.WithTransactionAsync(
+            async (transactionSession, token) =>
+            {
+                var result = await _collection.ReplaceOneAsync(
+                    transactionSession,
+                    stored => stored.Id == booking.Id
+                        && stored.Version == expectedVersion
+                        && stored.SlotStart == document.SlotStart
+                        && stored.SlotEnd == document.SlotEnd,
+                    document,
+                    cancellationToken: token);
+
+                if (result.MatchedCount == 0)
+                {
+                    await ThrowForUnmatchedActiveUpdateAsync(booking.Id, expectedVersion, token);
+                }
+
+                await StoreMessagesAsync(transactionSession, messages, token);
                 return true;
             },
             MajorityTransaction,
             cancellationToken);
     }
+
+    /// <summary>
+    /// Converts the domain events raised by the booking into outbox documents. Built before the transaction starts so a
+    /// retried transaction stores the same messages.
+    /// </summary>
+    /// <param name="booking">Booking whose pending events are stored.</param>
+    /// <returns>The outbox documents, possibly empty.</returns>
+    private static List<OutboxMessageDocument> PendingMessages(Booking booking) =>
+        [.. booking.DomainEvents.Select(domainEvent => domainEvent.ToOutboxMessage())];
+
+    /// <summary>
+    /// Inserts outbox messages inside the given transaction. Does nothing when there are none.
+    /// </summary>
+    /// <param name="session">Session of the running transaction.</param>
+    /// <param name="messages">Messages to insert.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the messages are stored.</returns>
+    private Task StoreMessagesAsync(IClientSessionHandle session, IReadOnlyList<OutboxMessageDocument> messages, CancellationToken cancellationToken) =>
+        messages.Count == 0
+            ? Task.CompletedTask
+            : _outbox.InsertManyAsync(session, messages, cancellationToken: cancellationToken);
 
     /// <summary>
     /// Reserves the booking's slot in the photographer's calendar, inside the given transaction. The reservation is one

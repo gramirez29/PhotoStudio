@@ -4,6 +4,7 @@
     <Project Path="src/PhotoStudio.Application/PhotoStudio.Application.csproj" />
     <Project Path="src/PhotoStudio.Infrastructure/PhotoStudio.Infrastructure.csproj" />
     <Project Path="src/PhotoStudio.Api/PhotoStudio.Api.csproj" />
+    <Project Path="src/PhotoStudio.Worker/PhotoStudio.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PhotoStudio.Domain.UnitTests/PhotoStudio.Domain.UnitTests.csproj" />

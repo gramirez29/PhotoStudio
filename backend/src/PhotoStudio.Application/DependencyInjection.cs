@@ -4,6 +4,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
+using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<CompleteBookingCommand, BookingResponse>, CompleteBookingHandler>();
         services.AddScoped<ICommandHandler<MarkClientAbsentCommand, BookingResponse>, MarkClientAbsentHandler>();
         services.AddScoped<ICommandHandler<RevertClientAbsentCommand, BookingResponse>, RevertClientAbsentHandler>();
+        services.AddScoped<ICommandHandler<ExpireTentativeBookingsCommand, ExpireTentativeBookingsResult>, ExpireTentativeBookingsHandler>();
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();
 

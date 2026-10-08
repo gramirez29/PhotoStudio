@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Infrastructure.Persistence;
+using PhotoStudio.Infrastructure.Persistence.Outbox;
 using PhotoStudio.Infrastructure.Policies;
 
 namespace PhotoStudio.Infrastructure;
@@ -17,7 +18,7 @@ public static class DependencyInjection
     public const string ReadinessTag = "ready";
 
     /// <summary>
-    /// Adds MongoDB persistence, the policy provider, the index initializer and the MongoDB health check.
+    /// Adds MongoDB persistence, the outbox processor, the policy provider, the index initializer and the MongoDB health check.
     /// </summary>
     /// <param name="services">Service collection to configure.</param>
     /// <returns>The same service collection, for chaining.</returns>
@@ -34,6 +35,7 @@ public static class DependencyInjection
 
         services.AddScoped<IBookingRepository, MongoBookingRepository>();
         services.AddSingleton<IBookingPolicyProvider, EnvironmentBookingPolicyProvider>();
+        services.AddSingleton<OutboxProcessor>();
 
         services.AddHostedService<MongoIndexInitializer>();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", tags: [ReadinessTag]);

@@ -14,6 +14,11 @@ namespace PhotoStudio.Infrastructure.Persistence;
 public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogger<MongoIndexInitializer> logger) : IHostedService
 {
     /// <summary>
+    /// How long delivered outbox messages are kept before MongoDB removes them (Atlas M0 has only 0.5 GB).
+    /// </summary>
+    public static readonly TimeSpan OutboxRetention = TimeSpan.FromDays(30);
+
+    /// <summary>
     /// Creates the indexes. The operation is idempotent: existing indexes are left as they are.
     /// </summary>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -27,9 +32,32 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 .Ascending(booking => booking.SlotStart),
             new CreateIndexOptions { Name = "ix_photographer_slot" });
 
+        // Serves the expiration job: tentative bookings whose hold ended.
+        var expirationIndex = new CreateIndexModel<BookingDocument>(
+            Builders<BookingDocument>.IndexKeys
+                .Ascending(booking => booking.Status)
+                .Ascending(booking => booking.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_status_expires" });
+
+        var outbox = database.GetCollection<OutboxMessageDocument>(Outbox.OutboxProcessor.CollectionName);
+
+        // Serves the outbox claim: pending messages that are due, oldest first.
+        var outboxPendingIndex = new CreateIndexModel<OutboxMessageDocument>(
+            Builders<OutboxMessageDocument>.IndexKeys
+                .Ascending(message => message.Status)
+                .Ascending(message => message.NextAttemptAt)
+                .Ascending(message => message.OccurredAt),
+            new CreateIndexOptions { Name = "ix_outbox_pending" });
+
+        // Removes delivered messages after the retention period; messages that are not delivered have no processedAt.
+        var outboxRetentionIndex = new CreateIndexModel<OutboxMessageDocument>(
+            Builders<OutboxMessageDocument>.IndexKeys.Ascending(message => message.ProcessedAt),
+            new CreateIndexOptions { Name = "ix_outbox_retention", ExpireAfter = OutboxRetention });
+
         try
         {
-            await bookings.Indexes.CreateOneAsync(photographerSlotIndex, cancellationToken: cancellationToken);
+            await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
+            await outbox.Indexes.CreateManyAsync([outboxPendingIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
         }
         catch (Exception exception) when (exception is MongoException or TimeoutException)
         {
