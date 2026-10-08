@@ -1,6 +1,6 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactElement } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../api/httpClient';
 import type { BookingResponse } from '../../api/types';
 import { AmountRow } from '../../components/AmountRow';
@@ -60,6 +60,16 @@ function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
             : `Firmado por ${booking.contract.signerName} el ${formatDateTime(booking.contract.signedAt)}`}
         </Text>
       </View>
+
+      {booking.allowedActions.includes('Reschedule') && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/bookings/reschedule', params: { id: booking.id } })}
+          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
+        >
+          <Text style={styles.actionLabel}>{BOOKING_ACTION_LABELS.Reschedule}</Text>
+        </Pressable>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Acciones disponibles</Text>
@@ -146,5 +156,20 @@ const styles = StyleSheet.create({
   body: {
     color: colors.textPrimary,
     fontSize: 15,
+  },
+  action: {
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  actionPressed: {
+    opacity: 0.8,
+  },
+  actionLabel: {
+    color: colors.textInverse,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
