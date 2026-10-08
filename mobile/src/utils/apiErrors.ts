@@ -43,6 +43,34 @@ export function createBookingErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed action on a booking (cancel, complete, mark absent, revert) into a message for the photographer.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function bookingCommandErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'booking.reason_required':
+      return 'Escribe el motivo.';
+    case 'booking.guard_failed':
+      return 'Todavía no se cumplen las condiciones: revisa la hora de la sesión o el plazo de la política.';
+    case 'booking.invalid_transition':
+      return 'Esa acción ya no está disponible para esta reserva. Vuelve a abrirla para ver su estado actual.';
+    case 'booking.slot_unavailable':
+      return 'Otra reserva ya ocupa ese horario, así que no se puede retomar.';
+    case 'concurrency.conflict':
+      return 'La reserva cambió mientras la editabas. Vuelve a abrirla e inténtalo de nuevo.';
+    case 'resource.not_found':
+      return 'La reserva ya no existe.';
+    default:
+      return 'No se pudo completar la acción. Inténtalo de nuevo.';
+  }
+}
+
+/**
  * Converts the error of a failed "reschedule booking" request into a message for the photographer.
  * @param error Error of the mutation.
  * @returns The message in Spanish.

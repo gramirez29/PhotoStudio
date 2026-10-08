@@ -129,4 +129,58 @@ describe('createBookingsApi', () => {
     expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
     expect(booking.id).toBe(bookingPayload.id);
   });
+
+  describe('actions on a booking', () => {
+    /**
+     * Builds an API whose HTTP client records every request and answers with the sample booking.
+     * @returns The API and the recorded requests.
+     */
+    function recordingApi(): {
+      readonly api: ReturnType<typeof createBookingsApi>;
+      readonly requests: { readonly url: string; readonly init: RequestInit | undefined }[];
+    } {
+      const requests: { readonly url: string; readonly init: RequestInit | undefined }[] = [];
+      const client = createHttpClient('https://api.example.test', {
+        fetchFn: (url, init) => {
+          requests.push({ url, init });
+          return Promise.resolve(jsonResponse(200, bookingPayload));
+        },
+      });
+      return { api: createBookingsApi(client), requests };
+    }
+
+    const base = `https://api.example.test/api/bookings/${bookingPayload.id}`;
+
+    it('cancels with a reason, or with an empty JSON object when there is none', async () => {
+      const { api, requests } = recordingApi();
+
+      await api.cancelBooking(bookingPayload.id, { reason: 'El cliente cambió de planes' });
+      await api.cancelBooking(bookingPayload.id, {});
+
+      expect(requests.map((request) => request.url)).toEqual([`${base}/cancel`, `${base}/cancel`]);
+      expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({ reason: 'El cliente cambió de planes' });
+      expect(requests[1]?.init?.body).toBe('{}');
+    });
+
+    it('completes and marks the client absent with a POST that has no body', async () => {
+      const { api, requests } = recordingApi();
+
+      await api.completeBooking(bookingPayload.id);
+      await api.markClientAbsent(bookingPayload.id);
+
+      expect(requests.map((request) => request.url)).toEqual([`${base}/complete`, `${base}/client-absent`]);
+      expect(requests.map((request) => request.init?.method)).toEqual(['POST', 'POST']);
+      expect(requests.map((request) => request.init?.body)).toEqual([undefined, undefined]);
+    });
+
+    it('reverts the absence with the reason as JSON', async () => {
+      const { api, requests } = recordingApi();
+
+      const booking = await api.revertClientAbsent(bookingPayload.id, { reason: 'Marcado por error' });
+
+      expect(requests[0]?.url).toBe(`${base}/client-absent/revert`);
+      expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({ reason: 'Marcado por error' });
+      expect(booking.id).toBe(bookingPayload.id);
+    });
+  });
 });

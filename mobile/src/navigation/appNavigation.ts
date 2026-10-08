@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { ReasonAction } from '../types/utils/bookingActions.types';
 
 /**
  * Opens the detail screen of a booking.
@@ -19,6 +20,15 @@ export function openNewBooking(): void {
  */
 export function openReschedule(bookingId: string): void {
   router.push({ pathname: '/bookings/reschedule', params: { id: bookingId } });
+}
+
+/**
+ * Opens the form to type the reason of an action on a booking.
+ * @param bookingId Booking identifier.
+ * @param action Action that needs the reason.
+ */
+export function openReason(bookingId: string, action: ReasonAction): void {
+  router.push({ pathname: '/bookings/reason', params: { id: bookingId, action } });
 }
 
 /**

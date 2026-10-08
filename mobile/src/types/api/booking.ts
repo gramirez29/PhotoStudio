@@ -146,3 +146,15 @@ export interface RescheduleBookingRequest {
   /** New session end (ISO 8601). */
   readonly sessionEnd: string;
 }
+
+/** Body to cancel a booking (backend `CancelBookingRequest`). Send `{}` when there is no reason. */
+export interface CancelBookingRequest {
+  /** Cancellation reason; required by the backend once the booking is confirmed. */
+  readonly reason?: string;
+}
+
+/** Body to revert a client-absent mark (backend `RevertClientAbsentRequest`). */
+export interface RevertClientAbsentRequest {
+  /** Why the mark is reverted; required. */
+  readonly reason: string;
+}
