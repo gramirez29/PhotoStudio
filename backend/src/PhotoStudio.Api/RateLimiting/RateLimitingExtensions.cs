@@ -16,6 +16,11 @@ public static class RateLimitingExtensions
     public const string MaintenancePolicy = "maintenance";
 
     /// <summary>
+    /// Name of the policy of the sign-in endpoints: 10 calls per minute per client address.
+    /// </summary>
+    public const string AuthPolicy = "auth";
+
+    /// <summary>
     /// Stable error code returned when a request is rejected by the rate limiter.
     /// </summary>
     public const string RateLimitExceededCode = "rate_limit.exceeded";
@@ -38,6 +43,14 @@ public static class RateLimitingExtensions
                 window.Window = TimeSpan.FromMinutes(1);
                 window.QueueLimit = 0;
             });
+            options.AddPolicy(AuthPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
             options.OnRejected = WriteRejectionAsync;
         });
     }

@@ -38,13 +38,11 @@ export function initialFormValues(now: Date): CreateBookingFormValues {
 /**
  * Validates the form and, when it is valid, builds the request for the API.
  * @param values Values of the form.
- * @param photographerId Photographer (tenant) identifier.
  * @param now Current instant; the session must start after it.
  * @returns The request, or the validation errors by field.
  */
 export function validateCreateBookingForm(
   values: CreateBookingFormValues,
-  photographerId: string,
   now: Date,
 ): CreateBookingFormResult {
   const errors: { -readonly [Field in CreateBookingField]?: string } = {};
@@ -80,7 +78,6 @@ export function validateCreateBookingForm(
   return {
     ok: true,
     request: {
-      photographerId,
       clientName,
       clientPhone,
       packageName,

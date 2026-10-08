@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { maintenanceApi } from '../api/client';
 import type { MaintenanceResponse } from '../types/api/maintenance';
+import { BOOKING_QUERY_PREFIX } from './useBooking';
+import { BOOKINGS_QUERY_PREFIX } from './useBookings';
 
 /**
  * Mutation that runs a maintenance pass on the backend (expires the bookings whose hold ended). On success it refreshes
@@ -14,10 +16,9 @@ export function useRunMaintenance(): UseMutationResult<MaintenanceResponse, Erro
   return useMutation({
     mutationFn: () => maintenanceApi.runMaintenance(),
     onSuccess: async () => {
-      // Prefixes of the keys built by `bookingsQueryKey` and `bookingQueryKey`: they match every photographer and booking.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['bookings'] }),
-        queryClient.invalidateQueries({ queryKey: ['booking'] }),
+        queryClient.invalidateQueries({ queryKey: BOOKINGS_QUERY_PREFIX }),
+        queryClient.invalidateQueries({ queryKey: BOOKING_QUERY_PREFIX }),
       ]);
     },
   });

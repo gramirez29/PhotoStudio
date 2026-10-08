@@ -5,7 +5,6 @@ import { BookingListItem } from '../components/BookingListItem';
 import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
 import { Placeholder } from '../components/Placeholder';
-import { env } from '../config/env';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
 import { colors, spacing } from '../theme/tokens';
@@ -16,13 +15,11 @@ import type { BookingSummaryResponse } from '../types/api/booking';
  * @returns The screen.
  */
 export default function HomeScreen(): ReactElement {
-  const query = useBookings(env.photographerId);
+  const query = useBookings();
   const bookings: readonly BookingSummaryResponse[] = query.data ?? [];
 
   let empty: ReactElement;
-  if (env.photographerId === null) {
-    empty = <Placeholder message="Falta configurar EXPO_PUBLIC_PHOTOGRAPHER_ID en el archivo .env de la app." />;
-  } else if (query.isPending) {
+  if (query.isPending) {
     empty = <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando reservas" style={styles.loader} />;
   } else if (query.isError) {
     empty = (

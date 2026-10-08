@@ -25,7 +25,7 @@ public sealed class CompleteBookingHandlerTests
 
         await Should.ThrowAsync<NotFoundException>(
             () => HandlerAt(BookingFactory.SessionStart).HandleAsync(
-                new CompleteBookingCommand(Guid.CreateVersion7()),
+                new CompleteBookingCommand(Guid.CreateVersion7(), Guid.CreateVersion7()),
                 TestContext.Current.CancellationToken));
     }
 
@@ -40,7 +40,7 @@ public sealed class CompleteBookingHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var response = await HandlerAt(BookingFactory.SessionStart.AddHours(1)).HandleAsync(
-            new CompleteBookingCommand(booking.Id),
+            new CompleteBookingCommand(booking.PhotographerId, booking.Id),
             TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.Completed);
@@ -59,7 +59,7 @@ public sealed class CompleteBookingHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(BookingFactory.SessionStart.AddMinutes(-1)).HandleAsync(
-                new CompleteBookingCommand(booking.Id),
+                new CompleteBookingCommand(booking.PhotographerId, booking.Id),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.GuardFailed);
@@ -78,7 +78,7 @@ public sealed class CompleteBookingHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(BookingFactory.SessionStart.AddHours(1)).HandleAsync(
-                new CompleteBookingCommand(booking.Id),
+                new CompleteBookingCommand(booking.PhotographerId, booking.Id),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.InvalidTransition);

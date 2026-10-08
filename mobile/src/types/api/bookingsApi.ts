@@ -61,12 +61,11 @@ export interface BookingsApi {
   revertClientAbsent(id: string, request: RevertClientAbsentRequest, signal?: AbortSignal): Promise<BookingResponse>;
 
   /**
-   * Lists the photographer's bookings, earliest session first.
-   * @param photographerId Photographer (tenant) identifier.
+   * Lists the bookings of the signed-in photographer, earliest session first.
    * @param signal Optional signal to cancel the request.
    * @returns The booking summaries.
    */
-  listBookings(photographerId: string, signal?: AbortSignal): Promise<readonly BookingSummaryResponse[]>;
+  listBookings(signal?: AbortSignal): Promise<readonly BookingSummaryResponse[]>;
 
   /**
    * Reads a booking.

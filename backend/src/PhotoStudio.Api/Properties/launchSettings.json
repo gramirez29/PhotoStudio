@@ -8,7 +8,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "MONGODB_CONNECTION_STRING": "mongodb://localhost:27019/?directConnection=true",
-        "MONGODB_DATABASE_NAME": "photostudio_dev"
+        "MONGODB_DATABASE_NAME": "photostudio_dev",
+        "JWT_SIGNING_KEY": "dev-only-signing-key-not-a-secret-0123456789abcdef"
       }
     }
   }

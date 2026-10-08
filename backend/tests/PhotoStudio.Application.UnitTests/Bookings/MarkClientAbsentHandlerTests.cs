@@ -27,7 +27,7 @@ public sealed class MarkClientAbsentHandlerTests
 
         await Should.ThrowAsync<NotFoundException>(
             () => HandlerAt(BookingFactory.SessionStart).HandleAsync(
-                new MarkClientAbsentCommand(Guid.CreateVersion7()),
+                new MarkClientAbsentCommand(Guid.CreateVersion7(), Guid.CreateVersion7()),
                 TestContext.Current.CancellationToken));
     }
 
@@ -42,7 +42,7 @@ public sealed class MarkClientAbsentHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var response = await HandlerAt(BookingFactory.SessionStart + Tolerance).HandleAsync(
-            new MarkClientAbsentCommand(booking.Id),
+            new MarkClientAbsentCommand(booking.PhotographerId, booking.Id),
             TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.ClientAbsent);
@@ -62,7 +62,7 @@ public sealed class MarkClientAbsentHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(BookingFactory.SessionStart + Tolerance - TimeSpan.FromMinutes(1)).HandleAsync(
-                new MarkClientAbsentCommand(booking.Id),
+                new MarkClientAbsentCommand(booking.PhotographerId, booking.Id),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.GuardFailed);
@@ -81,7 +81,7 @@ public sealed class MarkClientAbsentHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(BookingFactory.SessionStart + Tolerance).HandleAsync(
-                new MarkClientAbsentCommand(booking.Id),
+                new MarkClientAbsentCommand(booking.PhotographerId, booking.Id),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.InvalidTransition);

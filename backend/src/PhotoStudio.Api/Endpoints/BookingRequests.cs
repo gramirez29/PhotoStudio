@@ -11,7 +11,6 @@ namespace PhotoStudio.Api.Endpoints;
 /// <summary>
 /// HTTP body to create a booking.
 /// </summary>
-/// <param name="PhotographerId">Photographer identifier. Will come from the authenticated user once authentication exists.</param>
 /// <param name="ClientName">Client name.</param>
 /// <param name="ClientPhone">Client phone.</param>
 /// <param name="PackageName">Package name.</param>
@@ -20,7 +19,6 @@ namespace PhotoStudio.Api.Endpoints;
 /// <param name="SessionStart">Session start, with offset.</param>
 /// <param name="SessionEnd">Session end, with offset.</param>
 public sealed record CreateBookingRequest(
-    Guid PhotographerId,
     string ClientName,
     string ClientPhone,
     string PackageName,
@@ -74,12 +72,13 @@ public static class BookingRequestMappings
     /// Maps the create request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Authenticated photographer, from the access token; the client never chooses it.</param>
     /// <returns>The command.</returns>
-    public static CreateBookingCommand ToCommand(this CreateBookingRequest request)
+    public static CreateBookingCommand ToCommand(this CreateBookingRequest request, Guid photographerId)
     {
         ArgumentNullException.ThrowIfNull(request);
         return new CreateBookingCommand(
-            request.PhotographerId,
+            photographerId,
             request.ClientName,
             request.ClientPhone,
             request.PackageName,
@@ -93,59 +92,64 @@ public static class BookingRequestMappings
     /// Maps the sign-contract request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Authenticated photographer, from the access token.</param>
     /// <param name="bookingId">Booking identifier from the route.</param>
     /// <returns>The command.</returns>
-    public static SignContractInPersonCommand ToCommand(this SignContractInPersonRequest request, Guid bookingId)
+    public static SignContractInPersonCommand ToCommand(this SignContractInPersonRequest request, Guid photographerId, Guid bookingId)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new SignContractInPersonCommand(bookingId, request.SignerName, request.TemplateVersion, request.IsPaperContract);
+        return new SignContractInPersonCommand(photographerId, bookingId, request.SignerName, request.TemplateVersion, request.IsPaperContract);
     }
 
     /// <summary>
     /// Maps the in-person payment request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Authenticated photographer, from the access token.</param>
     /// <param name="bookingId">Booking identifier from the route.</param>
     /// <returns>The command.</returns>
-    public static RecordInPersonPaymentCommand ToCommand(this RecordInPersonPaymentRequest request, Guid bookingId)
+    public static RecordInPersonPaymentCommand ToCommand(this RecordInPersonPaymentRequest request, Guid photographerId, Guid bookingId)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new RecordInPersonPaymentCommand(bookingId, request.Amount, request.Currency, request.Method, request.IdempotencyKey);
+        return new RecordInPersonPaymentCommand(photographerId, bookingId, request.Amount, request.Currency, request.Method, request.IdempotencyKey);
     }
 
     /// <summary>
     /// Maps the reschedule request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Authenticated photographer, from the access token.</param>
     /// <param name="bookingId">Booking identifier from the route.</param>
     /// <returns>The command.</returns>
-    public static RescheduleBookingCommand ToCommand(this RescheduleBookingRequest request, Guid bookingId)
+    public static RescheduleBookingCommand ToCommand(this RescheduleBookingRequest request, Guid photographerId, Guid bookingId)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new RescheduleBookingCommand(bookingId, request.SessionStart, request.SessionEnd);
+        return new RescheduleBookingCommand(photographerId, bookingId, request.SessionStart, request.SessionEnd);
     }
 
     /// <summary>
     /// Maps the cancel request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Authenticated photographer, from the access token.</param>
     /// <param name="bookingId">Booking identifier from the route.</param>
     /// <returns>The command.</returns>
-    public static CancelBookingCommand ToCommand(this CancelBookingRequest request, Guid bookingId)
+    public static CancelBookingCommand ToCommand(this CancelBookingRequest request, Guid photographerId, Guid bookingId)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new CancelBookingCommand(bookingId, request.Reason);
+        return new CancelBookingCommand(photographerId, bookingId, request.Reason);
     }
 
     /// <summary>
     /// Maps the revert-client-absent request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Authenticated photographer, from the access token.</param>
     /// <param name="bookingId">Booking identifier from the route.</param>
     /// <returns>The command.</returns>
-    public static RevertClientAbsentCommand ToCommand(this RevertClientAbsentRequest request, Guid bookingId)
+    public static RevertClientAbsentCommand ToCommand(this RevertClientAbsentRequest request, Guid photographerId, Guid bookingId)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new RevertClientAbsentCommand(bookingId, request.Reason);
+        return new RevertClientAbsentCommand(photographerId, bookingId, request.Reason);
     }
 }

@@ -6,9 +6,7 @@ import { replaceWithBooking } from '../../navigation/appNavigation';
 import { createQueryWrapper } from '../__fixtures__/queryWrapper';
 import { useNewBookingForm } from '../useNewBookingForm';
 
-jest.mock('../../config/env', () => ({
-  env: { apiUrl: 'https://api.example.test', photographerId: '0197a000-0000-7000-8000-000000000001' },
-}));
+jest.mock('../../config/env', () => ({ env: { apiUrl: 'https://api.example.test' } }));
 jest.mock('../../api/client', () => ({ bookingsApi: { createBooking: jest.fn() } }));
 jest.mock('../../navigation/appNavigation');
 

@@ -928,7 +928,7 @@ Retry-After: 60
   "instance": "/api/maintenance/run", "code": "rate_limit.exceeded" }
 ```
 
-> **El endpoint no tiene autenticación**, igual que el resto de `/api/bookings`, por decisión consciente mientras el único usuario es el dueño del proyecto. El riesgo es acotado: la pasada es idempotente y de duración acotada, y el rate limiter evita que repetirla cargue la base. **Cuando se implemente la autenticación del fotógrafo, este endpoint debe quedar detrás de ella.**
+> **El endpoint exige sesión** (`Authorization: Bearer`, ver `docs/Authentication.md`). Ojo: la pasada es trabajo global del sistema, no de un fotógrafo (expira las reservas vencidas de todos), así que cualquier fotógrafo autenticado puede dispararla. Con un solo fotógrafo no importa; cuando haya varios habrá que restringirla a un rol de sistema. El riesgo es acotado: la pasada es idempotente y de duración acotada, y el rate limiter evita que repetirla cargue la base.
 
 El límite vive en la memoria de cada instancia de la API; con una sola instancia (hoy) es exacto.
 

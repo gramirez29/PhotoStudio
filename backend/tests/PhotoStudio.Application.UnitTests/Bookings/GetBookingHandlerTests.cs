@@ -24,7 +24,7 @@ public sealed class GetBookingHandlerTests
         var bookingId = Guid.CreateVersion7();
 
         var exception = await Should.ThrowAsync<NotFoundException>(
-            () => handler.HandleAsync(new GetBookingQuery(bookingId), TestContext.Current.CancellationToken));
+            () => handler.HandleAsync(new GetBookingQuery(Guid.CreateVersion7(), bookingId), TestContext.Current.CancellationToken));
 
         exception.ResourceId.ShouldBe(bookingId);
     }

@@ -2,6 +2,9 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { bookingsApi } from '../api/client';
 import type { BookingResponse } from '../types/api/booking';
 
+/** Prefix shared by the cache keys of every booking, to refresh them all at once. */
+export const BOOKING_QUERY_PREFIX = ['booking'] as const;
+
 /**
  * Builds the cache key of a booking, shared by queries and future mutations that invalidate it.
  * @param bookingId Booking identifier.

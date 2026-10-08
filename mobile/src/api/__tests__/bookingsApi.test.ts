@@ -74,13 +74,13 @@ describe('createBookingsApi', () => {
     expect(booking.id).toBe(bookingPayload.id);
   });
 
-  it('lists the bookings of the photographer with the identifier encoded in the query string', async () => {
+  it('lists the bookings of the signed-in photographer without sending an identifier', async () => {
     const { fetchFn, urls } = stubFetch(jsonResponse(200, [bookingSummaryPayload]));
     const api = createBookingsApi(createHttpClient('https://api.example.test', { fetchFn }));
 
-    const bookings = await api.listBookings('a b');
+    const bookings = await api.listBookings();
 
-    expect(urls).toEqual(['https://api.example.test/api/bookings?photographerId=a%20b']);
+    expect(urls).toEqual(['https://api.example.test/api/bookings']);
     expect(bookings).toHaveLength(1);
   });
 
@@ -93,7 +93,6 @@ describe('createBookingsApi', () => {
       },
     });
     const request = {
-      photographerId: bookingPayload.photographerId,
       clientName: 'María Pérez',
       clientPhone: '+50688881111',
       packageName: 'Retrato familiar',

@@ -28,7 +28,7 @@ public sealed class RevertClientAbsentHandlerTests
 
         await Should.ThrowAsync<NotFoundException>(
             () => HandlerAt(MarkedAt.AddHours(1)).HandleAsync(
-                new RevertClientAbsentCommand(Guid.CreateVersion7(), "error"),
+                new RevertClientAbsentCommand(Guid.CreateVersion7(), Guid.CreateVersion7(), "error"),
                 TestContext.Current.CancellationToken));
     }
 
@@ -44,7 +44,7 @@ public sealed class RevertClientAbsentHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var response = await HandlerAt(MarkedAt.AddDays(1)).HandleAsync(
-            new RevertClientAbsentCommand(booking.Id, "Marcado por error"),
+            new RevertClientAbsentCommand(booking.PhotographerId, booking.Id, "Marcado por error"),
             TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.Confirmed);
@@ -64,7 +64,7 @@ public sealed class RevertClientAbsentHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(MarkedAt.AddDays(1)).HandleAsync(
-                new RevertClientAbsentCommand(booking.Id, " "),
+                new RevertClientAbsentCommand(booking.PhotographerId, booking.Id, " "),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.ReasonRequired);
@@ -84,7 +84,7 @@ public sealed class RevertClientAbsentHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(afterWindow).HandleAsync(
-                new RevertClientAbsentCommand(booking.Id, "Tarde"),
+                new RevertClientAbsentCommand(booking.PhotographerId, booking.Id, "Tarde"),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.GuardFailed);
@@ -103,7 +103,7 @@ public sealed class RevertClientAbsentHandlerTests
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => HandlerAt(MarkedAt.AddDays(1)).HandleAsync(
-                new RevertClientAbsentCommand(booking.Id, "error"),
+                new RevertClientAbsentCommand(booking.PhotographerId, booking.Id, "error"),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.InvalidTransition);
@@ -124,7 +124,7 @@ public sealed class RevertClientAbsentHandlerTests
 
         var exception = await Should.ThrowAsync<ConflictException>(
             () => HandlerAt(MarkedAt.AddDays(1)).HandleAsync(
-                new RevertClientAbsentCommand(booking.Id, "Marcado por error"),
+                new RevertClientAbsentCommand(booking.PhotographerId, booking.Id, "Marcado por error"),
                 TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);

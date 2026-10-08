@@ -7,6 +7,11 @@ using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
+using PhotoStudio.Application.Identity;
+using PhotoStudio.Application.Identity.EnsureAccount;
+using PhotoStudio.Application.Identity.Login;
+using PhotoStudio.Application.Identity.Logout;
+using PhotoStudio.Application.Identity.RefreshSession;
 using PhotoStudio.Application.Maintenance.RunMaintenance;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
@@ -45,6 +50,25 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>, RunMaintenanceHandler>();
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the authentication use cases (login, refresh, logout and the startup account seeding). Registered apart from
+    /// <see cref="AddApplication"/> because they need the token ports, which only the API configures.
+    /// </summary>
+    /// <param name="services">Service collection to configure.</param>
+    /// <returns>The same service collection, for chaining.</returns>
+    public static IServiceCollection AddApplicationAuthentication(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<SessionIssuer>();
+        services.AddScoped<ICommandHandler<LoginCommand, AuthSessionResponse>, LoginHandler>();
+        services.AddScoped<ICommandHandler<RefreshSessionCommand, AuthSessionResponse>, RefreshSessionHandler>();
+        services.AddScoped<ICommandHandler<LogoutCommand, LogoutResponse>, LogoutHandler>();
+        services.AddScoped<ICommandHandler<EnsurePhotographerAccountCommand, EnsureAccountResult>, EnsurePhotographerAccountHandler>();
 
         return services;
     }

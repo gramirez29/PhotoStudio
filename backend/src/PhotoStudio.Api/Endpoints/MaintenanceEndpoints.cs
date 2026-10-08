@@ -19,7 +19,7 @@ public static class MaintenanceEndpoints
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        var group = endpoints.MapGroup("/api/maintenance").WithTags("Maintenance");
+        var group = endpoints.MapGroup("/api/maintenance").WithTags("Maintenance").RequireAuthorization();
 
         group.MapPost("/run", RunAsync)
             .WithName("RunMaintenance")

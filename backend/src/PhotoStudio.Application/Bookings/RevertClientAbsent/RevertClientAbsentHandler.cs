@@ -27,8 +27,7 @@ public sealed class RevertClientAbsentHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var booking = await repository.GetByIdAsync(command.BookingId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Booking), command.BookingId);
+        var booking = await repository.GetOwnedAsync(command.BookingId, command.PhotographerId, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         booking.RevertClientAbsent(command.Reason, now);
