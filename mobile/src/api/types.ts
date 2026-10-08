@@ -115,3 +115,23 @@ export interface BookingResponse {
   /** Actions the caller can perform right now. */
   readonly allowedActions: readonly BookingAction[];
 }
+
+/** Compact booking used in lists (backend `BookingSummaryResponse`). */
+export interface BookingSummaryResponse {
+  /** Booking identifier (GUID). */
+  readonly id: string;
+  /** Client name. */
+  readonly clientName: string;
+  /** Package name. */
+  readonly packageName: string;
+  /** Current status. */
+  readonly status: BookingStatus;
+  /** Session start (ISO 8601). */
+  readonly sessionStart: string;
+  /** Session end (ISO 8601). */
+  readonly sessionEnd: string;
+  /** Package price. */
+  readonly packagePrice: MoneyResponse;
+  /** Outstanding balance. */
+  readonly balance: MoneyResponse;
+}

@@ -44,6 +44,23 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Booking>> ListByPhotographerAsync(
+        Guid photographerId,
+        DateTimeOffset endingAfter,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        // Served by the (photographerId, slotStart) index created at startup.
+        var documents = await _collection
+            .Find(booking => booking.PhotographerId == photographerId && booking.SlotEnd >= endingAfter.UtcDateTime)
+            .SortBy(booking => booking.SlotStart)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+
+        return [.. documents.Select(document => document.ToDomain())];
+    }
+
+    /// <inheritdoc />
     public Task<bool> HasOverlappingActiveBookingAsync(Guid photographerId, TimeSlot slot, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(slot);

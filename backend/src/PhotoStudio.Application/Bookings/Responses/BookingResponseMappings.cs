@@ -39,6 +39,26 @@ public static class BookingResponseMappings
     }
 
     /// <summary>
+    /// Maps a booking to its compact list representation.
+    /// </summary>
+    /// <param name="booking">Booking to map.</param>
+    /// <returns>The summary DTO.</returns>
+    public static BookingSummaryResponse ToSummary(this Booking booking)
+    {
+        ArgumentNullException.ThrowIfNull(booking);
+
+        return new BookingSummaryResponse(
+            booking.Id,
+            booking.Client.Name,
+            booking.PackageName,
+            booking.Status,
+            booking.Slot.Start,
+            booking.Slot.End,
+            booking.PackagePrice.ToResponse(),
+            booking.Balance.ToResponse());
+    }
+
+    /// <summary>
     /// Maps an amount to its response.
     /// </summary>
     /// <param name="money">Amount to map.</param>

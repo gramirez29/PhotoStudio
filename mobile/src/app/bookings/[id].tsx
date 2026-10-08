@@ -1,12 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../api/httpClient';
 import type { BookingResponse } from '../../api/types';
 import { AmountRow } from '../../components/AmountRow';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useBooking } from '../../hooks/useBooking';
-import { useRecentBookingsStore } from '../../state/recentBookingsStore';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { formatDateTime } from '../../utils/format';
 import { BOOKING_ACTION_LABELS } from '../../utils/labels';
@@ -86,13 +85,6 @@ export default function BookingScreen(): ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
   const bookingId = typeof id === 'string' ? id : '';
   const query = useBooking(bookingId);
-  const addBooking = useRecentBookingsStore((state) => state.addBooking);
-
-  useEffect(() => {
-    if (query.data !== undefined) {
-      addBooking(query.data.id);
-    }
-  }, [addBooking, query.data]);
 
   if (query.isPending) {
     return (

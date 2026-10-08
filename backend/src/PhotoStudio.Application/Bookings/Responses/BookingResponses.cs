@@ -71,3 +71,24 @@ public sealed record BookingResponse(
     ContractResponse? Contract,
     IReadOnlyList<PaymentResponse> Payments,
     IReadOnlyList<BookingAction> AllowedActions);
+
+/// <summary>
+/// Compact booking for lists. The mobile app mirrors this shape in TypeScript; the full detail comes from <see cref="BookingResponse"/>.
+/// </summary>
+/// <param name="Id">Booking identifier.</param>
+/// <param name="ClientName">Client name.</param>
+/// <param name="PackageName">Package name.</param>
+/// <param name="Status">Current status.</param>
+/// <param name="SessionStart">Session start (UTC).</param>
+/// <param name="SessionEnd">Session end (UTC).</param>
+/// <param name="PackagePrice">Package price.</param>
+/// <param name="Balance">Outstanding balance.</param>
+public sealed record BookingSummaryResponse(
+    Guid Id,
+    string ClientName,
+    string PackageName,
+    BookingStatus Status,
+    DateTimeOffset SessionStart,
+    DateTimeOffset SessionEnd,
+    MoneyResponse PackagePrice,
+    MoneyResponse Balance);
