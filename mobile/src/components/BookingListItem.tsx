@@ -1,17 +1,9 @@
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { BookingSummaryResponse } from '../api/types';
 import { colors, radius, spacing } from '../theme/tokens';
+import type { BookingListItemProps } from '../types/components/BookingListItem.types';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { StatusBadge } from './StatusBadge';
-
-/** Props of {@link BookingListItem}. */
-export interface BookingListItemProps {
-  /** Booking to display. */
-  readonly booking: BookingSummaryResponse;
-  /** Called when the photographer taps the card. */
-  readonly onPress: (bookingId: string) => void;
-}
 
 /**
  * Card of the booking list: client, package, session date, status and outstanding balance.

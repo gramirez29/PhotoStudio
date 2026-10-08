@@ -1,29 +1,4 @@
-/** API URL used when `EXPO_PUBLIC_API_URL` is not defined (local backend). */
-export const DEFAULT_API_URL = 'http://localhost:8080';
-
-/**
- * Normalizes the API base URL: trims it, falls back to {@link DEFAULT_API_URL} and removes trailing slashes.
- * @param raw Value of the environment variable, if any.
- * @returns The base URL without a trailing slash.
- */
-export function normalizeApiUrl(raw: string | undefined): string {
-  const value = raw?.trim();
-  if (value === undefined || value.length === 0) {
-    return DEFAULT_API_URL;
-  }
-
-  return value.replace(/\/+$/, '');
-}
-
-/**
- * Normalizes the photographer identifier: trims it and treats a blank value as not configured.
- * @param raw Value of the environment variable, if any.
- * @returns The identifier, or null when it is missing or blank.
- */
-export function normalizePhotographerId(raw: string | undefined): string | null {
-  const value = raw?.trim();
-  return value === undefined || value.length === 0 ? null : value;
-}
+import { normalizeApiUrl, normalizePhotographerId } from '../utils/envNormalizers';
 
 /**
  * Runtime configuration of the app, resolved once at startup from `EXPO_PUBLIC_*` variables.

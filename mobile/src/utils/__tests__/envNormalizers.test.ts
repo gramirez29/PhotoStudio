@@ -1,4 +1,4 @@
-import { DEFAULT_API_URL, normalizeApiUrl, normalizePhotographerId } from '../env';
+import { DEFAULT_API_URL, normalizeApiUrl, normalizePhotographerId } from '../envNormalizers';
 
 describe('normalizeApiUrl', () => {
   it('falls back to the local API when the variable is missing or blank', () => {

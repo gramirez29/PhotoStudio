@@ -4,6 +4,19 @@ import { ApiError } from '../api/httpClient';
 export const NETWORK_ERROR_MESSAGE = 'No se pudo conectar con el servidor. Revisa la conexión e inténtalo de nuevo.';
 
 /**
+ * Converts the error of a failed "load booking" request into a message for the photographer.
+ * @param error Error of the query.
+ * @returns The message in Spanish.
+ */
+export function bookingLoadErrorMessage(error: Error): string {
+  if (error instanceof ApiError && error.status === 404) {
+    return 'No existe una reserva con ese identificador.';
+  }
+
+  return 'No se pudo cargar la reserva. Revisa la conexión e inténtalo de nuevo.';
+}
+
+/**
  * Converts the error of a failed "create booking" request into a message for the photographer.
  * @param error Error of the mutation.
  * @returns The message in Spanish.

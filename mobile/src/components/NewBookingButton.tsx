@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors, spacing } from '../theme/tokens';
+import { openNewBooking } from '../utils/navigation';
 
 /**
  * Header button that opens the create-booking form.
@@ -13,7 +13,7 @@ export function NewBookingButton(): ReactElement {
       accessibilityRole="button"
       accessibilityLabel="Nueva reserva"
       hitSlop={spacing.sm}
-      onPress={() => router.push('/bookings/new')}
+      onPress={openNewBooking}
       style={({ pressed }) => pressed && styles.pressed}
     >
       <Text style={styles.label}>+ Nueva</Text>

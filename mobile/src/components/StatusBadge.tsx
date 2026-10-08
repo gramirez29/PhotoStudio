@@ -1,24 +1,9 @@
 import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { BookingStatus } from '../api/types';
-import { colors, radius, spacing, type ColorToken } from '../theme/tokens';
+import { colors, radius, spacing } from '../theme/tokens';
+import type { StatusBadgeProps } from '../types/components/StatusBadge.types';
 import { BOOKING_STATUS_LABELS } from '../utils/labels';
-
-/** Color token used for each booking status. */
-export const STATUS_COLOR_TOKENS: Readonly<Record<BookingStatus, ColorToken>> = {
-  Tentative: 'warning',
-  Confirmed: 'success',
-  Completed: 'info',
-  Cancelled: 'muted',
-  Expired: 'muted',
-  ClientAbsent: 'danger',
-};
-
-/** Props of {@link StatusBadge}. */
-export interface StatusBadgeProps {
-  /** Status to display. */
-  readonly status: BookingStatus;
-}
+import { STATUS_COLOR_TOKENS } from '../utils/statusColors';
 
 /**
  * Pill that shows the booking status with its color.

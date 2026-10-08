@@ -1,4 +1,4 @@
-import type { MoneyResponse } from '../api/types';
+import type { MoneyResponse } from '../types/api/booking';
 
 /** Locale used for every user-facing format (Spanish, Costa Rica). */
 export const APP_LOCALE = 'es-CR';

@@ -1,5 +1,4 @@
-/** Plain JSON object with unknown values, as received from the network. */
-export type JsonRecord = Readonly<Record<string, unknown>>;
+import type { JsonRecord } from '../types/api/json';
 
 /** Thrown when a response body does not match the expected shape. */
 export class ResponseShapeError extends Error {
