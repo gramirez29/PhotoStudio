@@ -21,6 +21,12 @@ public static class RateLimitingExtensions
     public const string AuthPolicy = "auth";
 
     /// <summary>
+    /// Name of the policy of the sign-up endpoint: 5 accounts per hour per client address. It is stricter than the sign-in
+    /// policy because creating accounts is the cheapest way to fill the database.
+    /// </summary>
+    public const string RegisterPolicy = "register";
+
+    /// <summary>
     /// Stable error code returned when a request is rejected by the rate limiter.
     /// </summary>
     public const string RateLimitExceededCode = "rate_limit.exceeded";
@@ -51,6 +57,14 @@ public static class RateLimitingExtensions
                     Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
+            options.AddPolicy(RegisterPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                }));
             options.OnRejected = WriteRejectionAsync;
         });
     }
@@ -75,7 +89,7 @@ public static class RateLimitingExtensions
         {
             Status = StatusCodes.Status429TooManyRequests,
             Title = "Too many requests.",
-            Detail = "This action was requested too recently. Wait a minute and try again.",
+            Detail = "This action was requested too many times. Wait a while and try again.",
             Instance = httpContext.Request.Path,
         };
         problem.Extensions["code"] = RateLimitExceededCode;

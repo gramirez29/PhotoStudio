@@ -2,8 +2,8 @@ import type { LoginField, LoginFormErrors, LoginFormValues } from '../forms/logi
 
 /** Credentials sent to the backend by the login form. */
 export interface LoginCredentials {
-  /** Email, trimmed. */
-  readonly email: string;
+  /** Username, trimmed and in lower case. */
+  readonly username: string;
   /** Password, exactly as typed. */
   readonly password: string;
 }

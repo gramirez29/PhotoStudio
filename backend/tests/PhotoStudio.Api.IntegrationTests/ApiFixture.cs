@@ -10,12 +10,12 @@ using PhotoStudio.Infrastructure.Persistence;
 namespace PhotoStudio.Api.IntegrationTests;
 
 /// <summary>
-/// A photographer account created for a test, with the clear-text password needed to sign in.
+/// A user created for a test, with the clear-text password needed to sign in.
 /// </summary>
 /// <param name="Id">Photographer (tenant) identifier.</param>
-/// <param name="Email">Login email.</param>
+/// <param name="Username">Login name.</param>
 /// <param name="Password">Password in clear text.</param>
-public sealed record TestAccount(Guid Id, string Email, string Password);
+public sealed record TestUser(Guid Id, string Username, string Password);
 
 /// <summary>
 /// Starts the real API in memory once for all the API tests, against a throwaway MongoDB database. The connection string
@@ -83,9 +83,7 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("MONGODB_CONNECTION_STRING", connectionString);
         Environment.SetEnvironmentVariable("MONGODB_DATABASE_NAME", DatabaseName);
         Environment.SetEnvironmentVariable("JWT_SIGNING_KEY", SigningKey);
-        Environment.SetEnvironmentVariable("SEED_PHOTOGRAPHER_EMAIL", null);
-        Environment.SetEnvironmentVariable("SEED_PHOTOGRAPHER_PASSWORD", null);
-        Environment.SetEnvironmentVariable("SEED_PHOTOGRAPHER_ID", null);
+        Environment.SetEnvironmentVariable("AUTH_REGISTRATION_ENABLED", null);
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
         _ = _factory.Server;
@@ -122,21 +120,27 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Creates an account directly in the database, as the startup seeding would.
+    /// Gets the throwaway database the API under test writes to, to check what was really stored.
     /// </summary>
-    /// <returns>The account and its clear-text password.</returns>
-    public async Task<TestAccount> CreateAccountAsync()
+    public IMongoDatabase Database =>
+        _mongo?.GetDatabase(DatabaseName) ?? throw new InvalidOperationException("MongoDB is not available.");
+
+    /// <summary>
+    /// Creates a user directly in the database, without going through the registration endpoint.
+    /// </summary>
+    /// <returns>The user and its clear-text password.</returns>
+    public async Task<TestUser> CreateUserAsync()
     {
         var factory = _factory ?? throw new InvalidOperationException("MongoDB is not available.");
         await using var scope = factory.Services.CreateAsyncScope();
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-        var repository = scope.ServiceProvider.GetRequiredService<IPhotographerAccountRepository>();
+        var repository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
-        var account = new TestAccount(Guid.CreateVersion7(), $"{Guid.NewGuid():N}@example.com", "correct horse battery");
+        var user = new TestUser(Guid.CreateVersion7(), $"u{Guid.NewGuid():N}"[..13], "correct horse battery");
         await repository.AddAsync(
-            PhotographerAccount.Create(account.Id, account.Email, hasher.Hash(account.Password), DateTimeOffset.UtcNow),
+            User.Create(user.Id, user.Username, $"{user.Username}@example.com", hasher.Hash(user.Password), "Ana Pérez", "+50670189220", DateTimeOffset.UtcNow),
             CancellationToken.None);
-        return account;
+        return user;
     }
 }
 

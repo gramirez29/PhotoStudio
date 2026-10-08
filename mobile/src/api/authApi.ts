@@ -17,7 +17,9 @@ export function parseAuthSession(value: unknown): AuthSessionResponse {
     refreshToken: readString(record, 'refreshToken', path),
     refreshTokenExpiresAt: readString(record, 'refreshTokenExpiresAt', path),
     photographerId: readString(record, 'photographerId', path),
+    username: readString(record, 'username', path),
     email: readString(record, 'email', path),
+    name: readString(record, 'name', path),
   };
 }
 
@@ -29,7 +31,8 @@ export function parseAuthSession(value: unknown): AuthSessionResponse {
  */
 export function createAuthApi(client: HttpClient): AuthApi {
   return {
-    login: (email, password, signal) => client.post('/api/auth/login', { email, password }, parseAuthSession, signal),
+    register: (request, signal) => client.post('/api/auth/register', request, parseAuthSession, signal),
+    login: (username, password, signal) => client.post('/api/auth/login', { username, password }, parseAuthSession, signal),
     refresh: (refreshToken, signal) => client.post('/api/auth/refresh', { refreshToken }, parseAuthSession, signal),
     logout: (refreshToken, signal) =>
       client.post('/api/auth/logout', { refreshToken }, () => undefined, signal),

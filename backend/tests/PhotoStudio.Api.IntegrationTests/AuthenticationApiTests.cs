@@ -17,13 +17,13 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     public async Task Login_WithCorrectCredentials_ReturnsASessionTheApiAccepts()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
-        var account = await fixture.CreateAccountAsync();
+        var account = await fixture.CreateUserAsync();
         var client = fixture.CreateClient();
 
         var session = await client.LoginAsync(account);
 
         session.PhotographerId.ShouldBe(account.Id);
-        session.Email.ShouldBe(account.Email);
+        session.Username.ShouldBe(account.Username);
         session.AccessToken.ShouldNotBeNullOrWhiteSpace();
         session.RefreshToken.ShouldNotBeNullOrWhiteSpace();
         var response = await client.SendAsync(HttpMethod.Get, "/api/bookings", session.AccessToken);
@@ -31,40 +31,40 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     }
 
     /// <summary>
-    /// The email is matched ignoring case and surrounding spaces.
+    /// The username is matched ignoring case and surrounding spaces.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task Login_IgnoresTheCaseAndSpacesOfTheEmail()
+    public async Task Login_IgnoresTheCaseAndSpacesOfTheUsername()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
-        var account = await fixture.CreateAccountAsync();
+        var account = await fixture.CreateUserAsync();
 
-        var response = await fixture.CreateClient().LoginRawAsync($"  {account.Email.ToUpperInvariant()} ", account.Password);
+        var response = await fixture.CreateClient().LoginRawAsync($"  {account.Username.ToUpperInvariant()} ", account.Password);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     /// <summary>
-    /// A wrong password and an unknown email produce the same response, so the API does not reveal which emails exist.
+    /// A wrong password and an unknown username produce the same response, so the API does not reveal which usernames exist.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task Login_WithWrongPasswordOrUnknownEmail_ReturnsTheSameGenericFailure()
+    public async Task Login_WithWrongPasswordOrUnknownUsername_ReturnsTheSameGenericFailure()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
-        var account = await fixture.CreateAccountAsync();
+        var account = await fixture.CreateUserAsync();
         var client = fixture.CreateClient();
 
-        var wrongPassword = await client.LoginRawAsync(account.Email, "not the password");
-        var unknownEmail = await client.LoginRawAsync("nobody@example.com", "not the password");
+        var wrongPassword = await client.LoginRawAsync(account.Username, "not the password");
+        var unknownUsername = await client.LoginRawAsync("nobody", "not the password");
 
         wrongPassword.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        unknownEmail.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        unknownUsername.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         (await wrongPassword.ReadCodeAsync()).ShouldBe("auth.invalid_credentials");
-        (await unknownEmail.ReadCodeAsync()).ShouldBe("auth.invalid_credentials");
+        (await unknownUsername.ReadCodeAsync()).ShouldBe("auth.invalid_credentials");
         (await wrongPassword.ReadJsonAsync()).GetProperty("detail").GetString()
-            .ShouldBe((await unknownEmail.ReadJsonAsync()).GetProperty("detail").GetString());
+            .ShouldBe((await unknownUsername.ReadJsonAsync()).GetProperty("detail").GetString());
         wrongPassword.Headers.WwwAuthenticate.ToString().ShouldBe("Bearer");
     }
 
@@ -84,21 +84,21 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     }
 
     /// <summary>
-    /// After five wrong passwords the account is locked: even the correct password is refused, with the time to wait.
+    /// After five wrong passwords the user is locked: even the correct password is refused, with the time to wait.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task Login_AfterFiveFailures_LocksTheAccountEvenForTheCorrectPassword()
+    public async Task Login_AfterFiveFailures_LocksTheUserEvenForTheCorrectPassword()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
-        var account = await fixture.CreateAccountAsync();
+        var account = await fixture.CreateUserAsync();
         var client = fixture.CreateClient();
         for (var attempt = 0; attempt < 5; attempt++)
         {
-            (await client.LoginRawAsync(account.Email, "wrong")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+            (await client.LoginRawAsync(account.Username, "wrong")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         }
 
-        var locked = await client.LoginRawAsync(account.Email, account.Password);
+        var locked = await client.LoginRawAsync(account.Username, account.Password);
 
         locked.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
         (await locked.ReadCodeAsync()).ShouldBe("auth.account_locked");
@@ -114,20 +114,20 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     public async Task Login_ASuccessBeforeTheLimit_ClearsTheFailures()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
-        var account = await fixture.CreateAccountAsync();
+        var account = await fixture.CreateUserAsync();
         var client = fixture.CreateClient();
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            await client.LoginRawAsync(account.Email, "wrong");
+            await client.LoginRawAsync(account.Username, "wrong");
         }
 
-        (await client.LoginRawAsync(account.Email, account.Password)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.LoginRawAsync(account.Username, account.Password)).StatusCode.ShouldBe(HttpStatusCode.OK);
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            await client.LoginRawAsync(account.Email, "wrong");
+            await client.LoginRawAsync(account.Username, "wrong");
         }
 
-        (await client.LoginRawAsync(account.Email, account.Password)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await client.LoginRawAsync(account.Username, account.Password)).StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -142,11 +142,11 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
         var quiet = fixture.CreateClient();
         for (var attempt = 0; attempt < 10; attempt++)
         {
-            (await noisy.LoginRawAsync("nobody@example.com", "x")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+            (await noisy.LoginRawAsync("nobody", "x")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         }
 
-        var limited = await noisy.LoginRawAsync("nobody@example.com", "x");
-        var other = await quiet.LoginRawAsync("nobody@example.com", "x");
+        var limited = await noisy.LoginRawAsync("nobody", "x");
+        var other = await quiet.LoginRawAsync("nobody", "x");
 
         limited.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
         (await limited.ReadCodeAsync()).ShouldBe("rate_limit.exceeded");
@@ -162,7 +162,7 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var first = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var first = await client.LoginAsync(await fixture.CreateUserAsync());
 
         var refreshed = await client.RefreshRawAsync(first.RefreshToken);
 
@@ -182,7 +182,7 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var first = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var first = await client.LoginAsync(await fixture.CreateUserAsync());
         var second = await (await client.RefreshRawAsync(first.RefreshToken)).ReadSessionAsync();
 
         var replay = await client.RefreshRawAsync(first.RefreshToken);
@@ -201,7 +201,7 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     public async Task Refresh_ReplayOnOneDevice_DoesNotSignOutAnotherDevice()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
-        var account = await fixture.CreateAccountAsync();
+        var account = await fixture.CreateUserAsync();
         var client = fixture.CreateClient();
         var phone = await client.LoginAsync(account);
         var tablet = await client.LoginAsync(account);
@@ -236,7 +236,7 @@ public sealed class AuthenticationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var session = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var session = await client.LoginAsync(await fixture.CreateUserAsync());
 
         var first = await client.SendAsync(HttpMethod.Post, "/api/auth/logout", null, new { refreshToken = session.RefreshToken });
         var again = await client.SendAsync(HttpMethod.Post, "/api/auth/logout", null, new { refreshToken = session.RefreshToken });

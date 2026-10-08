@@ -35,7 +35,7 @@ public static class DependencyInjection
         services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(mongoOptions.DatabaseName));
 
         services.AddScoped<IBookingRepository, MongoBookingRepository>();
-        services.AddScoped<IPhotographerAccountRepository, MongoPhotographerAccountRepository>();
+        services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
         services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();

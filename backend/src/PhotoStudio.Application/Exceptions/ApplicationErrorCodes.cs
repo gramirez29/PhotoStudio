@@ -17,8 +17,14 @@ public static class ApplicationErrorCodes
     /// <summary>The email or the password is not correct (the response never says which).</summary>
     public const string InvalidCredentials = "auth.invalid_credentials";
 
-    /// <summary>An account with the same email or identifier already exists.</summary>
-    public const string AccountAlreadyExists = "account.already_exists";
+    /// <summary>Another user already has that username.</summary>
+    public const string UsernameTaken = "user.username_taken";
+
+    /// <summary>Another user already has that email.</summary>
+    public const string EmailTaken = "user.email_taken";
+
+    /// <summary>Creating accounts is turned off in this environment.</summary>
+    public const string RegistrationDisabled = "auth.registration_disabled";
 
     /// <summary>Too many consecutive failed logins; the account is temporarily locked.</summary>
     public const string AccountLocked = "auth.account_locked";

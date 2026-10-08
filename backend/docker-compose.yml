@@ -45,11 +45,6 @@ services:
       MONGODB_DATABASE_NAME: photostudio_dev
       # Development-only signing key (refused outside Development). Never reuse it anywhere else.
       JWT_SIGNING_KEY: dev-only-signing-key-for-docker-compose-0123456789abcdef
-      # The photographer account is created from these, which come from your own shell so no credentials live in the repo:
-      #   $env:SEED_PHOTOGRAPHER_EMAIL="you@example.com"; $env:SEED_PHOTOGRAPHER_PASSWORD="a long password"; $env:SEED_PHOTOGRAPHER_ID="<tenant id>"
-      SEED_PHOTOGRAPHER_EMAIL: ${SEED_PHOTOGRAPHER_EMAIL:-}
-      SEED_PHOTOGRAPHER_PASSWORD: ${SEED_PHOTOGRAPHER_PASSWORD:-}
-      SEED_PHOTOGRAPHER_ID: ${SEED_PHOTOGRAPHER_ID:-}
     ports:
       - "8080:8080"
 

@@ -3,44 +3,50 @@ using PhotoStudio.Domain.Identity;
 namespace PhotoStudio.Infrastructure.Persistence.Documents;
 
 /// <summary>
-/// Mapping between the identity domain objects and their MongoDB documents.
+/// Mapping between the identity domain objects (users and refresh tokens) and their MongoDB documents.
 /// </summary>
 public static class IdentityDocumentMappings
 {
     /// <summary>
-    /// Maps an account to its document.
+    /// Maps a user to its document.
     /// </summary>
-    /// <param name="account">Account to map.</param>
+    /// <param name="user">User to map.</param>
     /// <param name="version">Version to store.</param>
     /// <returns>The document.</returns>
-    public static PhotographerAccountDocument ToDocument(this PhotographerAccount account, long version)
+    public static UserDocument ToDocument(this User user, long version)
     {
-        ArgumentNullException.ThrowIfNull(account);
-        return new PhotographerAccountDocument
+        ArgumentNullException.ThrowIfNull(user);
+        return new UserDocument
         {
-            Id = account.Id,
+            Id = user.Id,
             Version = version,
-            Email = account.Email,
-            PasswordHash = account.PasswordHash,
-            CreatedAt = account.CreatedAt.UtcDateTime,
-            FailedLoginAttempts = account.FailedLoginAttempts,
-            LockedUntil = account.LockedUntil?.UtcDateTime,
+            Username = user.Username,
+            Email = user.Email,
+            PasswordHash = user.PasswordHash,
+            Name = user.Name,
+            Phone = user.Phone,
+            CreatedAt = user.CreatedAt.UtcDateTime,
+            FailedLoginAttempts = user.FailedLoginAttempts,
+            LockedUntil = user.LockedUntil?.UtcDateTime,
         };
     }
 
     /// <summary>
-    /// Maps an account document to the domain account.
+    /// Maps a user document to the domain user.
     /// </summary>
     /// <param name="document">Document to map.</param>
-    /// <returns>The account.</returns>
-    public static PhotographerAccount ToDomain(this PhotographerAccountDocument document)
+    /// <returns>The user.</returns>
+    public static User ToDomain(this UserDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
-        return PhotographerAccount.Restore(
+        return User.Restore(
             document.Id,
             document.Version,
+            document.Username,
             document.Email,
             document.PasswordHash,
+            document.Name,
+            document.Phone,
             ToOffset(document.CreatedAt),
             document.FailedLoginAttempts,
             document.LockedUntil is null ? null : ToOffset(document.LockedUntil.Value));

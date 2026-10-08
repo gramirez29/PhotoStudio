@@ -8,11 +8,15 @@ namespace PhotoStudio.Application.Identity;
 /// <param name="RefreshToken">Secret that obtains a new session; the app keeps it in secure storage.</param>
 /// <param name="RefreshTokenExpiresAt">Instant the refresh token stops being valid (UTC).</param>
 /// <param name="PhotographerId">Photographer (tenant) identifier.</param>
-/// <param name="Email">Photographer email.</param>
+/// <param name="Username">Login name of the user.</param>
+/// <param name="Email">Email of the user; empty for users created before the email existed.</param>
+/// <param name="Name">Display name of the user.</param>
 public sealed record AuthSessionResponse(
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAt,
     string RefreshToken,
     DateTimeOffset RefreshTokenExpiresAt,
     Guid PhotographerId,
-    string Email);
+    string Username,
+    string Email,
+    string Name);

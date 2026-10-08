@@ -37,6 +37,8 @@ public sealed partial class GlobalExceptionHandler(
                 (StatusCodes.Status409Conflict, "The request conflicts with the current state.", conflict.Code),
             AuthenticationFailedException authentication =>
                 (StatusCodes.Status401Unauthorized, "Authentication failed.", authentication.Code),
+            RegistrationDisabledException disabled =>
+                (StatusCodes.Status403Forbidden, "Creating accounts is turned off.", disabled.Code),
             AccountLockedException locked =>
                 (StatusCodes.Status429TooManyRequests, "Too many failed attempts.", locked.Code),
             NotFoundException =>

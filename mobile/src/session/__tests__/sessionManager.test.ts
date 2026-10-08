@@ -1,7 +1,7 @@
 import type { AuthSessionResponse } from '../../types/api/auth';
 
 jest.mock('../../api/authClient', () => ({
-  authApi: { login: jest.fn(), refresh: jest.fn(), logout: jest.fn() },
+  authApi: { register: jest.fn(), login: jest.fn(), refresh: jest.fn(), logout: jest.fn() },
 }));
 jest.mock('../../storage/refreshTokenStorage', () => ({
   saveRefreshToken: jest.fn(() => Promise.resolve()),
@@ -25,6 +25,7 @@ function load() {
   return {
     manager,
     store: useSessionStore,
+    register: jest.mocked(authApi.register),
     login: jest.mocked(authApi.login),
     refresh: jest.mocked(authApi.refresh),
     logout: jest.mocked(authApi.logout),
@@ -47,7 +48,9 @@ function backendSession(overrides: Partial<AuthSessionResponse> = {}): AuthSessi
     refreshToken: 'refresh-1',
     refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 3_600_000).toISOString(),
     photographerId: '0199a1b2-0000-7000-8000-000000000002',
+    username: 'ana',
     email: 'ana@example.com',
+    name: 'Ana Pérez',
     ...overrides,
   };
 }
@@ -57,16 +60,17 @@ describe('signIn', () => {
     const t = load();
     t.login.mockResolvedValue(backendSession());
 
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
 
-    expect(t.login).toHaveBeenCalledWith('ana@example.com', 'secret password');
+    expect(t.login).toHaveBeenCalledWith('ana', 'secret password');
     expect(t.saveRefreshToken).toHaveBeenCalledWith('refresh-1');
     const state = t.store.getState();
     expect(state.status).toBe('signedIn');
     expect(state.session).toMatchObject({
       accessToken: 'access-1',
       photographerId: '0199a1b2-0000-7000-8000-000000000002',
-      email: 'ana@example.com',
+      username: 'ana',
+      name: 'Ana Pérez',
     });
     expect(state.session?.accessTokenExpiresAt).toBeGreaterThan(Date.now());
   });
@@ -76,7 +80,34 @@ describe('signIn', () => {
     t.store.getState().setSignedOut();
     t.login.mockRejectedValue(new t.ApiError(401, 'x', 'auth.invalid_credentials'));
 
-    await expect(t.manager.signIn('ana@example.com', 'wrong')).rejects.toMatchObject({ code: 'auth.invalid_credentials' });
+    await expect(t.manager.signIn('ana', 'wrong')).rejects.toMatchObject({ code: 'auth.invalid_credentials' });
+
+    expect(t.store.getState().status).toBe('signedOut');
+    expect(t.saveRefreshToken).not.toHaveBeenCalled();
+  });
+});
+
+describe('register', () => {
+  const request = { username: 'ana', email: 'ana@example.com', password: 'a long password', name: 'Ana Pérez', phone: '+50670189220' };
+
+  it('creates the account and keeps its session as if the user had signed in', async () => {
+    const t = load();
+    t.register.mockResolvedValue(backendSession({ refreshToken: 'refresh-new' }));
+
+    await t.manager.register(request);
+
+    expect(t.register).toHaveBeenCalledWith(request);
+    expect(t.saveRefreshToken).toHaveBeenCalledWith('refresh-new');
+    expect(t.store.getState().status).toBe('signedIn');
+    expect(t.store.getState().session).toMatchObject({ username: 'ana', email: 'ana@example.com', name: 'Ana Pérez' });
+  });
+
+  it('leaves the app signed out and saves nothing when the username is taken', async () => {
+    const t = load();
+    t.store.getState().setSignedOut();
+    t.register.mockRejectedValue(new t.ApiError(409, 'x', 'user.username_taken'));
+
+    await expect(t.manager.register(request)).rejects.toMatchObject({ code: 'user.username_taken' });
 
     expect(t.store.getState().status).toBe('signedOut');
     expect(t.saveRefreshToken).not.toHaveBeenCalled();
@@ -152,7 +183,7 @@ describe('getValidAccessToken', () => {
   it('returns the current token without renewing while it is not about to expire', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession());
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
 
     await expect(t.manager.getValidAccessToken()).resolves.toBe('access-1');
 
@@ -162,7 +193,7 @@ describe('getValidAccessToken', () => {
   it('renews the session first when the token is about to expire', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession({ accessTokenExpiresAt: new Date(Date.now() + 10_000).toISOString() }));
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     t.refresh.mockResolvedValue(backendSession({ accessToken: 'access-2', refreshToken: 'refresh-2' }));
 
     await expect(t.manager.getValidAccessToken()).resolves.toBe('access-2');
@@ -174,7 +205,7 @@ describe('getValidAccessToken', () => {
   it('renews only once when several requests need a new token at the same time', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession({ accessTokenExpiresAt: new Date(Date.now() + 10_000).toISOString() }));
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     let finish: (session: AuthSessionResponse) => void = () => undefined;
     t.refresh.mockReturnValue(new Promise<AuthSessionResponse>((resolve) => { finish = resolve; }));
 
@@ -189,7 +220,7 @@ describe('getValidAccessToken', () => {
   it('ends the session when the backend rejects the refresh token while renewing', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession({ accessTokenExpiresAt: new Date(Date.now() + 10_000).toISOString() }));
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     t.refresh.mockRejectedValue(new t.ApiError(401, 'x', 'auth.invalid_refresh_token'));
 
     await expect(t.manager.getValidAccessToken()).resolves.toBeNull();
@@ -201,7 +232,7 @@ describe('getValidAccessToken', () => {
   it('keeps the session and rethrows when renewing fails for a network problem', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession({ accessTokenExpiresAt: new Date(Date.now() + 10_000).toISOString() }));
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     t.refresh.mockRejectedValue(new TypeError('Network request failed'));
 
     await expect(t.manager.getValidAccessToken()).rejects.toThrow('Network request failed');
@@ -215,7 +246,7 @@ describe('renewAfterRejection', () => {
   it('uses the token another request already obtained instead of renewing again', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession({ accessToken: 'access-newer' }));
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
 
     await expect(t.manager.renewAfterRejection('access-older')).resolves.toBe('access-newer');
 
@@ -225,7 +256,7 @@ describe('renewAfterRejection', () => {
   it('renews the session when the rejected token is the current one', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession());
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     t.refresh.mockResolvedValue(backendSession({ accessToken: 'access-2', refreshToken: 'refresh-2' }));
 
     await expect(t.manager.renewAfterRejection('access-1')).resolves.toBe('access-2');
@@ -238,7 +269,7 @@ describe('signOut', () => {
   it('forgets the session at once and tells the backend to revoke it', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession());
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     t.logout.mockResolvedValue(undefined);
 
     await t.manager.signOut();
@@ -252,7 +283,7 @@ describe('signOut', () => {
   it('signs out even when the backend cannot be reached', async () => {
     const t = load();
     t.login.mockResolvedValue(backendSession());
-    await t.manager.signIn('ana@example.com', 'secret password');
+    await t.manager.signIn('ana', 'secret password');
     t.logout.mockRejectedValue(new TypeError('Network request failed'));
 
     await expect(t.manager.signOut()).resolves.toBeUndefined();

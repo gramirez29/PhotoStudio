@@ -71,8 +71,8 @@ export function bookingCommandErrorMessage(error: Error): string {
 }
 
 /**
- * Converts the error of a failed sign-in into a message for the photographer. A wrong email and a wrong password get the
- * same message on purpose, like the backend.
+ * Converts the error of a failed sign-in into a message for the user. A wrong username and a wrong password get the same
+ * message on purpose, like the backend.
  * @param error Error of the mutation.
  * @returns The message in Spanish.
  */
@@ -83,13 +83,47 @@ export function loginErrorMessage(error: Error): string {
 
   switch (error.code) {
     case 'auth.invalid_credentials':
-      return 'El email o la contraseña no son correctos.';
+      return 'El usuario o la contraseña no son correctos.';
     case 'auth.account_locked':
       return 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
     case 'rate_limit.exceeded':
       return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
     default:
       return 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+  }
+}
+
+/**
+ * Converts the error of a failed account creation into a message for the user.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function registerErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'user.username_taken':
+      return 'Ese usuario ya existe. Elige otro.';
+    case 'user.invalid_username':
+      return 'El usuario no es válido: usa de 3 a 30 letras, números, puntos, guiones o guiones bajos.';
+    case 'user.email_taken':
+      return 'Ese correo ya está registrado.';
+    case 'user.invalid_email':
+      return 'El correo no es válido.';
+    case 'user.invalid_name':
+      return 'El nombre no es válido.';
+    case 'user.invalid_phone':
+      return 'El teléfono no es válido.';
+    case 'user.weak_password':
+      return 'La contraseña debe tener entre 8 y 128 caracteres.';
+    case 'auth.registration_disabled':
+      return 'Por ahora no se pueden crear cuentas nuevas.';
+    case 'rate_limit.exceeded':
+      return 'Se crearon demasiadas cuentas desde este dispositivo. Inténtalo más tarde.';
+    default:
+      return 'No se pudo crear la cuenta. Inténtalo de nuevo.';
   }
 }
 

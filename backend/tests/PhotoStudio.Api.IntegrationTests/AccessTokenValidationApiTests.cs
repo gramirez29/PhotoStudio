@@ -64,7 +64,7 @@ public sealed class AccessTokenValidationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var session = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var session = await client.LoginAsync(await fixture.CreateUserAsync());
 
         var response = await client.SendAsync(HttpMethod.Post, "/api/maintenance/run", session.AccessToken);
 
@@ -81,7 +81,7 @@ public sealed class AccessTokenValidationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var session = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var session = await client.LoginAsync(await fixture.CreateUserAsync());
         var parts = session.AccessToken.Split('.');
         var forgedPayload = Base64UrlEncoder.Encode(Encoding.UTF8.GetBytes($$"""{"sub":"{{Guid.CreateVersion7()}}","iss":"{{ApiFixture.Issuer}}","aud":"{{ApiFixture.Audience}}","exp":{{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()}}}"""));
         var tampered = $"{parts[0]}.{forgedPayload}.{parts[2]}";

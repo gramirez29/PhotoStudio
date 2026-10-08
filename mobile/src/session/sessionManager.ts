@@ -1,7 +1,7 @@
 import { authApi } from '../api/authClient';
 import { ApiError } from '../api/httpClient';
 import { clearRefreshToken, loadRefreshToken, saveRefreshToken } from '../storage/refreshTokenStorage';
-import type { AuthSessionResponse } from '../types/api/auth';
+import type { AuthSessionResponse, RegisterRequest } from '../types/api/auth';
 import type { AccessTokenProvider } from '../types/api/http';
 import { useSessionStore } from './sessionStore';
 
@@ -28,7 +28,9 @@ async function adoptSession(session: AuthSessionResponse): Promise<void> {
     accessToken: session.accessToken,
     accessTokenExpiresAt: Date.parse(session.accessTokenExpiresAt),
     photographerId: session.photographerId,
+    username: session.username,
     email: session.email,
+    name: session.name,
   });
 }
 
@@ -82,14 +84,24 @@ export function renewSessionOnce(): Promise<string | null> {
 }
 
 /**
- * Signs in with email and password and keeps the session.
- * @param email Email of the photographer.
- * @param password Password of the photographer.
+ * Creates an account and keeps the session it starts, so the person who just registered is already signed in.
+ * @param request Data of the new user.
  * @returns A promise that resolves when the session is in place.
- * @throws ApiError when the credentials are not accepted or the account is locked.
+ * @throws ApiError when the username is taken, a field is not valid or sign-up is closed.
  */
-export async function signIn(email: string, password: string): Promise<void> {
-  await adoptSession(await authApi.login(email, password));
+export async function register(request: RegisterRequest): Promise<void> {
+  await adoptSession(await authApi.register(request));
+}
+
+/**
+ * Signs in with username and password and keeps the session.
+ * @param username Username of the user.
+ * @param password Password of the user.
+ * @returns A promise that resolves when the session is in place.
+ * @throws ApiError when the credentials are not accepted or the user is locked.
+ */
+export async function signIn(username: string, password: string): Promise<void> {
+  await adoptSession(await authApi.login(username, password));
 }
 
 /**
