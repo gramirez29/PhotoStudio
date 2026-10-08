@@ -2,44 +2,27 @@
  * TypeScript mirror of the backend response DTOs (PhotoStudio.Application.Bookings.Responses).
  * Enums travel as strings because the API uses JsonStringEnumConverter; property names are camelCase.
  * Keep in sync with the backend, or replace with types generated from /openapi/v1.json.
+ * Enum values live in `src/constants/booking.ts`; the enum types are derived from them here.
  */
-
-/** Every value of the backend `BookingStatus` enum. */
-export const BOOKING_STATUSES = ['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Expired', 'ClientAbsent'] as const;
+import type {
+  BOOKING_ACTIONS,
+  BOOKING_STATUSES,
+  CHANNELS,
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+} from '../../constants/booking';
 
 /** Lifecycle status of a booking. */
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
-/** Every value of the backend `PaymentMethod` enum. */
-export const PAYMENT_METHODS = ['SinpeMovil', 'Cash', 'Card'] as const;
-
 /** Method used to pay. */
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
-
-/** Every value of the backend `PaymentStatus` enum. */
-export const PAYMENT_STATUSES = ['PendingVerification', 'Verified', 'Rejected'] as const;
 
 /** Verification status of a payment. */
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-/** Every value of the backend `Channel` enum. */
-export const CHANNELS = ['Portal', 'PhotographerApp', 'InPerson', 'External'] as const;
-
 /** Channel through which an action was performed. */
 export type Channel = (typeof CHANNELS)[number];
-
-/** Every value of the backend `BookingAction` enum. */
-export const BOOKING_ACTIONS = [
-  'SignContract',
-  'SubmitPaymentProof',
-  'VerifyPayment',
-  'RecordInPersonPayment',
-  'Reschedule',
-  'Cancel',
-  'Complete',
-  'MarkClientAbsent',
-  'RevertClientAbsent',
-] as const;
 
 /** Action the caller is allowed to perform on a booking right now. */
 export type BookingAction = (typeof BOOKING_ACTIONS)[number];

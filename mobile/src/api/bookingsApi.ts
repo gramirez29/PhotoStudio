@@ -1,3 +1,14 @@
+import { BOOKING_ACTIONS, BOOKING_STATUSES, CHANNELS, PAYMENT_METHODS, PAYMENT_STATUSES } from '../constants/booking';
+import type {
+  BookingAction,
+  BookingResponse,
+  BookingSummaryResponse,
+  ContractResponse,
+  MoneyResponse,
+  PaymentResponse,
+} from '../types/api/booking';
+import type { BookingsApi } from '../types/api/bookingsApi';
+import type { HttpClient } from '../types/api/http';
 import {
   expectArray,
   expectRecord,
@@ -7,21 +18,6 @@ import {
   readNumber,
   readString,
 } from './guards';
-import {
-  BOOKING_ACTIONS,
-  BOOKING_STATUSES,
-  CHANNELS,
-  PAYMENT_METHODS,
-  PAYMENT_STATUSES,
-  type BookingAction,
-  type BookingResponse,
-  type BookingSummaryResponse,
-  type ContractResponse,
-  type MoneyResponse,
-  type PaymentResponse,
-} from '../types/api/booking';
-import type { BookingsApi } from '../types/api/bookingsApi';
-import type { HttpClient } from '../types/api/http';
 
 /**
  * Parses a monetary amount.
