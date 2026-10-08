@@ -25,3 +25,21 @@ export function formatDateTime(isoDate: string): string {
 
   return new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
+
+/**
+ * Formats a date as a long weekday and date in the device time zone, for example "sábado, 17 de octubre de 2026".
+ * @param date Date to format.
+ * @returns The formatted date.
+ */
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'full' }).format(date);
+}
+
+/**
+ * Formats the time of day in the device time zone.
+ * @param date Date to format.
+ * @returns The formatted time, for example "9:00" or "2:30 p. m." depending on the device.
+ */
+export function formatTime(date: Date): string {
+  return new Intl.DateTimeFormat(APP_LOCALE, { timeStyle: 'short' }).format(date);
+}

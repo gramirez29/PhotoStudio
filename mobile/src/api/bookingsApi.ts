@@ -18,6 +18,7 @@ import {
   type BookingResponse,
   type BookingSummaryResponse,
   type ContractResponse,
+  type CreateBookingRequest,
   type MoneyResponse,
   type PaymentResponse,
 } from './types';
@@ -141,6 +142,14 @@ export function parseBookingSummaries(value: unknown): readonly BookingSummaryRe
 /** Booking endpoints used by the photographer app. */
 export interface BookingsApi {
   /**
+   * Creates a tentative booking.
+   * @param request Booking data.
+   * @param signal Optional signal to cancel the request.
+   * @returns The created booking.
+   */
+  createBooking(request: CreateBookingRequest, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
    * Lists the photographer's bookings, earliest session first.
    * @param photographerId Photographer (tenant) identifier.
    * @param signal Optional signal to cancel the request.
@@ -164,6 +173,7 @@ export interface BookingsApi {
  */
 export function createBookingsApi(client: HttpClient): BookingsApi {
   return {
+    createBooking: (request, signal) => client.post('/api/bookings', request, parseBooking, signal),
     listBookings: (photographerId, signal) =>
       client.get(`/api/bookings?photographerId=${encodeURIComponent(photographerId)}`, parseBookingSummaries, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),

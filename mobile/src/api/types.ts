@@ -135,3 +135,23 @@ export interface BookingSummaryResponse {
   /** Outstanding balance. */
   readonly balance: MoneyResponse;
 }
+
+/** Body to create a booking (backend `CreateBookingRequest`). */
+export interface CreateBookingRequest {
+  /** Photographer (tenant) identifier (GUID). */
+  readonly photographerId: string;
+  /** Client name. */
+  readonly clientName: string;
+  /** Client phone, with country code. */
+  readonly clientPhone: string;
+  /** Package name. */
+  readonly packageName: string;
+  /** Package price. */
+  readonly packagePrice: number;
+  /** ISO 4217 currency code. */
+  readonly currency: string;
+  /** Session start (ISO 8601). */
+  readonly sessionStart: string;
+  /** Session end (ISO 8601). */
+  readonly sessionEnd: string;
+}
