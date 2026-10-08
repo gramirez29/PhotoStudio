@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import { bookingsApi } from '../api/client';
-import type { BookingResponse, RescheduleBookingRequest } from '../api/types';
+import type { BookingResponse, RescheduleBookingRequest } from '../types/api/booking';
 import { bookingQueryKey } from './useBooking';
 import { bookingsQueryKey } from './useBookings';
 

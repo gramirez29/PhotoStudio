@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { openNewBooking } from '../navigation/appNavigation';
 import { colors, spacing } from '../theme/tokens';
 
 /**
@@ -13,7 +13,7 @@ export function NewBookingButton(): ReactElement {
       accessibilityRole="button"
       accessibilityLabel="Nueva reserva"
       hitSlop={spacing.sm}
-      onPress={() => router.push('/bookings/new')}
+      onPress={openNewBooking}
       style={({ pressed }) => pressed && styles.pressed}
     >
       <Text style={styles.label}>+ Nueva</Text>

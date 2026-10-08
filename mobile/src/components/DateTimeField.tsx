@@ -2,25 +2,9 @@ import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/d
 import type { ReactElement } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../theme/tokens';
-import { withDayOf, withTimeOf } from '../forms/createBookingForm';
+import type { DateTimeFieldProps, PickerMode } from '../types/components/DateTimeField.types';
+import { withDayOf, withTimeOf } from '../utils/date';
 import { formatDate, formatTime } from '../utils/format';
-
-/** Props of {@link DateTimeField}. */
-export interface DateTimeFieldProps {
-  /** Label shown above the field. */
-  readonly label: string;
-  /** Selected instant, in the device time zone. */
-  readonly value: Date;
-  /** Called with the new instant when the photographer picks a day or a time. */
-  readonly onChange: (next: Date) => void;
-  /** Earliest day that can be picked. */
-  readonly minimumDate: Date;
-  /** Validation message shown below the field, if any. */
-  readonly error?: string;
-}
-
-/** Part of the instant that a picker edits. */
-type PickerMode = 'date' | 'time';
 
 /**
  * Field to pick a day and a time. On iOS it renders the native compact pickers inline; on Android it opens the system

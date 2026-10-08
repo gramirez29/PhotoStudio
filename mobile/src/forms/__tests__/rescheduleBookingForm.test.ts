@@ -1,4 +1,4 @@
-import { sessionDurationMs, validateReschedule } from '../rescheduleBookingForm';
+import { validateReschedule } from '../rescheduleBookingForm';
 
 /** A fixed "now": 10 October 2026, 10:00 local time. */
 const NOW = new Date(2026, 9, 10, 10, 0, 0, 0);
@@ -8,18 +8,6 @@ const CURRENT = {
   sessionStart: new Date(2026, 9, 16, 14, 0).toISOString(),
   sessionEnd: new Date(2026, 9, 16, 18, 0).toISOString(),
 };
-
-describe('sessionDurationMs', () => {
-  it('returns the length of the session', () => {
-    expect(sessionDurationMs(CURRENT.sessionStart, CURRENT.sessionEnd)).toBe(4 * 60 * 60 * 1000);
-  });
-
-  it('returns null when a date is invalid or the end is not after the start', () => {
-    expect(sessionDurationMs('nope', CURRENT.sessionEnd)).toBeNull();
-    expect(sessionDurationMs(CURRENT.sessionEnd, CURRENT.sessionStart)).toBeNull();
-    expect(sessionDurationMs(CURRENT.sessionStart, CURRENT.sessionStart)).toBeNull();
-  });
-});
 
 describe('validateReschedule', () => {
   it('moves the session to the new start and keeps its duration', () => {

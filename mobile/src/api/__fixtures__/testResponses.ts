@@ -1,4 +1,4 @@
-import type { FetchFunction } from '../httpClient';
+import type { FetchFunction } from '../../types/api/http';
 
 /**
  * Builds a JSON response like the ones the backend returns.

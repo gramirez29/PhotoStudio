@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { bookingsApi } from '../api/client';
-import type { BookingResponse } from '../api/types';
+import type { BookingResponse } from '../types/api/booking';
 
 /**
  * Builds the cache key of a booking, shared by queries and future mutations that invalidate it.

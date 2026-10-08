@@ -1,4 +1,4 @@
-import type { BookingAction, BookingStatus } from '../api/types';
+import type { BookingAction, BookingStatus } from '../types/api/booking';
 
 /** Spanish label of each booking status, as shown to the photographer. */
 export const BOOKING_STATUS_LABELS: Readonly<Record<BookingStatus, string>> = {

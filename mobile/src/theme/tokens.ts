@@ -32,6 +32,3 @@ export const radius = {
   md: 12,
   pill: 999,
 } as const;
-
-/** Name of a color token. */
-export type ColorToken = keyof typeof colors;

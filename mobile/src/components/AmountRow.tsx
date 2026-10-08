@@ -1,18 +1,8 @@
 import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import type { MoneyResponse } from '../api/types';
 import { colors, spacing } from '../theme/tokens';
+import type { AmountRowProps } from '../types/components/AmountRow.types';
 import { formatMoney } from '../utils/format';
-
-/** Props of {@link AmountRow}. */
-export interface AmountRowProps {
-  /** Label shown on the left. */
-  readonly label: string;
-  /** Amount shown on the right. */
-  readonly money: MoneyResponse;
-  /** Whether to emphasize the row (for example, the balance). */
-  readonly emphasized?: boolean;
-}
 
 /**
  * Row with a label and a formatted amount.

@@ -1,5 +1,10 @@
 import { ApiError } from '../../api/httpClient';
-import { NETWORK_ERROR_MESSAGE, createBookingErrorMessage, rescheduleBookingErrorMessage } from '../apiErrors';
+import {
+  NETWORK_ERROR_MESSAGE,
+  bookingLoadErrorMessage,
+  createBookingErrorMessage,
+  rescheduleBookingErrorMessage,
+} from '../apiErrors';
 
 describe('createBookingErrorMessage', () => {
   it('explains a taken slot', () => {
@@ -49,5 +54,20 @@ describe('rescheduleBookingErrorMessage', () => {
       'No se pudo reprogramar la reserva. Inténtalo de nuevo.',
     );
     expect(rescheduleBookingErrorMessage(new TypeError('Network request failed'))).toBe(NETWORK_ERROR_MESSAGE);
+  });
+});
+
+describe('bookingLoadErrorMessage', () => {
+  it('says the booking does not exist when the API answers 404', () => {
+    expect(bookingLoadErrorMessage(new ApiError(404, 'x', 'resource.not_found'))).toBe(
+      'No existe una reserva con ese identificador.',
+    );
+  });
+
+  it('asks to check the connection for any other failure', () => {
+    const expected = 'No se pudo cargar la reserva. Revisa la conexión e inténtalo de nuevo.';
+
+    expect(bookingLoadErrorMessage(new ApiError(500, 'x', null))).toBe(expected);
+    expect(bookingLoadErrorMessage(new TypeError('Network request failed'))).toBe(expected);
   });
 });

@@ -1,14 +1,7 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing } from '../theme/tokens';
-
-/** Props of {@link FormInput}. */
-export interface FormInputProps extends Omit<TextInputProps, 'style' | 'placeholderTextColor'> {
-  /** Label shown above the field. */
-  readonly label: string;
-  /** Validation message shown below the field, if any. */
-  readonly error?: string;
-}
+import type { FormInputProps } from '../types/components/FormInput.types';
 
 /**
  * Labeled text field that shows its validation message below.
