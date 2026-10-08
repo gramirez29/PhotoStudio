@@ -4,10 +4,10 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace PhotoStudio.Infrastructure.Persistence.Documents;
 
 /// <summary>
-/// MongoDB data model of a photographer account. The identifier is the photographer (tenant) identifier. The email is
-/// stored already normalized and is unique.
+/// MongoDB data model of a user (collection <c>users</c>). The identifier is the photographer (tenant) identifier. The
+/// username is stored already normalized and is unique. The password is stored only as a hash.
 /// </summary>
-public sealed class PhotographerAccountDocument
+public sealed class UserDocument
 {
     /// <summary>Gets or sets the photographer identifier.</summary>
     [BsonId]
@@ -18,13 +18,25 @@ public sealed class PhotographerAccountDocument
     [BsonElement("version")]
     public long Version { get; set; }
 
-    /// <summary>Gets or sets the normalized login email.</summary>
+    /// <summary>Gets or sets the normalized username.</summary>
+    [BsonElement("username")]
+    public string Username { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the normalized email. Empty for users created before the email existed.</summary>
     [BsonElement("email")]
     public string Email { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the password hash.</summary>
     [BsonElement("passwordHash")]
     public string PasswordHash { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the display name.</summary>
+    [BsonElement("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the phone number.</summary>
+    [BsonElement("phone")]
+    public string Phone { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the creation instant (UTC).</summary>
     [BsonElement("createdAt")]

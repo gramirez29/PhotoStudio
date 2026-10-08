@@ -62,12 +62,23 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<OutboxMessageDocument>.IndexKeys.Ascending(message => message.ProcessedAt),
             new CreateIndexOptions { Name = "ix_outbox_retention", ExpireAfter = OutboxRetention });
 
-        var accounts = database.GetCollection<PhotographerAccountDocument>(MongoPhotographerAccountRepository.CollectionName);
+        var users = database.GetCollection<UserDocument>(MongoUserRepository.CollectionName);
 
-        // The email identifies the account at login, and uniqueness is enforced here, not by checking first and inserting after.
-        var accountEmailIndex = new CreateIndexModel<PhotographerAccountDocument>(
-            Builders<PhotographerAccountDocument>.IndexKeys.Ascending(account => account.Email),
-            new CreateIndexOptions { Name = "ix_account_email", Unique = true });
+        // The username identifies the user at login, and uniqueness is enforced here, not by checking first and inserting after.
+        var usernameIndex = new CreateIndexModel<UserDocument>(
+            Builders<UserDocument>.IndexKeys.Ascending(user => user.Username),
+            new CreateIndexOptions { Name = MongoUserRepository.UsernameIndexName, Unique = true });
+
+        // The email is unique too. The index is partial so users created before the email existed (empty email) never collide
+        // with each other; only real addresses are constrained.
+        var emailIndex = new CreateIndexModel<UserDocument>(
+            Builders<UserDocument>.IndexKeys.Ascending(user => user.Email),
+            new CreateIndexOptions<UserDocument>
+            {
+                Name = MongoUserRepository.EmailIndexName,
+                Unique = true,
+                PartialFilterExpression = Builders<UserDocument>.Filter.Gt(user => user.Email, string.Empty),
+            });
 
         var refreshTokens = database.GetCollection<RefreshTokenDocument>(MongoRefreshTokenRepository.CollectionName);
 
@@ -93,7 +104,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
         {
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
-            await accounts.Indexes.CreateOneAsync(accountEmailIndex, cancellationToken: cancellationToken);
+            await users.Indexes.CreateManyAsync([usernameIndex, emailIndex], cancellationToken: cancellationToken);
             await refreshTokens.Indexes.CreateManyAsync(
                 [refreshHashIndex, refreshFamilyIndex, refreshPhotographerIndex, refreshRetentionIndex],
                 cancellationToken: cancellationToken);

@@ -10,8 +10,8 @@ namespace PhotoStudio.Api.IntegrationTests;
 /// <param name="AccessToken">Access token.</param>
 /// <param name="RefreshToken">Refresh token secret.</param>
 /// <param name="PhotographerId">Photographer (tenant) identifier.</param>
-/// <param name="Email">Photographer email.</param>
-public sealed record SessionTokens(string AccessToken, string RefreshToken, Guid PhotographerId, string Email);
+/// <param name="Username">Username of the user.</param>
+public sealed record SessionTokens(string AccessToken, string RefreshToken, Guid PhotographerId, string Username);
 
 /// <summary>
 /// Helpers shared by the API tests to talk to the endpoints.
@@ -22,24 +22,46 @@ internal static class ApiTestHelpers
     /// Signs in and returns the raw response.
     /// </summary>
     /// <param name="client">HTTP client.</param>
-    /// <param name="email">Email.</param>
+    /// <param name="username">Username.</param>
     /// <param name="password">Password.</param>
     /// <returns>The response.</returns>
-    public static Task<HttpResponseMessage> LoginRawAsync(this HttpClient client, string email, string password) =>
-        client.PostAsJsonAsync("/api/auth/login", new { email, password }, TestContext.Current.CancellationToken);
+    public static Task<HttpResponseMessage> LoginRawAsync(this HttpClient client, string username, string password) =>
+        client.PostAsJsonAsync("/api/auth/login", new { username, password }, TestContext.Current.CancellationToken);
 
     /// <summary>
     /// Signs in with the right credentials and returns the session.
     /// </summary>
     /// <param name="client">HTTP client.</param>
-    /// <param name="account">Account to sign in.</param>
+    /// <param name="user">User to sign in.</param>
     /// <returns>The session.</returns>
-    public static async Task<SessionTokens> LoginAsync(this HttpClient client, TestAccount account)
+    public static async Task<SessionTokens> LoginAsync(this HttpClient client, TestUser user)
     {
-        var response = await client.LoginRawAsync(account.Email, account.Password);
+        var response = await client.LoginRawAsync(user.Username, user.Password);
         response.EnsureSuccessStatusCode();
         return await response.ReadSessionAsync();
     }
+
+    /// <summary>
+    /// Creates an account through the registration endpoint and returns the raw response.
+    /// </summary>
+    /// <param name="client">HTTP client.</param>
+    /// <param name="username">Username.</param>
+    /// <param name="password">Password.</param>
+    /// <param name="name">Display name.</param>
+    /// <param name="phone">Phone number.</param>
+    /// <param name="email">Email; defaults to one derived from the username.</param>
+    /// <returns>The response.</returns>
+    public static Task<HttpResponseMessage> RegisterRawAsync(
+        this HttpClient client,
+        string username,
+        string password = "a long enough password",
+        string name = "Ana Pérez",
+        string phone = "+506 7018-9220",
+        string? email = null) =>
+        client.PostAsJsonAsync(
+            "/api/auth/register",
+            new { username, email = email ?? $"{username}@example.com", password, name, phone },
+            TestContext.Current.CancellationToken);
 
     /// <summary>
     /// Refreshes a session and returns the raw response.
@@ -62,7 +84,7 @@ internal static class ApiTestHelpers
             json.GetProperty("accessToken").GetString()!,
             json.GetProperty("refreshToken").GetString()!,
             json.GetProperty("photographerId").GetGuid(),
-            json.GetProperty("email").GetString()!);
+            json.GetProperty("username").GetString()!);
     }
 
     /// <summary>

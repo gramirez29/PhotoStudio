@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using MongoDB.Bson;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Domain.Identity;
 using PhotoStudio.Infrastructure.Persistence;
@@ -6,8 +7,8 @@ using PhotoStudio.Infrastructure.Persistence;
 namespace PhotoStudio.Infrastructure.IntegrationTests;
 
 /// <summary>
-/// Tests of <see cref="MongoPhotographerAccountRepository"/> and <see cref="MongoRefreshTokenRepository"/> against a real
-/// MongoDB replica set, focused on what must hold under concurrency: the email is unique, the failed-login counter never
+/// Tests of <see cref="MongoUserRepository"/> and <see cref="MongoRefreshTokenRepository"/> against a real
+/// MongoDB replica set, focused on what must hold under concurrency: the username is unique, the failed-login counter never
 /// loses an increment, and a refresh token can be rotated exactly once.
 /// </summary>
 /// <param name="fixture">Throwaway database shared by the tests of this class.</param>
@@ -16,47 +17,96 @@ public sealed class MongoIdentityRepositoriesTests(MongoFixture fixture) : IClas
     private static readonly DateTimeOffset Now = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
 
     /// <summary>
-    /// An account is stored and found both by email and by identifier, with all its data.
+    /// A user is stored and found both by username and by identifier, with all its data.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task Account_IsStoredAndFoundByEmailAndById()
+    public async Task User_IsStoredAndFoundByUsernameAndById()
     {
         await EnsureIndexesAsync();
-        var accounts = NewAccounts();
-        var account = NewAccount();
+        var users = NewUsers();
+        var user = NewUser();
 
-        await accounts.AddAsync(account, TestContext.Current.CancellationToken);
+        await users.AddAsync(user, TestContext.Current.CancellationToken);
 
-        var byEmail = await accounts.GetByEmailAsync(account.Email, TestContext.Current.CancellationToken);
-        var byId = await accounts.GetByIdAsync(account.Id, TestContext.Current.CancellationToken);
-        byEmail.ShouldNotBeNull();
-        byEmail.Id.ShouldBe(account.Id);
-        byEmail.PasswordHash.ShouldBe("stored-hash");
-        byEmail.CreatedAt.ShouldBe(Now);
-        byEmail.FailedLoginAttempts.ShouldBe(0);
-        byEmail.LockedUntil.ShouldBeNull();
+        var byUsername = await users.GetByUsernameAsync(user.Username, TestContext.Current.CancellationToken);
+        var byId = await users.GetByIdAsync(user.Id, TestContext.Current.CancellationToken);
+        byUsername.ShouldNotBeNull();
+        byUsername.Id.ShouldBe(user.Id);
+        byUsername.PasswordHash.ShouldBe("stored-hash");
+        byUsername.CreatedAt.ShouldBe(Now);
+        byUsername.FailedLoginAttempts.ShouldBe(0);
+        byUsername.LockedUntil.ShouldBeNull();
+        byUsername.Name.ShouldBe("Ana Pérez");
+        byUsername.Email.ShouldBe(user.Email);
+        byUsername.Phone.ShouldBe("+50670189220");
         byId.ShouldNotBeNull();
-        byId.Email.ShouldBe(account.Email);
-        (await accounts.GetByEmailAsync("nobody@example.com", TestContext.Current.CancellationToken)).ShouldBeNull();
+        byId.Username.ShouldBe(user.Username);
+        (await users.GetByUsernameAsync("nobody", TestContext.Current.CancellationToken)).ShouldBeNull();
     }
 
     /// <summary>
-    /// A second account with the same email is refused by the unique index, whatever the identifier.
+    /// A second user with the same username is refused by the unique index, whatever the identifier.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task AddAsync_WithADuplicateEmail_ThrowsConflict()
+    public async Task AddAsync_WithADuplicateUsername_ThrowsConflict()
     {
         await EnsureIndexesAsync();
-        var accounts = NewAccounts();
-        var first = NewAccount();
-        await accounts.AddAsync(first, TestContext.Current.CancellationToken);
-        var second = PhotographerAccount.Create(Guid.CreateVersion7(), first.Email, "another-hash", Now);
+        var users = NewUsers();
+        var first = NewUser();
+        await users.AddAsync(first, TestContext.Current.CancellationToken);
+        var second = User.Create(Guid.CreateVersion7(), first.Username, $"{Guid.NewGuid():N}@example.com", "another-hash", "Other", "70189221", Now);
 
-        var exception = await Should.ThrowAsync<ConflictException>(() => accounts.AddAsync(second, TestContext.Current.CancellationToken));
+        var exception = await Should.ThrowAsync<ConflictException>(() => users.AddAsync(second, TestContext.Current.CancellationToken));
 
-        exception.Code.ShouldBe(ApplicationErrorCodes.AccountAlreadyExists);
+        exception.Code.ShouldBe(ApplicationErrorCodes.UsernameTaken);
+    }
+
+    /// <summary>
+    /// A second user with the same email is refused with its own code, even when the username is different, and the check
+    /// ignores the case the email was typed in (it is stored normalized).
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task AddAsync_WithADuplicateEmail_ThrowsEmailTaken()
+    {
+        await EnsureIndexesAsync();
+        var users = NewUsers();
+        var first = NewUser();
+        await users.AddAsync(first, TestContext.Current.CancellationToken);
+        var second = User.Create(Guid.CreateVersion7(), $"u{Guid.NewGuid():N}"[..13], first.Email.ToUpperInvariant(), "another-hash", "Other", "70189221", Now);
+
+        var exception = await Should.ThrowAsync<ConflictException>(() => users.AddAsync(second, TestContext.Current.CancellationToken));
+
+        exception.Code.ShouldBe(ApplicationErrorCodes.EmailTaken);
+    }
+
+    /// <summary>
+    /// Users created before the email existed have none. They must not collide with each other, and the unique index must
+    /// still be creatable on a collection that already holds them.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UsersWithoutAnEmail_DoNotCollideWithEachOther()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var collection = fixture.Database.GetCollection<BsonDocument>(MongoUserRepository.CollectionName);
+        await collection.InsertManyAsync(
+            [
+                new BsonDocument { { "_id", new BsonBinaryData(Guid.CreateVersion7(), GuidRepresentation.Standard) }, { "username", $"legacy{Guid.NewGuid():N}"[..14] }, { "passwordHash", "x" } },
+                new BsonDocument { { "_id", new BsonBinaryData(Guid.CreateVersion7(), GuidRepresentation.Standard) }, { "username", $"legacy{Guid.NewGuid():N}"[..14] }, { "passwordHash", "x" } },
+            ],
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        await new MongoIndexInitializer(fixture.Database, NullLogger<MongoIndexInitializer>.Instance).StartAsync(TestContext.Current.CancellationToken);
+
+        var listing = await fixture.Database.RunCommandAsync<BsonDocument>(
+            new BsonDocument("listIndexes", MongoUserRepository.CollectionName),
+            cancellationToken: TestContext.Current.CancellationToken);
+        var names = listing["cursor"]["firstBatch"].AsBsonArray.Select(index => index["name"].AsString).ToList();
+        names.ShouldContain(MongoUserRepository.EmailIndexName);
+        names.ShouldContain(MongoUserRepository.UsernameIndexName);
     }
 
     /// <summary>
@@ -68,15 +118,15 @@ public sealed class MongoIdentityRepositoriesTests(MongoFixture fixture) : IClas
     public async Task RegisterFailedLoginAsync_CountsEveryParallelAttempt()
     {
         await EnsureIndexesAsync();
-        var accounts = NewAccounts();
-        var account = NewAccount();
-        await accounts.AddAsync(account, TestContext.Current.CancellationToken);
+        var users = NewUsers();
+        var user = NewUser();
+        await users.AddAsync(user, TestContext.Current.CancellationToken);
 
         var counts = await Task.WhenAll(
-            Enumerable.Range(0, 25).Select(_ => NewAccounts().RegisterFailedLoginAsync(account.Id, TestContext.Current.CancellationToken)));
+            Enumerable.Range(0, 25).Select(_ => NewUsers().RegisterFailedLoginAsync(user.Id, TestContext.Current.CancellationToken)));
 
         counts.Order().ShouldBe(Enumerable.Range(1, 25));
-        (await accounts.GetByIdAsync(account.Id, TestContext.Current.CancellationToken))!.FailedLoginAttempts.ShouldBe(25);
+        (await users.GetByIdAsync(user.Id, TestContext.Current.CancellationToken))!.FailedLoginAttempts.ShouldBe(25);
     }
 
     /// <summary>
@@ -87,44 +137,23 @@ public sealed class MongoIdentityRepositoriesTests(MongoFixture fixture) : IClas
     public async Task LockAsync_StoresTheLockAndResetClearsIt()
     {
         await EnsureIndexesAsync();
-        var accounts = NewAccounts();
-        var account = NewAccount();
-        await accounts.AddAsync(account, TestContext.Current.CancellationToken);
-        await accounts.RegisterFailedLoginAsync(account.Id, TestContext.Current.CancellationToken);
+        var users = NewUsers();
+        var user = NewUser();
+        await users.AddAsync(user, TestContext.Current.CancellationToken);
+        await users.RegisterFailedLoginAsync(user.Id, TestContext.Current.CancellationToken);
 
-        await accounts.LockAsync(account.Id, Now.AddMinutes(15), TestContext.Current.CancellationToken);
-        var locked = await accounts.GetByIdAsync(account.Id, TestContext.Current.CancellationToken);
+        await users.LockAsync(user.Id, Now.AddMinutes(15), TestContext.Current.CancellationToken);
+        var locked = await users.GetByIdAsync(user.Id, TestContext.Current.CancellationToken);
 
         locked!.LockedUntil.ShouldBe(Now.AddMinutes(15));
         locked.FailedLoginAttempts.ShouldBe(0);
         locked.IsLockedAt(Now).ShouldBeTrue();
 
-        await accounts.ResetFailedLoginsAsync(account.Id, TestContext.Current.CancellationToken);
-        var cleared = await accounts.GetByIdAsync(account.Id, TestContext.Current.CancellationToken);
+        await users.ResetFailedLoginsAsync(user.Id, TestContext.Current.CancellationToken);
+        var cleared = await users.GetByIdAsync(user.Id, TestContext.Current.CancellationToken);
 
         cleared!.LockedUntil.ShouldBeNull();
         cleared.FailedLoginAttempts.ShouldBe(0);
-    }
-
-    /// <summary>
-    /// Replacing the password hash also lifts a lock and clears the counter.
-    /// </summary>
-    /// <returns>A task that completes when the test finishes.</returns>
-    [Fact]
-    public async Task SetPasswordHashAsync_ReplacesTheHashAndLiftsTheLock()
-    {
-        await EnsureIndexesAsync();
-        var accounts = NewAccounts();
-        var account = NewAccount();
-        await accounts.AddAsync(account, TestContext.Current.CancellationToken);
-        await accounts.LockAsync(account.Id, Now.AddMinutes(15), TestContext.Current.CancellationToken);
-
-        await accounts.SetPasswordHashAsync(account.Id, "new-hash", TestContext.Current.CancellationToken);
-
-        var stored = await accounts.GetByIdAsync(account.Id, TestContext.Current.CancellationToken);
-        stored!.PasswordHash.ShouldBe("new-hash");
-        stored.LockedUntil.ShouldBeNull();
-        stored.FailedLoginAttempts.ShouldBe(0);
     }
 
     /// <summary>
@@ -253,33 +282,7 @@ public sealed class MongoIdentityRepositoriesTests(MongoFixture fixture) : IClas
     }
 
     /// <summary>
-    /// Revoking everything of a photographer signs out every device, and only theirs.
-    /// </summary>
-    /// <returns>A task that completes when the test finishes.</returns>
-    [Fact]
-    public async Task RevokeAllAsync_RevokesEverySessionOfThePhotographerOnly()
-    {
-        await EnsureIndexesAsync();
-        var tokens = NewTokens();
-        var photographerId = Guid.CreateVersion7();
-        var phone = RefreshToken.Issue(photographerId, Guid.CreateVersion7(), Hash(), Now, TimeSpan.FromDays(30));
-        var tablet = RefreshToken.Issue(photographerId, Guid.CreateVersion7(), Hash(), Now, TimeSpan.FromDays(30));
-        var stranger = NewToken();
-        foreach (var token in new[] { phone, tablet, stranger })
-        {
-            await tokens.AddAsync(token, TestContext.Current.CancellationToken);
-        }
-
-        var revoked = await tokens.RevokeAllAsync(photographerId, Now, TestContext.Current.CancellationToken);
-
-        revoked.ShouldBe(2);
-        (await tokens.GetByHashAsync(phone.TokenHash, TestContext.Current.CancellationToken))!.IsRevoked.ShouldBeTrue();
-        (await tokens.GetByHashAsync(tablet.TokenHash, TestContext.Current.CancellationToken))!.IsRevoked.ShouldBeTrue();
-        (await tokens.GetByHashAsync(stranger.TokenHash, TestContext.Current.CancellationToken))!.IsRevoked.ShouldBeFalse();
-    }
-
-    /// <summary>
-    /// Creates the indexes the repositories rely on (the unique email and token hash), skipping the test when MongoDB is down.
+    /// Creates the indexes the repositories rely on (the unique username and token hash), skipping the test when MongoDB is down.
     /// </summary>
     /// <returns>A task that completes when the indexes exist.</returns>
     private async Task EnsureIndexesAsync()
@@ -292,7 +295,7 @@ public sealed class MongoIdentityRepositoriesTests(MongoFixture fixture) : IClas
     /// Creates an account repository over the throwaway database.
     /// </summary>
     /// <returns>A new repository.</returns>
-    private MongoPhotographerAccountRepository NewAccounts() => new(fixture.Database);
+    private MongoUserRepository NewUsers() => new(fixture.Database);
 
     /// <summary>
     /// Creates a refresh token repository over the throwaway database.
@@ -301,11 +304,11 @@ public sealed class MongoIdentityRepositoriesTests(MongoFixture fixture) : IClas
     private MongoRefreshTokenRepository NewTokens() => new(fixture.Database);
 
     /// <summary>
-    /// Builds an account with a unique email.
+    /// Builds a user with a unique username.
     /// </summary>
-    /// <returns>The account.</returns>
-    private static PhotographerAccount NewAccount() =>
-        PhotographerAccount.Create(Guid.CreateVersion7(), $"{Guid.NewGuid():N}@example.com", "stored-hash", Now);
+    /// <returns>The user.</returns>
+    private static User NewUser() =>
+        User.Create(Guid.CreateVersion7(), $"u{Guid.NewGuid():N}"[..13], $"{Guid.NewGuid():N}@example.com", "stored-hash", "Ana Pérez", "+50670189220", Now);
 
     /// <summary>
     /// Builds an unused refresh token for a new photographer and a new family.

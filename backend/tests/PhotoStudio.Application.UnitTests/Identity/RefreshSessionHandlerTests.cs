@@ -20,7 +20,7 @@ public sealed class RefreshSessionHandlerTests
     [Fact]
     public async Task HandleAsync_WithAValidToken_RotatesItAndReturnsANewSession()
     {
-        var account = IdentityFixture.Account();
+        var account = IdentityFixture.NewUser();
         var current = GivenStoredToken(account);
         _fixture.RefreshTokens.RotateAsync(current, Arg.Any<RefreshToken>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(true);
 
@@ -76,7 +76,7 @@ public sealed class RefreshSessionHandlerTests
     [Fact]
     public async Task HandleAsync_WithAnAlreadyUsedToken_RevokesTheWholeFamily()
     {
-        var account = IdentityFixture.Account();
+        var account = IdentityFixture.NewUser();
         var used = GivenStoredToken(account, revoked: true);
 
         var exception = await Should.ThrowAsync<AuthenticationFailedException>(
@@ -94,7 +94,7 @@ public sealed class RefreshSessionHandlerTests
     [Fact]
     public async Task HandleAsync_WithAnExpiredToken_IsRejected()
     {
-        var account = IdentityFixture.Account();
+        var account = IdentityFixture.NewUser();
         GivenStoredToken(account, expiresAt: IdentityFixture.Now);
 
         var exception = await Should.ThrowAsync<AuthenticationFailedException>(
@@ -105,15 +105,15 @@ public sealed class RefreshSessionHandlerTests
     }
 
     /// <summary>
-    /// A token whose account no longer exists is rejected and its family revoked.
+    /// A token whose user no longer exists is rejected and its family revoked.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task HandleAsync_WhenTheAccountNoLongerExists_RevokesTheFamily()
+    public async Task HandleAsync_WhenTheUserNoLongerExists_RevokesTheFamily()
     {
-        var account = IdentityFixture.Account();
+        var account = IdentityFixture.NewUser();
         var token = GivenStoredToken(account);
-        _fixture.Accounts.GetByIdAsync(account.Id, Arg.Any<CancellationToken>()).Returns((PhotographerAccount?)null);
+        _fixture.Users.GetByIdAsync(account.Id, Arg.Any<CancellationToken>()).Returns((User?)null);
 
         await Should.ThrowAsync<AuthenticationFailedException>(
             () => NewHandler().HandleAsync(new RefreshSessionCommand(PresentedSecret), TestContext.Current.CancellationToken));
@@ -128,7 +128,7 @@ public sealed class RefreshSessionHandlerTests
     [Fact]
     public async Task HandleAsync_WhenAnotherRequestRotatedTheTokenFirst_RevokesTheFamily()
     {
-        var account = IdentityFixture.Account();
+        var account = IdentityFixture.NewUser();
         var current = GivenStoredToken(account);
         _fixture.RefreshTokens.RotateAsync(current, Arg.Any<RefreshToken>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(false);
 
@@ -146,11 +146,11 @@ public sealed class RefreshSessionHandlerTests
     /// <param name="revoked">Whether the token was already used.</param>
     /// <param name="expiresAt">Expiry of the token.</param>
     /// <returns>The stored token.</returns>
-    private RefreshToken GivenStoredToken(PhotographerAccount account, bool revoked = false, DateTimeOffset? expiresAt = null)
+    private RefreshToken GivenStoredToken(User account, bool revoked = false, DateTimeOffset? expiresAt = null)
     {
         var token = IdentityFixture.StoredToken(account, revoked, expiresAt);
         _fixture.RefreshTokens.GetByHashAsync("hash-of-" + PresentedSecret, Arg.Any<CancellationToken>()).Returns(token);
-        _fixture.Accounts.GetByIdAsync(account.Id, Arg.Any<CancellationToken>()).Returns(account);
+        _fixture.Users.GetByIdAsync(account.Id, Arg.Any<CancellationToken>()).Returns(account);
         return token;
     }
 
@@ -159,7 +159,7 @@ public sealed class RefreshSessionHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private RefreshSessionHandler NewHandler() => new(
-        _fixture.Accounts,
+        _fixture.Users,
         _fixture.RefreshTokens,
         _fixture.TokenGenerator,
         _fixture.Sessions,

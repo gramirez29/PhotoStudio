@@ -50,9 +50,18 @@ public static class DomainErrorCodes
     /// <summary>The payment is not in a status that allows the requested operation.</summary>
     public const string InvalidPaymentStatus = "payment.invalid_status";
 
-    /// <summary>The email of a photographer account is empty or has no valid shape.</summary>
-    public const string InvalidEmail = "account.invalid_email";
+    /// <summary>The username is empty or has no valid shape.</summary>
+    public const string InvalidUsername = "user.invalid_username";
 
-    /// <summary>The password is shorter than the minimum length.</summary>
-    public const string WeakPassword = "account.weak_password";
+    /// <summary>The email of a user is empty or has no valid shape.</summary>
+    public const string InvalidEmail = "user.invalid_email";
+
+    /// <summary>The name of a user is empty or too long.</summary>
+    public const string InvalidName = "user.invalid_name";
+
+    /// <summary>The phone of a user has no valid shape.</summary>
+    public const string InvalidPhone = "user.invalid_phone";
+
+    /// <summary>The password is shorter than the minimum length or longer than the maximum.</summary>
+    public const string WeakPassword = "user.weak_password";
 }

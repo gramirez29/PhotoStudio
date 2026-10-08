@@ -42,13 +42,4 @@ public interface IRefreshTokenRepository
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The number of tokens revoked.</returns>
     Task<int> RevokeFamilyAsync(Guid familyId, DateTimeOffset now, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Revokes every active token of a photographer, signing out all their devices.
-    /// </summary>
-    /// <param name="photographerId">Photographer identifier.</param>
-    /// <param name="now">Current instant, stored as the revocation instant.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The number of tokens revoked.</returns>
-    Task<int> RevokeAllAsync(Guid photographerId, DateTimeOffset now, CancellationToken cancellationToken);
 }

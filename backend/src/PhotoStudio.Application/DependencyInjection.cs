@@ -8,10 +8,10 @@ using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Identity;
-using PhotoStudio.Application.Identity.EnsureAccount;
 using PhotoStudio.Application.Identity.Login;
 using PhotoStudio.Application.Identity.Logout;
 using PhotoStudio.Application.Identity.RefreshSession;
+using PhotoStudio.Application.Identity.Register;
 using PhotoStudio.Application.Maintenance.RunMaintenance;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
@@ -55,7 +55,7 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Adds the authentication use cases (login, refresh, logout and the startup account seeding). Registered apart from
+    /// Adds the authentication use cases (register, login, refresh and logout). Registered apart from
     /// <see cref="AddApplication"/> because they need the token ports, which only the API configures.
     /// </summary>
     /// <param name="services">Service collection to configure.</param>
@@ -68,7 +68,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<LoginCommand, AuthSessionResponse>, LoginHandler>();
         services.AddScoped<ICommandHandler<RefreshSessionCommand, AuthSessionResponse>, RefreshSessionHandler>();
         services.AddScoped<ICommandHandler<LogoutCommand, LogoutResponse>, LogoutHandler>();
-        services.AddScoped<ICommandHandler<EnsurePhotographerAccountCommand, EnsureAccountResult>, EnsurePhotographerAccountHandler>();
+        services.AddScoped<ICommandHandler<RegisterUserCommand, AuthSessionResponse>, RegisterUserHandler>();
 
         return services;
     }

@@ -8,7 +8,7 @@ namespace PhotoStudio.Infrastructure.Identity;
 
 /// <summary>
 /// Issues the access tokens as signed JWTs (HMAC-SHA256). The token carries only what the API needs to authorize a request:
-/// the photographer identifier as <c>sub</c> (the tenant of every query), the email, and a unique <c>jti</c>.
+/// the photographer identifier as <c>sub</c> (the tenant of every query), the username, and a unique <c>jti</c>.
 /// </summary>
 public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
 {
@@ -39,7 +39,7 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
     }
 
     /// <inheritdoc />
-    public AccessToken Issue(Guid photographerId, string email, DateTimeOffset now)
+    public AccessToken Issue(Guid photographerId, string username, DateTimeOffset now)
     {
         var expiresAt = now + _options.AccessTokenLifetime;
         var descriptor = new SecurityTokenDescriptor
@@ -53,7 +53,7 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
             Subject = new ClaimsIdentity(
             [
                 new Claim(JwtRegisteredClaimNames.Sub, photographerId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.PreferredUsername, username),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             ]),
         };

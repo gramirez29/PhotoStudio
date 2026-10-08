@@ -19,7 +19,7 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var session = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var session = await client.LoginAsync(await fixture.CreateUserAsync());
         var forgedOwner = Guid.CreateVersion7();
 
         var booking = await client.CreateBookingAsync(session.AccessToken, new Dictionary<string, object> { ["photographerId"] = forgedOwner });
@@ -37,8 +37,8 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var owner = await client.LoginAsync(await fixture.CreateAccountAsync());
-        var other = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var owner = await client.LoginAsync(await fixture.CreateUserAsync());
+        var other = await client.LoginAsync(await fixture.CreateUserAsync());
         var ownerBooking = await client.CreateBookingAsync(owner.AccessToken);
 
         var ownList = await client.SendAsync(HttpMethod.Get, "/api/bookings", owner.AccessToken);
@@ -69,8 +69,8 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var owner = await client.LoginAsync(await fixture.CreateAccountAsync());
-        var intruder = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var owner = await client.LoginAsync(await fixture.CreateUserAsync());
+        var intruder = await client.LoginAsync(await fixture.CreateUserAsync());
         var booking = await client.CreateBookingAsync(owner.AccessToken);
         var id = booking.GetProperty("id").GetGuid();
         object? body = suffix switch
@@ -101,7 +101,7 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var owner = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var owner = await client.LoginAsync(await fixture.CreateUserAsync());
         var id = (await client.CreateBookingAsync(owner.AccessToken)).GetProperty("id").GetGuid();
 
         var read = await client.SendAsync(HttpMethod.Get, $"/api/bookings/{id}", owner.AccessToken);
@@ -121,8 +121,8 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
-        var owner = await client.LoginAsync(await fixture.CreateAccountAsync());
-        var intruder = await client.LoginAsync(await fixture.CreateAccountAsync());
+        var owner = await client.LoginAsync(await fixture.CreateUserAsync());
+        var intruder = await client.LoginAsync(await fixture.CreateUserAsync());
         var id = (await client.CreateBookingAsync(owner.AccessToken)).GetProperty("id").GetGuid();
 
         var someoneElses = await client.SendAsync(HttpMethod.Get, $"/api/bookings/{id}", intruder.AccessToken);

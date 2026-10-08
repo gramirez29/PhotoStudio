@@ -5,17 +5,17 @@ using PhotoStudio.Domain.Identity;
 namespace PhotoStudio.Application.Identity.Login;
 
 /// <summary>
-/// Signs a photographer in. Wrong credentials, an unknown email and an invalid email all produce the same
+/// Signs a user in. Wrong credentials, an unknown username and an invalid username all produce the same
 /// <see cref="AuthenticationFailedException"/>, after the same amount of hashing work, so the response does not reveal
-/// which emails have an account. Consecutive failures lock the account for <see cref="PhotographerAccount.LockoutDuration"/>.
+/// which usernames exist. Consecutive failures lock the user for <see cref="User.LockoutDuration"/>.
 /// </summary>
-/// <param name="accounts">Account repository.</param>
+/// <param name="users">User repository.</param>
 /// <param name="refreshTokens">Refresh token repository.</param>
 /// <param name="passwordHasher">Password hashing.</param>
 /// <param name="sessions">Builds the session tokens.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class LoginHandler(
-    IPhotographerAccountRepository accounts,
+    IUserRepository users,
     IRefreshTokenRepository refreshTokens,
     IPasswordHasher passwordHasher,
     SessionIssuer sessions,
@@ -24,49 +24,49 @@ public sealed class LoginHandler(
     /// <summary>
     /// Verifies the credentials and starts a session.
     /// </summary>
-    /// <param name="command">Email and password.</param>
+    /// <param name="command">Username and password.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The new session.</returns>
     /// <exception cref="AuthenticationFailedException">When the credentials are not accepted.</exception>
-    /// <exception cref="AccountLockedException">When the account is locked by too many failed attempts.</exception>
+    /// <exception cref="AccountLockedException">When the user is locked by too many failed attempts.</exception>
     public async Task<AuthSessionResponse> HandleAsync(LoginCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
         var now = timeProvider.GetUtcNow();
         var password = command.Password ?? string.Empty;
-        var email = PhotographerAccount.TryNormalizeEmail(command.Email);
-        var account = email is null ? null : await accounts.GetByEmailAsync(email, cancellationToken);
+        var username = User.TryNormalizeUsername(command.Username);
+        var user = username is null ? null : await users.GetByUsernameAsync(username, cancellationToken);
 
-        if (account is null)
+        if (user is null)
         {
             passwordHasher.SpendVerificationTime(password);
             throw InvalidCredentials();
         }
 
-        if (account.IsLockedAt(now))
+        if (user.IsLockedAt(now))
         {
-            throw new AccountLockedException(account.LockedUntil!.Value - now);
+            throw new AccountLockedException(user.LockedUntil!.Value - now);
         }
 
-        if (!passwordHasher.Verify(account.PasswordHash, password))
+        if (!passwordHasher.Verify(user.PasswordHash, password))
         {
-            var failedAttempts = await accounts.RegisterFailedLoginAsync(account.Id, cancellationToken);
-            if (PhotographerAccount.ShouldLock(failedAttempts))
+            var failedAttempts = await users.RegisterFailedLoginAsync(user.Id, cancellationToken);
+            if (User.ShouldLock(failedAttempts))
             {
-                await accounts.LockAsync(account.Id, now + PhotographerAccount.LockoutDuration, cancellationToken);
+                await users.LockAsync(user.Id, now + User.LockoutDuration, cancellationToken);
             }
 
             throw InvalidCredentials();
         }
 
-        if (account.FailedLoginAttempts > 0 || account.LockedUntil is not null)
+        if (user.FailedLoginAttempts > 0 || user.LockedUntil is not null)
         {
-            await accounts.ResetFailedLoginsAsync(account.Id, cancellationToken);
+            await users.ResetFailedLoginsAsync(user.Id, cancellationToken);
         }
 
         // Every login starts a new family, so signing out of one device never signs out the others.
-        var session = sessions.Issue(account.Id, account.Email, Guid.CreateVersion7(), now);
+        var session = sessions.Issue(user, Guid.CreateVersion7(), now);
         await refreshTokens.AddAsync(session.RefreshToken, cancellationToken);
         return session.Response;
     }
@@ -76,5 +76,5 @@ public sealed class LoginHandler(
     /// </summary>
     /// <returns>The exception to throw.</returns>
     private static AuthenticationFailedException InvalidCredentials() =>
-        new(ApplicationErrorCodes.InvalidCredentials, "The email or the password is not correct.");
+        new(ApplicationErrorCodes.InvalidCredentials, "The username or the password is not correct.");
 }

@@ -15,7 +15,7 @@ export function useLoginForm(): LoginFormState {
   const [values, setValues] = useState<LoginFormValues>(EMPTY_LOGIN_VALUES);
   const [errors, setErrors] = useState<LoginFormErrors>({});
   // Not retried: a wrong password must count once, and the backend locks the account after a few failures.
-  const login = useMutation({ mutationFn: ({ email, password }: LoginCredentials) => signIn(email, password) });
+  const login = useMutation({ mutationFn: ({ username, password }: LoginCredentials) => signIn(username, password) });
 
   return {
     values,
@@ -38,7 +38,7 @@ export function useLoginForm(): LoginFormState {
       }
 
       setErrors({});
-      login.mutate({ email: result.email, password: result.password });
+      login.mutate({ username: result.username, password: result.password });
     },
   };
 }

@@ -1,15 +1,23 @@
-import type { AuthSessionResponse } from './auth';
+import type { AuthSessionResponse, RegisterRequest } from './auth';
 
 /** Authentication endpoints. They need no access token, so they use a client without session handling. */
 export interface AuthApi {
   /**
-   * Signs in with email and password.
-   * @param email Email of the photographer.
-   * @param password Password of the photographer.
+   * Creates an account and signs it in.
+   * @param request Data of the new user.
    * @param signal Optional signal to cancel the request.
    * @returns The new session.
    */
-  login(email: string, password: string, signal?: AbortSignal): Promise<AuthSessionResponse>;
+  register(request: RegisterRequest, signal?: AbortSignal): Promise<AuthSessionResponse>;
+
+  /**
+   * Signs in with username and password.
+   * @param username Username of the user.
+   * @param password Password of the user.
+   * @param signal Optional signal to cancel the request.
+   * @returns The new session.
+   */
+  login(username: string, password: string, signal?: AbortSignal): Promise<AuthSessionResponse>;
 
   /**
    * Exchanges a refresh token for a new session. The refresh token cannot be used again.

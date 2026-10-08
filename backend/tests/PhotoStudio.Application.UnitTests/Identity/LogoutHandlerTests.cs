@@ -17,7 +17,7 @@ public sealed class LogoutHandlerTests
     [Fact]
     public async Task HandleAsync_WithAKnownToken_RevokesTheFamily()
     {
-        var token = IdentityFixture.StoredToken(IdentityFixture.Account());
+        var token = IdentityFixture.StoredToken(IdentityFixture.NewUser());
         _fixture.RefreshTokens.GetByHashAsync("hash-of-secret", Arg.Any<CancellationToken>()).Returns(token);
 
         var response = await NewHandler().HandleAsync(new LogoutCommand("secret"), TestContext.Current.CancellationToken);

@@ -30,11 +30,12 @@ internal sealed class IdentityFixture
             .Returns(call => new AccessToken("access-jwt", call.Arg<DateTimeOffset>().AddMinutes(15)));
         TokenGenerator.Generate().Returns(new GeneratedRefreshToken("new-secret", "new-hash"));
         TokenGenerator.Hash(Arg.Any<string>()).Returns(call => "hash-of-" + call.Arg<string>());
+        PasswordHasher.Hash(Arg.Any<string>()).Returns("hashed-password");
         Sessions = new SessionIssuer(AccessTokens, TokenGenerator, new AuthSessionSettings(RefreshLifetime));
     }
 
-    /// <summary>Gets the substituted account repository.</summary>
-    public IPhotographerAccountRepository Accounts { get; } = Substitute.For<IPhotographerAccountRepository>();
+    /// <summary>Gets the substituted user repository.</summary>
+    public IUserRepository Users { get; } = Substitute.For<IUserRepository>();
 
     /// <summary>Gets the substituted refresh token repository.</summary>
     public IRefreshTokenRepository RefreshTokens { get; } = Substitute.For<IRefreshTokenRepository>();
@@ -55,25 +56,26 @@ internal sealed class IdentityFixture
     public TimeProvider Clock { get; } = new FixedTimeProvider(Now);
 
     /// <summary>
-    /// Builds a stored account.
+    /// Builds a stored user.
     /// </summary>
     /// <param name="failedLoginAttempts">Consecutive failed logins already counted.</param>
-    /// <param name="lockedUntil">Lock end, if the account is locked.</param>
-    /// <returns>The account.</returns>
-    public static PhotographerAccount Account(int failedLoginAttempts = 0, DateTimeOffset? lockedUntil = null) =>
-        PhotographerAccount.Restore(Guid.CreateVersion7(), 1, "ana@example.com", "stored-hash", Now.AddDays(-30), failedLoginAttempts, lockedUntil);
+    /// <param name="lockedUntil">Lock end, if the user is locked.</param>
+    /// <returns>The user.</returns>
+    public static User NewUser(int failedLoginAttempts = 0, DateTimeOffset? lockedUntil = null) =>
+        Domain.Identity.User.Restore(
+            Guid.CreateVersion7(), 1, "ana", "ana@example.com", "stored-hash", "Ana Pérez", "+50670189220", Now.AddDays(-30), failedLoginAttempts, lockedUntil);
 
     /// <summary>
-    /// Builds a stored refresh token for an account.
+    /// Builds a stored refresh token for a user.
     /// </summary>
-    /// <param name="account">Owner of the token.</param>
+    /// <param name="user">Owner of the token.</param>
     /// <param name="revoked">Whether the token was already used or revoked.</param>
     /// <param name="expiresAt">Expiry; defaults to 10 days from <see cref="Now"/>.</param>
     /// <returns>The token.</returns>
-    public static RefreshToken StoredToken(PhotographerAccount account, bool revoked = false, DateTimeOffset? expiresAt = null) =>
+    public static RefreshToken StoredToken(User user, bool revoked = false, DateTimeOffset? expiresAt = null) =>
         RefreshToken.Restore(
             Guid.CreateVersion7(),
-            account.Id,
+            user.Id,
             Guid.CreateVersion7(),
             "hash-of-presented-secret",
             Now.AddDays(-20),

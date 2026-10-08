@@ -65,7 +65,7 @@ describe('createHttpClient with a session', () => {
     const { fetchFn, sent } = sequenceFetch(jsonResponse(200, { ok: true }));
     const client = createHttpClient('https://api.example.test', { fetchFn });
 
-    await client.post('/api/auth/login', { email: 'a@b.c', password: 'x' }, identity);
+    await client.post('/api/auth/login', { username: 'ana', password: 'x' }, identity);
 
     expect(sent[0]?.authorization).toBeUndefined();
   });

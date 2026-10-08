@@ -8,13 +8,13 @@ namespace PhotoStudio.Application.Identity.RefreshSession;
 /// the same family. A token that was already revoked means it was used twice, which only happens when it was copied, so the
 /// whole family is revoked and the owner has to sign in again.
 /// </summary>
-/// <param name="accounts">Account repository.</param>
+/// <param name="users">User repository.</param>
 /// <param name="refreshTokens">Refresh token repository.</param>
 /// <param name="tokenGenerator">Hashes the presented secret.</param>
 /// <param name="sessions">Builds the session tokens.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class RefreshSessionHandler(
-    IPhotographerAccountRepository accounts,
+    IUserRepository users,
     IRefreshTokenRepository refreshTokens,
     IRefreshTokenGenerator tokenGenerator,
     SessionIssuer sessions,
@@ -26,7 +26,7 @@ public sealed class RefreshSessionHandler(
     /// <param name="command">Refresh token secret.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The new session.</returns>
-    /// <exception cref="AuthenticationFailedException">When the token is unknown, expired, already used or its account no longer exists.</exception>
+    /// <exception cref="AuthenticationFailedException">When the token is unknown, expired, already used or its user no longer exists.</exception>
     public async Task<AuthSessionResponse> HandleAsync(RefreshSessionCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
@@ -52,14 +52,14 @@ public sealed class RefreshSessionHandler(
             throw Invalid();
         }
 
-        var account = await accounts.GetByIdAsync(current.PhotographerId, cancellationToken);
-        if (account is null)
+        var user = await users.GetByIdAsync(current.PhotographerId, cancellationToken);
+        if (user is null)
         {
             await refreshTokens.RevokeFamilyAsync(current.FamilyId, now, cancellationToken);
             throw Invalid();
         }
 
-        var session = sessions.Issue(account.Id, account.Email, current.FamilyId, now);
+        var session = sessions.Issue(user, current.FamilyId, now);
         if (!await refreshTokens.RotateAsync(current, session.RefreshToken, now, cancellationToken))
         {
             // Another request used the same token between our read and our write.

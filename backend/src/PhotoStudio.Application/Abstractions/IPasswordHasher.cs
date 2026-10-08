@@ -22,8 +22,8 @@ public interface IPasswordHasher
     bool Verify(string passwordHash, string password);
 
     /// <summary>
-    /// Spends the same time as a real verification without comparing against any account. Used when the email is unknown,
-    /// so the response time does not reveal which emails have an account.
+    /// Spends the same time as a real verification without comparing against any user. Used when the username is unknown,
+    /// so the response time does not reveal which usernames exist.
     /// </summary>
     /// <param name="password">Password in clear text.</param>
     void SpendVerificationTime(string password);

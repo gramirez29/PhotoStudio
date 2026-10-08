@@ -83,15 +83,4 @@ public sealed class MongoRefreshTokenRepository(IMongoDatabase database) : IRefr
 
         return (int)result.ModifiedCount;
     }
-
-    /// <inheritdoc />
-    public async Task<int> RevokeAllAsync(Guid photographerId, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var result = await _collection.UpdateManyAsync(
-            token => token.PhotographerId == photographerId && token.RevokedAt == null,
-            Builders<RefreshTokenDocument>.Update.Set(token => token.RevokedAt, now.UtcDateTime),
-            cancellationToken: cancellationToken);
-
-        return (int)result.ModifiedCount;
-    }
 }

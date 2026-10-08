@@ -9,19 +9,24 @@ using PhotoStudio.Application.Identity;
 namespace PhotoStudio.Infrastructure.Identity;
 
 /// <summary>
-/// Registers everything the API needs to authenticate photographers: the token settings, the access token issuer, the JWT
-/// validation, a fallback policy that makes every endpoint require authentication unless it opts out, and the account seeder.
+/// Registers everything the API needs to authenticate users: the token settings, the access token issuer, the JWT
+/// validation, a fallback policy that makes every endpoint require authentication unless it opts out, and the sign-up switch.
 /// </summary>
 public static class PhotographerAuthenticationExtensions
 {
+    /// <summary>
+    /// Environment variable that turns sign-up off when its value is <c>false</c>. Sign-up is open when it is not set.
+    /// </summary>
+    public const string RegistrationEnabledVariable = "AUTH_REGISTRATION_ENABLED";
+
     /// <summary>
     /// Maximum difference tolerated between the clock of the API and the expiry of a token.
     /// </summary>
     public static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Adds JWT authentication for the photographer app. Only the API calls this: the worker has no endpoints, so it needs
-    /// neither the signing key nor the seeding variables.
+    /// Adds JWT authentication for the photographer app. Only the API calls this: the worker has no endpoints, so it does
+    /// not need the signing key.
     /// </summary>
     /// <param name="services">Service collection to configure.</param>
     /// <param name="isDevelopment">Whether the API runs in the Development environment.</param>
@@ -34,13 +39,14 @@ public static class PhotographerAuthenticationExtensions
         var options = JwtOptions.FromEnvironment(isDevelopment);
         services.AddSingleton(options);
         services.AddSingleton(new AuthSessionSettings(options.RefreshTokenLifetime));
+        services.AddSingleton(new RegistrationSettings(ReadRegistrationEnabled()));
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(bearer =>
             {
-                // Keep the claim names as issued ("sub", "email") instead of mapping them to the legacy WS-Federation URIs.
+                // Keep the claim names as issued ("sub", "preferred_username") instead of mapping them to the legacy WS-Federation URIs.
                 bearer.MapInboundClaims = false;
                 bearer.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -65,7 +71,28 @@ public static class PhotographerAuthenticationExtensions
         services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-        services.AddHostedService<PhotographerAccountSeeder>();
         return services;
+    }
+
+    /// <summary>
+    /// Reads whether sign-up is open. A value that is neither <c>true</c> nor <c>false</c> stops the API at startup: guessing
+    /// could leave sign-up open when the operator meant to close it.
+    /// </summary>
+    /// <returns><see langword="true"/> unless the variable is set to <c>false</c>.</returns>
+    /// <exception cref="InvalidOperationException">When the variable holds anything other than true or false.</exception>
+    private static bool ReadRegistrationEnabled()
+    {
+        var value = Environment.GetEnvironmentVariable(RegistrationEnabledVariable);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        if (bool.TryParse(value.Trim(), out var enabled))
+        {
+            return enabled;
+        }
+
+        throw new InvalidOperationException($"'{RegistrationEnabledVariable}' must be 'true' or 'false'.");
     }
 }

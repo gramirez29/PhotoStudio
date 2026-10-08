@@ -1,8 +1,8 @@
 namespace PhotoStudio.Application.Identity.Login;
 
 /// <summary>
-/// Command to sign a photographer in with email and password.
+/// Command to sign a user in with username and password.
 /// </summary>
-/// <param name="Email">Email typed by the user.</param>
+/// <param name="Username">Username typed by the user.</param>
 /// <param name="Password">Password typed by the user.</param>
-public sealed record LoginCommand(string Email, string Password);
+public sealed record LoginCommand(string Username, string Password);

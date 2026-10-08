@@ -1,10 +1,10 @@
-# Autenticación del fotógrafo (JWT propio)
+# Autenticación (cuentas de usuario + JWT propio)
 
-Documento de referencia de cómo el fotógrafo inicia sesión y cómo la API sabe quién es, para que alguien que no vio el código entienda el diseño, dónde vive cada pieza y cómo se opera.
+Documento de referencia de cómo se crean las cuentas, cómo inicia sesión el fotógrafo y cómo la API sabe quién es cada petición, para que alguien que no vio el código entienda el diseño, dónde vive cada pieza y cómo se opera.
 
 - **Rama de origen:** `feature/photographer-auth`
 - **Alcance:** backend (.NET 10 + MongoDB) y app móvil (Expo). El portal del cliente (token de enlace + OTP) **no** está incluido: es otro mecanismo.
-- **Decisiones del producto:** cuenta sembrada desde variables de entorno (sin registro público) y login con email + contraseña.
+- **Decisiones del producto:** las cuentas se crean desde la propia app (pantalla de login → "Crear cuenta"), se guardan en la colección **`users`** (usuario, correo, contraseña —solo su hash—, nombre y teléfono) y se entra con **usuario y contraseña**. El correo se pide y es único, pero **todavía no se verifica ni se usa para entrar** (ver §18).
 
 ---
 
@@ -14,11 +14,11 @@ Documento de referencia de cómo el fotógrafo inicia sesión y cómo la API sab
 2. [Vista general](#2-vista-general)
 3. [Tokens: access y refresh](#3-tokens-access-y-refresh)
 4. [Mapa de archivos](#4-mapa-de-archivos)
-5. [Backend: login](#5-backend-login)
-6. [Backend: renovación (refresh) y rotación](#6-backend-renovación-refresh-y-rotación)
-7. [Backend: logout](#7-backend-logout)
-8. [Backend: validar cada petición y aislar fotógrafos](#8-backend-validar-cada-petición-y-aislar-fotógrafos)
-9. [Backend: la cuenta sembrada](#9-backend-la-cuenta-sembrada)
+5. [Backend: crear una cuenta (registro)](#5-backend-crear-una-cuenta-registro)
+6. [Backend: login](#6-backend-login)
+7. [Backend: renovación (refresh) y rotación](#7-backend-renovación-refresh-y-rotación)
+8. [Backend: logout](#8-backend-logout)
+9. [Backend: validar cada petición y aislar usuarios](#9-backend-validar-cada-petición-y-aislar-usuarios)
 10. [Persistencia en MongoDB](#10-persistencia-en-mongodb)
 11. [App móvil](#11-app-móvil)
 12. [Configuración y variables de entorno](#12-configuración-y-variables-de-entorno)
@@ -40,9 +40,11 @@ Antes de este cambio la API estaba abierta: cualquiera que conociera la URL pod�
 
 Ahora:
 
-- Toda petición a `/api/**` (salvo el inicio de sesión) exige un **token firmado** emitido por la propia API.
+- Cada persona tiene un **usuario** (colección `users`) y se identifica con usuario y contraseña.
+- Toda petición a `/api/**` (salvo crear cuenta e iniciar sesión) exige un **token firmado** emitido por la propia API.
 - El `PhotographerId` sale **únicamente del token**. Lo que el cliente mande en el cuerpo o en la URL se ignora.
-- Cada operación sobre una reserva verifica que la reserva pertenece al fotógrafo del token. Si no, la API responde **404**, exactamente igual que si la reserva no existiera.
+- Cada operación sobre una reserva verifica que la reserva pertenece al usuario del token. Si no, la API responde **404**, exactamente igual que si la reserva no existiera.
+- El identificador del usuario (`users._id`) **es** el `PhotographerId`: cada cuenta nueva es su propio tenant.
 
 ---
 
@@ -50,24 +52,28 @@ Ahora:
 
 ```
    App móvil                                    API (.NET)                         MongoDB
- ┌───────────┐  POST /api/auth/login        ┌─────────────────┐
- │  Login    │ ───────────────────────────▶ │ LoginHandler    │ ─ cuenta por email ─▶ photographer_accounts
- │ (email +  │ ◀─ accessToken + refreshToken│  verifica hash  │ ─ guarda el hash ───▶ refresh_tokens
- │ password) │    (JWT 15 min / opaco 30 d) └─────────────────┘
+ ┌───────────┐  POST /api/auth/register     ┌──────────────────┐
+ │ Crear     │ ───────────────────────────▶ │ RegisterUser     │ ─ guarda el usuario ─▶ users
+ │ cuenta    │ ◀─ 201 + sesión (ya entró)   │  valida + hash   │ ─ guarda el hash ────▶ refresh_tokens
+ └───────────┘                              └──────────────────┘
+ ┌───────────┐  POST /api/auth/login        ┌──────────────────┐
+ │ Login     │ ───────────────────────────▶ │ LoginHandler     │ ─ usuario por username ▶ users
+ │ (usuario +│ ◀─ accessToken + refreshToken│  verifica hash   │ ─ guarda el hash ─────▶ refresh_tokens
+ │ password) │    (JWT 15 min / opaco 30 d) └──────────────────┘
  └─────┬─────┘
        │ guarda el refreshToken en expo-secure-store (Keychain / Keystore)
        │ guarda el accessToken solo en memoria
        ▼
- ┌───────────┐  GET /api/bookings           ┌─────────────────┐
- │ cualquier │  Authorization: Bearer <JWT> │ Middleware JWT  │  valida firma, emisor, audiencia,
- │ petición  │ ───────────────────────────▶ │ + Authorization │  algoritmo y vencimiento
- └─────┬─────┘                              └────────┬────────┘
+ ┌───────────┐  GET /api/bookings           ┌──────────────────┐
+ │ cualquier │  Authorization: Bearer <JWT> │ Middleware JWT   │  valida firma, emisor, audiencia,
+ │ petición  │ ───────────────────────────▶ │ + Authorization  │  algoritmo y vencimiento
+ └─────┬─────┘                              └────────┬─────────┘
        │                                             │ claim "sub" = PhotographerId
        │ 401 (token vencido)                         ▼
-       │                                    ┌─────────────────┐
-       │  POST /api/auth/refresh            │ Handler         │  GetOwnedAsync(id, photographerId)
-       └──────────────────────────────────▶ │ (con tenant)    │  → 404 si la reserva es de otro
-          { refreshToken }                  └─────────────────┘
+       │                                    ┌──────────────────┐
+       │  POST /api/auth/refresh            │ Handler          │  GetOwnedAsync(id, photographerId)
+       └──────────────────────────────────▶ │ (con tenant)     │  → 404 si la reserva es de otro
+          { refreshToken }                  └──────────────────┘
           ◀─ nuevo accessToken + NUEVO refreshToken (el anterior queda revocado)
 ```
 
@@ -80,7 +86,7 @@ Dos tokens con dos funciones:
 | Para qué sirve | Autorizar cada petición | Obtener un access token nuevo sin pedir la contraseña |
 | Dónde vive en el servidor | En ningún lado (se valida con la firma) | En Mongo, **solo su hash** SHA-256 |
 | Dónde vive en la app | **Solo en memoria** | `expo-secure-store` (Keychain en iOS, Keystore en Android) |
-| Si se filtra | Sirve hasta 15 minutos | Se detecta al usarse dos veces (ver §6) |
+| Si se filtra | Sirve hasta 15 minutos | Se detecta al usarse dos veces (ver §7) |
 
 ---
 
@@ -92,21 +98,21 @@ Emitido por `JwtAccessTokenIssuer`. Claims:
 
 | Claim | Valor | Uso |
 |---|---|---|
-| `sub` | `PhotographerId` (GUID) | **Es el tenant de toda consulta.** |
-| `email` | email del fotógrafo | Informativo. |
+| `sub` | `PhotographerId` (= `users._id`, GUID) | **Es el tenant de toda consulta.** |
+| `preferred_username` | el usuario | Informativo. |
 | `jti` | GUID único | Identifica el token. |
 | `iss` / `aud` | `photostudio-api` / `photostudio-app` (configurables) | La API rechaza tokens de otro emisor o audiencia. |
 | `iat` / `nbf` / `exp` | emisión / no antes de / vencimiento | Vida de 15 min (configurable). |
 
-No lleva roles ni permisos: hoy un fotógrafo solo puede hacer cosas de fotógrafo sobre sus propios datos.
+No lleva roles, nombre ni teléfono: solo lo necesario para autorizar.
 
-Validación (en `PhotographerAuthenticationExtensions`): firma con la clave del servidor, `iss`, `aud`, vencimiento (tolerancia de 30 s), `RequireSignedTokens`, y **`ValidAlgorithms = [HS256]`**, de modo que un token con `alg: none` o con otro algoritmo se rechaza. `MapInboundClaims = false` mantiene los nombres de claim tal cual (`sub`, no el URI largo de WS-Federation).
+Validación (en `PhotographerAuthenticationExtensions`): firma con la clave del servidor, `iss`, `aud`, vencimiento (tolerancia de 30 s), `RequireSignedTokens`, y **`ValidAlgorithms = [HS256]`**, de modo que un token con `alg: none` o con otro algoritmo se rechaza. `MapInboundClaims = false` mantiene los nombres de claim tal cual.
 
 ### 3.2 Refresh token
 
 Generado por `RefreshTokenGenerator`: 256 bits del generador aleatorio del sistema, en base64url. **Lo que se guarda en Mongo es `SHA-256(secreto)`**, nunca el secreto: si alguien lee la base de datos no obtiene tokens utilizables. Un hash rápido es suficiente aquí (a diferencia de una contraseña) porque el secreto ya tiene entropía completa y no hay nada que adivinar por fuerza bruta.
 
-Cada login crea una **familia** (`familyId`). Cada renovación revoca el token usado y emite uno nuevo **de la misma familia**. La familia es la unidad de revocación: cerrar sesión o detectar un robo revoca solo esa familia, así que cerrar sesión en el teléfono no cierra la de la tablet.
+Cada login o registro crea una **familia** (`familyId`). Cada renovación revoca el token usado y emite uno nuevo **de la misma familia**. La familia es la unidad de revocación: cerrar sesión o detectar un robo revoca solo esa familia, así que cerrar sesión en el teléfono no cierra la de la tablet.
 
 ---
 
@@ -118,23 +124,23 @@ Rutas relativas a `backend/` (API) y `mobile/` (app).
 
 | Archivo | Rol |
 |---|---|
-| `src/PhotoStudio.Domain/Identity/PhotographerAccount.cs` | Agregado de la cuenta: email normalizado, hash, contador de fallos y bloqueo. Constantes `MaxFailedLoginAttempts = 5` y `LockoutDuration = 15 min`. |
+| `src/PhotoStudio.Domain/Identity/User.cs` | Agregado del usuario: `username`, hash de la contraseña, `name`, `phone`, contador de fallos y bloqueo. Reglas de validación y normalización (username, nombre, teléfono, largo de contraseña). `MaxFailedLoginAttempts = 5`, `LockoutDuration = 15 min`. |
 | `src/PhotoStudio.Domain/Identity/RefreshToken.cs` | Refresh token (solo su hash), familia, vencimiento, revocación. |
-| `src/PhotoStudio.Domain/Common/DomainErrorCodes.cs` | Códigos nuevos `account.invalid_email` y `account.weak_password`. |
+| `src/PhotoStudio.Domain/Common/DomainErrorCodes.cs` | Códigos `user.invalid_username`, `user.invalid_name`, `user.invalid_phone`, `user.weak_password`. |
 
 ### Backend: Application
 
 | Archivo | Rol |
 |---|---|
-| `Abstractions/IPhotographerAccountRepository.cs`, `IRefreshTokenRepository.cs` | Puertos de persistencia. |
+| `Abstractions/IUserRepository.cs`, `IRefreshTokenRepository.cs` | Puertos de persistencia. |
 | `Abstractions/IPasswordHasher.cs`, `IAccessTokenIssuer.cs`, `IRefreshTokenGenerator.cs` | Puertos de criptografía y emisión (los implementa Infrastructure). |
-| `Identity/Login/LoginHandler.cs` | Caso de uso de login. |
+| `Identity/Register/RegisterUserHandler.cs` | Crea el usuario y lo deja con sesión iniciada. |
+| `Identity/Login/LoginHandler.cs` | Login. |
 | `Identity/RefreshSession/RefreshSessionHandler.cs` | Renovación con rotación y detección de robo. |
 | `Identity/Logout/LogoutHandler.cs` | Cierre de sesión. |
-| `Identity/EnsureAccount/EnsurePhotographerAccountHandler.cs` | Crea o actualiza la cuenta sembrada. |
-| `Identity/SessionIssuer.cs`, `AuthSessionSettings.cs`, `AuthSessionResponse.cs` | Arma los tokens de una sesión; vida del refresh token; respuesta. |
-| `Exceptions/AuthenticationFailedException.cs`, `AccountLockedException.cs` | Errores de autenticación (401 y 429). |
-| `Bookings/BookingRepositoryExtensions.cs` | `GetOwnedAsync`: carga una reserva **solo si es del fotógrafo**. |
+| `Identity/SessionIssuer.cs`, `AuthSessionSettings.cs`, `RegistrationSettings.cs`, `AuthSessionResponse.cs` | Arma los tokens; vida del refresh token; interruptor del registro; respuesta. |
+| `Exceptions/AuthenticationFailedException.cs`, `AccountLockedException.cs`, `RegistrationDisabledException.cs` | Errores 401, 429 y 403. |
+| `Bookings/BookingRepositoryExtensions.cs` | `GetOwnedAsync`: carga una reserva **solo si es del usuario**. |
 | `DependencyInjection.cs` | `AddApplicationAuthentication()`. |
 
 ### Backend: Infrastructure
@@ -143,51 +149,89 @@ Rutas relativas a `backend/` (API) y `mobile/` (app).
 |---|---|
 | `Identity/AspNetPasswordHasher.cs` | Hash de contraseñas (PBKDF2 del hasher de ASP.NET Core). |
 | `Identity/RefreshTokenGenerator.cs` | Secreto aleatorio y su hash SHA-256. |
-| `Identity/JwtOptions.cs` | Lee y valida las variables `JWT_*`. |
-| `Identity/JwtAccessTokenIssuer.cs` | Emite el JWT. |
-| `Identity/PhotographerAuthenticationExtensions.cs` | Configura la validación JWT, la política por defecto (todo protegido) y el sembrado. |
-| `Identity/PhotographerAccountSeeder.cs` | Servicio de arranque que crea la cuenta desde las variables `SEED_*`. |
-| `Persistence/MongoPhotographerAccountRepository.cs`, `MongoRefreshTokenRepository.cs` | Repositorios Mongo. |
+| `Identity/JwtOptions.cs`, `JwtAccessTokenIssuer.cs` | Variables `JWT_*` y emisión del JWT. |
+| `Identity/PhotographerAuthenticationExtensions.cs` | Validación JWT, política por defecto (todo protegido) e interruptor `AUTH_REGISTRATION_ENABLED`. |
+| `Persistence/MongoUserRepository.cs`, `MongoRefreshTokenRepository.cs` | Repositorios Mongo. |
 | `Persistence/Documents/IdentityDocuments.cs`, `IdentityDocumentMappings.cs` | Documentos y mapeos. |
-| `Persistence/MongoIndexInitializer.cs` | Índices (email único, hash único, TTL, etc.). |
+| `Persistence/MongoIndexInitializer.cs` | Índices (username único, hash único, TTL, etc.). |
 
 ### Backend: Api
 
 | Archivo | Rol |
 |---|---|
-| `Endpoints/AuthEndpoints.cs`, `AuthRequests.cs` | `/api/auth/login`, `/refresh`, `/logout`. |
+| `Endpoints/AuthEndpoints.cs`, `AuthRequests.cs` | `/api/auth/register`, `/login`, `/refresh`, `/logout`. |
 | `Auth/ClaimsPrincipalExtensions.cs` | `GetPhotographerId()`: el tenant sale del claim `sub`. |
-| `Endpoints/BookingEndpoints.cs`, `BookingRequests.cs` | Todos los endpoints pasan el fotógrafo del token. |
-| `RateLimiting/RateLimitingExtensions.cs` | Límite de 10 por minuto por IP para `/api/auth/*`. |
-| `Errors/GlobalExceptionHandler.cs` | 401 y 429 con `code` estable. |
+| `Endpoints/BookingEndpoints.cs`, `BookingRequests.cs` | Todos los endpoints pasan el usuario del token. |
+| `RateLimiting/RateLimitingExtensions.cs` | 5 registros por hora y 10 intentos de sesión por minuto, por IP. |
+| `Errors/GlobalExceptionHandler.cs` | 401, 403 y 429 con `code` estable. |
 | `Program.cs` | Composición: `UseForwardedHeaders`, `UseAuthentication`, `UseAuthorization`. |
+| `scripts/migrate-tenant.js` | Script de `mongosh` para pasar las reservas de un tenant antiguo a un usuario (ver §13.3). |
 
 ### App móvil (`mobile/src/`)
 
 | Archivo | Rol |
 |---|---|
-| `session/sessionStore.ts` | Estado de la sesión (Zustand): `restoring`, `offline`, `signedOut`, `signedIn`. |
-| `session/sessionManager.ts` | Login, restaurar, renovar (una sola a la vez), cerrar sesión. |
+| `session/sessionStore.ts`, `sessionManager.ts` | Estado de la sesión (Zustand) y su ciclo: registrar, entrar, restaurar, renovar (una a la vez), salir. |
 | `storage/refreshTokenStorage.ts` | Guarda el refresh token en `expo-secure-store`. |
 | `api/authApi.ts`, `api/authClient.ts` | Llamadas a `/api/auth/*` con un cliente **sin** manejo de sesión. |
-| `api/httpClient.ts` | Adjunta el token y, ante un 401, renueva y reintenta **una vez**. |
-| `api/client.ts` | Cliente con sesión para el resto de la API. |
-| `app/_layout.tsx`, `app/login.tsx` | Navegación protegida y pantalla de login. |
-| `components/LoginForm.tsx`, `SignOutButton.tsx`; `hooks/useLoginForm.ts`; `forms/loginForm.ts` | Formulario, botón "Salir", estado y validación. |
+| `api/httpClient.ts`, `api/client.ts` | Adjunta el token y, ante un 401, renueva y reintenta **una vez**. |
+| `app/_layout.tsx`, `app/login.tsx` | Navegación protegida y pantalla de acceso. |
+| `components/AuthPanel.tsx`, `LoginForm.tsx`, `RegisterForm.tsx`, `KeyboardAwareScreen.tsx`, `SignOutButton.tsx` | Pantalla de acceso (alterna login/crear cuenta), formularios, contenedor que esquiva el teclado, botón "Salir". |
+| `forms/loginForm.ts`, `forms/registerForm.ts`; `hooks/useLoginForm.ts`, `hooks/useRegisterForm.ts` | Validación y estado de los formularios. |
 
 ---
 
-## 5. Backend: login
+## 5. Backend: crear una cuenta (registro)
 
-`POST /api/auth/login` con `{ "email", "password" }`. Lo ejecuta `LoginHandler`:
+`POST /api/auth/register` con `{ "username", "password", "name", "phone" }`. Lo ejecuta `RegisterUserHandler`:
 
 ```
-1. email = TryNormalizeEmail(command.Email)            // recorta y pasa a minúsculas; null si no parece un email
-2. account = email == null ? null : GetByEmailAsync(email)
-3. si account == null:
+1. si el registro está cerrado (AUTH_REGISTRATION_ENABLED=false)  → 403 auth.registration_disabled
+2. valida y normaliza TODO antes de gastar CPU en el hash:
+       contraseña (8–128), username, correo, nombre, teléfono → 422 con el código del campo
+3. crea el usuario con un Id nuevo (Guid v7) y el hash de la contraseña
+4. lo guarda; los índices únicos deciden si el usuario o el correo ya existían
+                                                            → 409 user.username_taken / user.email_taken
+5. abre sesión (familia nueva) y guarda el hash del refresh token
+6. → 201 con la sesión: la persona ya está dentro
+```
+
+### 5.1 Campos del usuario
+
+| Campo | Regla | Se guarda como |
+|---|---|---|
+| `username` | 3 a 30 caracteres: letras `a-z`, dígitos, `.`, `-` y `_`; empieza y termina con letra o dígito. No distingue mayúsculas. | Minúsculas |
+| `email` | Obligatorio, hasta 254 caracteres: una arroba, algo antes, un dominio con punto después y sin espacios. Solo se comprueba la **forma**, no que el buzón exista. No distingue mayúsculas. **Único.** | Minúsculas |
+| `password` | 8 a 128 caracteres (solo se valida el largo; una frase larga vale más que una regla de composición). El máximo evita que alguien nos haga gastar CPU con una clave enorme. | **Solo el hash** (PBKDF2 con sal) |
+| `name` | Obligatorio, hasta 100 caracteres | Sin espacios sobrantes |
+| `phone` | 8 a 15 dígitos, con `+` opcional al inicio. Se quitan espacios, guiones, puntos y paréntesis | Ej.: `+50670189220` |
+
+Respecto a "contraseña encriptada": la contraseña **no se cifra** (el cifrado se puede revertir), se **hashea** (no se puede revertir). Es la práctica correcta: ni el servidor ni quien lea la base de datos puede recuperar la contraseña original; solo comprobar si una candidata coincide.
+
+### 5.2 Concurrencia
+
+Dos registros simultáneos con el mismo usuario (o el mismo correo): gana exactamente uno. No se hace "buscar y luego insertar" (que dejaría pasar a los dos); los **índices únicos** `ix_user_username` e `ix_user_email` rechazan al segundo y el repositorio lo convierte en `409`. El servidor nombra el índice violado en su error, y así el repositorio distingue `user.username_taken` de `user.email_taken`. Hay una prueba con 4 registros paralelos que exige 1 creado y 3 conflictos.
+
+### 5.3 Quién puede registrarse
+
+Cualquiera que llegue a la API, mientras el registro esté abierto (por defecto lo está). Defensas:
+
+- **Límite de 5 registros por hora por IP** (`register`), más estricto que el de login porque crear cuentas es la forma más barata de llenar la base.
+- **Interruptor `AUTH_REGISTRATION_ENABLED=false`**: cierra el registro (403) sin tocar el login ni a los usuarios existentes. Pensado para activarlo en producción una vez creada tu cuenta.
+
+---
+
+## 6. Backend: login
+
+`POST /api/auth/login` con `{ "username", "password" }`. Lo ejecuta `LoginHandler`:
+
+```
+1. username = TryNormalizeUsername(command.Username)   // recorta y pasa a minúsculas; null si no es válido
+2. user = username == null ? null : GetByUsernameAsync(username)
+3. si user == null:
        SpendVerificationTime(password)                 // gasta el mismo tiempo que una verificación real
        → 401 auth.invalid_credentials
-4. si account está bloqueada ahora:
+4. si el usuario está bloqueado ahora:
        → 429 auth.account_locked  (+ Retry-After)      // sin verificar la contraseña
 5. si Verify(hash, password) falla:
        intentos = RegisterFailedLoginAsync(id)         // $inc atómico en Mongo
@@ -200,12 +244,12 @@ Rutas relativas a `backend/` (API) y `mobile/` (app).
 
 Decisiones de seguridad:
 
-- **No se revela si el email existe.** Email inexistente, email con formato inválido y contraseña incorrecta responden con el mismo estado, el mismo `code` y el mismo `detail`. Además, el caso "email desconocido" ejecuta una verificación de hash señuelo (`SpendVerificationTime`) para que el **tiempo de respuesta** tampoco lo delate.
-- **El contador de fallos es atómico.** Si se cargara la cuenta, se incrementara y se guardara con concurrencia optimista, un atacante que enviara 100 intentos en paralelo haría que casi todas las escrituras chocaran y el contador apenas avanzara, burlando el bloqueo. Con `$inc` cada intento cuenta (hay una prueba de integración con 25 intentos paralelos que exige que el contador llegue a exactamente 25).
-- **Bloqueo temporal, no permanente:** 5 fallos seguidos bloquean 15 minutos. Contrapartida conocida: un atacante que sepa el email puede mantener bloqueado al dueño (ver §18).
+- **No se revela si el usuario existe.** Usuario inexistente, usuario con formato inválido y contraseña incorrecta responden con el mismo estado, el mismo `code` y el mismo `detail`. El caso "usuario desconocido" ejecuta además una verificación de hash señuelo (`SpendVerificationTime`) para que el **tiempo de respuesta** tampoco lo delate. (El *registro* sí revela que un nombre está ocupado: es inherente a poder elegir nombre.)
+- **El contador de fallos es atómico.** Si se cargara el usuario, se incrementara y se guardara con concurrencia optimista, un atacante que enviara 100 intentos en paralelo haría que casi todas las escrituras chocaran y el contador apenas avanzara, burlando el bloqueo. Con `$inc` cada intento cuenta (hay una prueba con 25 intentos paralelos que exige que el contador llegue a exactamente 25).
+- **Bloqueo temporal, no permanente:** 5 fallos seguidos bloquean 15 minutos.
 - **Cada login crea su propia familia** de refresh tokens.
 
-Respuesta (`AuthSessionResponse`):
+Respuesta de registro y de login (`AuthSessionResponse`):
 
 ```json
 {
@@ -213,14 +257,16 @@ Respuesta (`AuthSessionResponse`):
   "accessTokenExpiresAt": "2026-10-08T21:15:00+00:00",
   "refreshToken": "q3Vf...",
   "refreshTokenExpiresAt": "2026-11-07T21:00:00+00:00",
-  "photographerId": "0197a000-0000-7000-8000-000000000001",
-  "email": "ana@example.com"
+  "photographerId": "0199a1b2-0000-7000-8000-000000000002",
+  "username": "ana.photo",
+  "email": "ana@example.com",
+  "name": "Ana Pérez"
 }
 ```
 
 ---
 
-## 6. Backend: renovación (refresh) y rotación
+## 7. Backend: renovación (refresh) y rotación
 
 `POST /api/auth/refresh` con `{ "refreshToken" }`. Lo ejecuta `RefreshSessionHandler`:
 
@@ -231,14 +277,14 @@ Respuesta (`AuthSessionResponse`):
        RevokeFamilyAsync(token.FamilyId)          // se mata toda la familia
        → 401
 4. si token vencido                               → 401
-5. si la cuenta ya no existe: revoca la familia   → 401
+5. si el usuario ya no existe: revoca la familia  → 401
 6. nueva = access token + refresh token (misma familia)
 7. RotateAsync(actual, nueva)                     // atómico, ver abajo
        si devuelve false (otro lo rotó antes): revoca la familia → 401
 8. → 200 con la sesión nueva
 ```
 
-### 6.1 Rotación atómica
+### 7.1 Rotación atómica
 
 `MongoRefreshTokenRepository.RotateAsync` hace, **dentro de una transacción**:
 
@@ -248,7 +294,7 @@ Respuesta (`AuthSessionResponse`):
 
 Como el filtro exige `revokedAt: null`, de varias renovaciones simultáneas del mismo token **exactamente una** gana (prueba de integración con 8 en paralelo: una gana y se guarda un solo reemplazo). Y como todo va en una transacción, un fallo a mitad no deja al usuario sin token válido.
 
-### 6.2 Por qué reusar un token revoca toda la familia
+### 7.2 Por qué reusar un token revoca toda la familia
 
 Un refresh token legítimo se usa una sola vez: la app lo cambia por uno nuevo y descarta el viejo. Si el servidor ve un token ya usado, solo hay dos explicaciones: alguien lo copió (robo) o hay un fallo del cliente. En ambos casos lo seguro es **invalidar toda la familia**: el ladrón y el dueño pierden la sesión y el dueño tiene que iniciar sesión de nuevo. Es el comportamiento recomendado por la guía de seguridad de OAuth para refresh tokens públicos/móviles.
 
@@ -256,7 +302,7 @@ Consecuencia para el cliente: **no puede haber dos renovaciones en paralelo con 
 
 ---
 
-## 7. Backend: logout
+## 8. Backend: logout
 
 `POST /api/auth/logout` con `{ "refreshToken" }`. `LogoutHandler` busca el token por hash y revoca **su familia**. Siempre responde **204**, exista o no el token, para no revelar qué tokens son válidos. Es idempotente.
 
@@ -264,21 +310,21 @@ El access token vigente sigue siendo válido hasta que venza (máximo 15 min): l
 
 ---
 
-## 8. Backend: validar cada petición y aislar fotógrafos
+## 9. Backend: validar cada petición y aislar usuarios
 
-### 8.1 Seguro por defecto
+### 9.1 Seguro por defecto
 
 `PhotographerAuthenticationExtensions` define una **política de respaldo** (`FallbackPolicy = RequireAuthenticatedUser`). Significa que un endpoint nuevo es **privado por defecto**: para hacerlo público hay que decir `AllowAnonymous()` explícitamente. Hoy son públicos únicamente:
 
 | Endpoint | Por qué |
 |---|---|
-| `POST /api/auth/login`, `/refresh`, `/logout` | Son los que crean y cierran la sesión (con límite de 10 por minuto por IP). |
+| `POST /api/auth/register`, `/login`, `/refresh`, `/logout` | Crean y cierran la sesión (con límite por IP). |
 | `GET /health/live`, `/health/ready` | Railway los consulta sin credenciales. |
 | `GET /openapi/v1.json` | Fuente de los tipos TypeScript. |
 
 Todo lo demás (`/api/bookings/**`, `/api/maintenance/run`) devuelve **401** sin token válido, con la cabecera `WWW-Authenticate: Bearer`.
 
-### 8.2 El tenant sale solo del token
+### 9.2 El tenant sale solo del token
 
 `ClaimsPrincipalExtensions.GetPhotographerId()` lee el claim `sub`. Los endpoints lo pasan a los comandos:
 
@@ -288,119 +334,106 @@ private static async Task<Ok<BookingResponse>> CancelAsync(
     TypedResults.Ok(await handler.HandleAsync(request.ToCommand(user.GetPhotographerId(), id), ct));
 ```
 
-`CreateBookingRequest` ya **no tiene** `PhotographerId`, y `GET /api/bookings` ya no recibe `?photographerId=`. Si un cliente malicioso los envía igual, se ignoran (hay pruebas de integración para ambos casos).
+`CreateBookingRequest` no tiene `PhotographerId` y `GET /api/bookings` no recibe `?photographerId=`. Si un cliente malicioso los envía igual, se ignoran (hay pruebas de integración para ambos casos).
 
-### 8.3 Cada operación verifica la propiedad
+### 9.3 Cada operación verifica la propiedad
 
-Todos los comandos y consultas de reservas llevan ahora `PhotographerId` como primer parámetro, y sus handlers cargan la reserva con:
+Todos los comandos y consultas de reservas llevan `PhotographerId` como primer parámetro, y sus handlers cargan la reserva con:
 
 ```csharp
 var booking = await repository.GetOwnedAsync(command.BookingId, command.PhotographerId, cancellationToken);
 ```
 
-`GetOwnedAsync` lanza `NotFoundException` si la reserva no existe **o si es de otro fotógrafo**, así que ambos casos responden **404 idéntico**: la API no confirma que un identificador ajeno exista. Cubre los 8 handlers: obtener, cancelar, completar, marcar ausente, revertir ausencia, reprogramar, firmar contrato y registrar pago. Está probado a nivel unitario (`BookingTenantIsolationTests`) y de punta a punta (`TenantIsolationApiTests`).
+`GetOwnedAsync` lanza `NotFoundException` si la reserva no existe **o si es de otro usuario**, así que ambos casos responden **404 idéntico**: la API no confirma que un identificador ajeno exista. Cubre los 8 handlers: obtener, cancelar, completar, marcar ausente, revertir ausencia, reprogramar, firmar contrato y registrar pago. Está probado a nivel unitario (`BookingTenantIsolationTests`) y de punta a punta (`TenantIsolationApiTests`, `RegistrationApiTests`).
 
-> El endpoint `POST /api/maintenance/run` exige sesión pero ejecuta trabajo **global** (expira reservas de todos los fotógrafos). Con un solo fotógrafo es irrelevante; cuando haya varios, restringirlo a un rol de sistema.
-
----
-
-## 9. Backend: la cuenta sembrada
-
-No hay registro público. La cuenta se crea al arrancar la API con tres variables de entorno; `PhotographerAccountSeeder` (un `BackgroundService`) ejecuta `EnsurePhotographerAccountHandler`:
-
-| Variable | Obligatoria | Descripción |
-|---|---|---|
-| `SEED_PHOTOGRAPHER_EMAIL` | Sí (para sembrar) | Email de acceso. |
-| `SEED_PHOTOGRAPHER_PASSWORD` | Sí (para sembrar) | Contraseña, **mínimo 10 caracteres**. |
-| `SEED_PHOTOGRAPHER_ID` | No | GUID del fotógrafo. **Conserva el tenant de los datos existentes**: las reservas se guardan con ese `PhotographerId`. Si falta, se genera uno nuevo. |
-
-Comportamiento:
-
-| Situación | Resultado |
-|---|---|
-| No existe cuenta con ese email | **Se crea** con el `SEED_PHOTOGRAPHER_ID` dado. |
-| Existe y la contraseña coincide | No hace nada (`Unchanged`). |
-| Existe y la contraseña es distinta | **Reemplaza la contraseña** y **revoca todas las sesiones** (`PasswordUpdated`). |
-| Existe con otro `PhotographerId` que el configurado | Conserva el existente y escribe un aviso en el log (las reservas guardadas bajo el id configurado no serían alcanzables). |
-| Faltan las variables | Registra un aviso y no hace nada (la API arranca igual). |
-| Mongo no responde al arrancar | Reintenta 5 veces cada 5 s; nunca impide que la API arranque. |
-| Contraseña muy corta o email inválido | Error en el log; no crea la cuenta. |
-
-**Mientras las variables estén definidas, el entorno manda sobre la contraseña.** Esa es también la vía de **recuperación** si olvidas la contraseña: cambias `SEED_PHOTOGRAPHER_PASSWORD`, reinicias, y todas las sesiones anteriores quedan revocadas. Cuando exista cambio de contraseña desde la app, habrá que quitar estas variables para que no la pisen.
+> **Importante con el registro abierto:** `POST /api/maintenance/run` exige sesión pero ejecuta trabajo **global** (expira las reservas vencidas de *todos* los usuarios). Como ahora cualquiera puede crear una cuenta, cualquiera puede dispararlo. Es idempotente, de duración acotada y limitado a 1 llamada por minuto, así que el daño posible es una carga leve, pero conviene restringirlo a un rol de sistema (ver §18).
 
 ---
 
 ## 10. Persistencia en MongoDB
 
-### `photographer_accounts`
+### `users`
 
 | Campo | Significado |
 |---|---|
-| `_id` | `PhotographerId` (GUID). Es el tenant de todas las demás colecciones. |
-| `version` | Versión (se incrementa al cambiar la contraseña). |
-| `email` | Normalizado (minúsculas, sin espacios). **Índice único `ix_account_email`**. |
-| `passwordHash` | Formato del hasher de ASP.NET Core (incluye sal y parámetros). |
-| `createdAt`, `failedLoginAttempts`, `lockedUntil` | Alta, fallos seguidos y fin del bloqueo. |
+| `_id` | **`PhotographerId`** (GUID v7). Es el tenant de todas las demás colecciones. |
+| `username` | Normalizado (minúsculas). **Índice único `ix_user_username`**. |
+| `email` | Normalizado (minúsculas). **Índice único y parcial `ix_user_email`** (solo para correos no vacíos, así los usuarios creados antes de que existiera el correo no chocan entre sí). |
+| `passwordHash` | Hash PBKDF2 con sal y parámetros (formato del hasher de ASP.NET Core). **Nunca la contraseña.** |
+| `name`, `phone` | Nombre y teléfono, ya normalizados. |
+| `version`, `createdAt` | Versión y alta. |
+| `failedLoginAttempts`, `lockedUntil` | Fallos seguidos y fin del bloqueo. |
 
 ### `refresh_tokens`
 
 | Campo | Significado |
 |---|---|
-| `_id`, `photographerId`, `familyId` | Identificador, dueño y familia de login. |
+| `_id`, `photographerId`, `familyId` | Identificador, dueño (= `users._id`) y familia de login. |
 | `tokenHash` | SHA-256 del secreto. **Índice único `ix_refresh_hash`**. |
 | `createdAt`, `expiresAt` | Emisión y vencimiento. |
 | `revokedAt`, `replacedById` | Cuándo se usó/revocó y qué token lo reemplazó. |
 
-Índices: `ix_refresh_hash` (único), `ix_refresh_family` y `ix_refresh_photographer` (revocar una familia o todas las sesiones de un fotógrafo), y `ix_refresh_retention` (TTL: Mongo borra los tokens 7 días después de vencer; se conservan ese tiempo para reconocer un token vencido que se reenvía).
+Índices: `ix_user_username` (único), `ix_user_email` (único, parcial), `ix_refresh_hash` (único), `ix_refresh_family` y `ix_refresh_photographer` (revocar una familia o las sesiones de un usuario) y `ix_refresh_retention` (TTL: Mongo borra los tokens 7 días después de vencer; se conservan ese tiempo para reconocer un token vencido que se reenvía).
+
+> La colección anterior `photographer_accounts` (la usó una versión previa de esta rama) ya no se usa. Si existe en tu base de desarrollo puedes borrarla: `db.photographer_accounts.drop()`.
 
 ---
 
 ## 11. App móvil
 
-### 11.1 Estados de la sesión
+### 11.1 Pantalla de acceso
 
-`sessionStore.ts` (Zustand) guarda `status` y, si hay sesión, el access token, su vencimiento, el `photographerId` y el email:
+`app/login.tsx` muestra `AuthPanel`, que alterna entre dos formularios con un enlace al pie:
+
+| Modo | Campos | Botón |
+|---|---|---|
+| **Iniciar sesión** (por defecto) | Usuario, Contraseña | Iniciar sesión · "¿No tienes cuenta? **Crear cuenta**" |
+| **Crear cuenta** | Nombre, Teléfono (se muestra como `7018-9220`), Correo, Usuario, Contraseña, Repite la contraseña | Crear cuenta · "¿Ya tienes cuenta? **Iniciar sesión**" |
+
+La validación del formulario (`forms/registerForm.ts`) repite las reglas del servidor para avisar junto al campo sin ir a la red: nombre obligatorio, teléfono válido (8 dígitos CR o con código de país), correo con forma válida (la app es un poco más estricta que el servidor: no admite dos puntos seguidos en el dominio), usuario de 3–30 caracteres con el formato permitido, contraseña de 8 a 128 y que las dos coincidan. El servidor vuelve a validar todo: la validación de la app es solo comodidad. El usuario se pasa a minúsculas antes de enviarlo.
+
+Al crear la cuenta la persona **queda dentro** (el registro devuelve una sesión), sin volver a escribir sus datos.
+
+### 11.2 Estados de la sesión
+
+`sessionStore.ts` (Zustand) guarda `status` y, si hay sesión, el access token, su vencimiento, el `photographerId`, el usuario y el nombre:
 
 | Estado | Significado | Qué se ve |
 |---|---|---|
 | `restoring` | Buscando una sesión guardada al abrir la app | Indicador de carga |
 | `offline` | Hay sesión guardada pero no se pudo contactar al servidor para renovarla | "No se pudo conectar…" con **Reintentar** |
-| `signedOut` | Sin sesión | Pantalla de login |
+| `signedOut` | Sin sesión | Pantalla de acceso |
 | `signedIn` | Con sesión | La app |
 
-El access token vive **solo en memoria**. El refresh token se guarda en `expo-secure-store` (almacén cifrado del sistema). Si el almacén falla (por ejemplo, dispositivo bloqueado) la app sigue funcionando con la sesión en memoria y solo pide iniciar sesión de nuevo al reiniciar.
+El access token vive **solo en memoria**. El refresh token se guarda en `expo-secure-store`. Si el almacén falla la app sigue funcionando con la sesión en memoria y solo pide iniciar sesión de nuevo al reiniciar.
 
-### 11.2 Arranque
+### 11.3 Arranque y una sola renovación a la vez
 
-`_layout.tsx` llama `restoreSession()` una vez:
+`_layout.tsx` llama `restoreSession()` una vez: sin token guardado → acceso; con uno → lo canjea y guarda el nuevo; si el servidor responde 401 → borra lo guardado; si falla por **red** → `offline` con "Reintentar" (**no cierra la sesión por un problema de conexión**).
 
-1. Sin refresh token guardado → `signedOut` (login).
-2. Con uno guardado → lo canjea en `/api/auth/refresh`; si funciona → `signedIn` y guarda el refresh token **nuevo**.
-3. Si el servidor responde 401 (token revocado o vencido) → borra lo guardado y va al login.
-4. Si falla por **red** → `offline` con "Reintentar". **No cierra la sesión por un problema de conexión.**
-
-### 11.3 Una sola renovación a la vez
-
-El refresh token es de un solo uso (§6.2), así que dos renovaciones simultáneas harían que la segunda pareciera un robo y el servidor revocaría toda la sesión. `renewSessionOnce()` comparte **una sola promesa** entre todos los que necesiten renovar al mismo tiempo (por ejemplo, tres peticiones que reciben 401 a la vez). Está probado, y se comprobó con una mutación que la prueba falla si se elimina esa protección (3 llamadas en lugar de 1).
+El refresh token es de un solo uso (§7.2), así que dos renovaciones simultáneas harían que la segunda pareciera un robo. `renewSessionOnce()` comparte **una sola promesa** entre todos los que necesiten renovar al mismo tiempo. Está probado, y se comprobó con una mutación que la prueba falla si se elimina esa protección (3 llamadas en lugar de 1).
 
 ### 11.4 Cada petición
 
-`httpClient.ts` recibe un `AccessTokenProvider`:
-
-1. Antes de enviar pide el token (`getValidAccessToken`). Si le quedan menos de 60 s, **renueva primero**, así casi nunca se envía una petición con un token vencido.
-2. Envía `Authorization: Bearer <token>`.
-3. Si el servidor responde **401**, pide `renewAfterRejection(tokenRechazado)`: si otra petición ya renovó, usa ese token; si no, renueva. Luego **reintenta una sola vez**. Un segundo 401 se devuelve al llamador: nunca hay un bucle de reintentos.
-4. Si la renovación falla porque el servidor rechazó el refresh token → sesión terminada → la app vuelve al login. Si falla por red → el error de red llega al llamador y la sesión se conserva.
-
-Los endpoints de `/api/auth/*` usan un cliente aparte **sin** manejo de sesión (`authClient.ts`), para que el propio login o la renovación nunca intenten renovar la sesión recursivamente.
+`httpClient.ts` recibe un `AccessTokenProvider`: pide el token (si le quedan menos de 60 s, **renueva primero**), envía `Authorization: Bearer <token>`, y si el servidor responde **401** renueva una vez y **reintenta una sola vez** (un segundo 401 se devuelve: nunca hay bucle). Los endpoints de `/api/auth/*` usan un cliente aparte **sin** manejo de sesión (`authClient.ts`), para que el login o la renovación nunca intenten renovar recursivamente.
 
 ### 11.5 Navegación protegida
 
-`_layout.tsx` usa `Stack.Protected`: las pantallas de la app existen solo con `guard = signedIn` y el login solo con `signedOut`. Con la sesión cerrada **no se puede llegar a ninguna pantalla de la app** (ni por enlace profundo): Expo Router redirige. Al cerrar sesión se **vacía el caché de TanStack Query** para que los datos de una cuenta nunca se muestren a quien inicie sesión después en el mismo dispositivo. El botón **Salir** (esquina superior izquierda de la lista) pide confirmación.
+`_layout.tsx` usa `Stack.Protected`: las pantallas de la app existen solo con `signedIn` y la de acceso solo con `signedOut`. Con la sesión cerrada **no se puede llegar a ninguna pantalla de la app**. Al cerrar sesión se **vacía el caché de TanStack Query**. El botón **Salir** (esquina superior izquierda de la lista) pide confirmación.
 
 ### 11.6 Cerrar sesión
 
-`signOut()` olvida la sesión en el dispositivo **de inmediato** (memoria, almacén seguro, store) y después avisa al servidor para revocar la familia, en modo "mejor esfuerzo": sin conexión igual se cierra la sesión en el teléfono, y el refresh token del servidor expira solo a los 30 días.
+`signOut()` olvida la sesión en el dispositivo **de inmediato** y después avisa al servidor para revocar la familia, en modo "mejor esfuerzo": sin conexión igual se cierra la sesión en el teléfono, y el refresh token del servidor expira solo a los 30 días.
+
+### 11.7 El teclado ya no tapa los campos
+
+**Síntoma:** al tocar un campo del login, el teclado cubría la mitad de la pantalla y tapaba donde se escribe.
+
+**Causa probable:** la app se dibuja de borde a borde en Android (*edge-to-edge*), por lo que el sistema **ya no reduce la ventana** cuando aparece el teclado, y el formulario anterior solo se ajustaba en iOS (`KeyboardAvoidingView` con `behavior` indefinido en Android).
+
+**Arreglo:** el nuevo componente `KeyboardAwareScreen` (usado por el acceso) envuelve el contenido en un `KeyboardAvoidingView` con `behavior="padding"` **en ambas plataformas**, de modo que el área se encoge al espacio libre sobre el teclado, y dentro un `ScrollView` que permite desplazarse si el formulario no cabe (el de crear cuenta tiene cinco campos), con `keyboardShouldPersistTaps="handled"` (los toques siguen funcionando con el teclado abierto) y `keyboardDismissMode="on-drag"` (arrastrar cierra el teclado). Hay pruebas que fijan esas propiedades para que no se pierdan sin querer.
+
+> Esto no se pudo comprobar en un dispositivo desde el entorno de desarrollo del asistente: las pruebas verifican la configuración del componente, no el comportamiento visual del teclado. Si algún formulario sigue quedando tapado, indica el modelo/sistema del teléfono. Los formularios de nueva reserva y de motivo tienen el mismo patrón anterior (ajuste solo en iOS) y podrían adoptar `KeyboardAwareScreen`.
 
 ---
 
@@ -415,11 +448,11 @@ Solo la **API** las necesita; el worker no (no sirve HTTP).
 | `JWT_AUDIENCE` | No | `photostudio-app` | Claim `aud`. |
 | `JWT_ACCESS_TOKEN_MINUTES` | No | `15` | Vida del access token (1–60). |
 | `JWT_REFRESH_TOKEN_DAYS` | No | `30` | Vida del refresh token (1–365). |
-| `SEED_PHOTOGRAPHER_EMAIL` / `_PASSWORD` / `_ID` | Para crear la cuenta | — | Ver §9. |
+| `AUTH_REGISTRATION_ENABLED` | No | `true` | `false` cierra la creación de cuentas (403). Cualquier otro valor que no sea `true`/`false` hace que la API no arranque. |
 
-Un valor fuera de rango o no numérico en `JWT_*_MINUTES/DAYS` hace que la API **falle al arrancar** con un mensaje claro, en vez de usar un valor inesperado.
+Un valor fuera de rango o no numérico en las `JWT_*` hace que la API **falle al arrancar** con un mensaje claro.
 
-En la app ya **no existe** `EXPO_PUBLIC_PHOTOGRAPHER_ID`: el fotógrafo sale de la sesión. Solo queda `EXPO_PUBLIC_API_URL`. Recuerda que las variables `EXPO_PUBLIC_*` van dentro del paquete de la app: nunca pongas ahí un secreto.
+Ya **no existen** las variables `SEED_PHOTOGRAPHER_*` ni `EXPO_PUBLIC_PHOTOGRAPHER_ID`: el usuario sale del registro y de la sesión. En la app solo queda `EXPO_PUBLIC_API_URL`. Las variables `EXPO_PUBLIC_*` van dentro del paquete de la app: nunca pongas ahí un secreto.
 
 ---
 
@@ -427,38 +460,39 @@ En la app ya **no existe** `EXPO_PUBLIC_PHOTOGRAPHER_ID`: el fotógrafo sale de 
 
 ### 13.1 Backend
 
-El perfil de `launchSettings.json` ya trae una clave `dev-only` (solo válida en Development). Falta crear **tu cuenta**. Las credenciales **no se guardan en el repositorio**: expórtalas en la terminal antes de arrancar.
-
-PowerShell:
+No hace falta definir ninguna variable: el perfil de `launchSettings.json` trae la clave de desarrollo.
 
 ```powershell
 cd backend
 docker compose up -d --wait
-$env:SEED_PHOTOGRAPHER_EMAIL    = "tu@correo.com"
-$env:SEED_PHOTOGRAPHER_PASSWORD = "una contraseña larga de verdad"
-$env:SEED_PHOTOGRAPHER_ID       = "0197a000-0000-7000-8000-000000000001"
 dotnet run --project src/PhotoStudio.Api --launch-profile PhotoStudio.Api
 ```
 
-El `SEED_PHOTOGRAPHER_ID` anterior es el que usan las reservas de desarrollo existentes (el valor que tenía `EXPO_PUBLIC_PHOTOGRAPHER_ID`); así conservas esos datos. En el log debe aparecer `Photographer account Created (id …)`. En los siguientes arranques aparece `Unchanged`.
-
 ### 13.2 App
 
-Quita `EXPO_PUBLIC_PHOTOGRAPHER_ID` de `mobile/.env` (ya no se usa; no hace daño dejarla). Con la API corriendo y `EXPO_PUBLIC_API_URL` apuntando a ella, abre la app: verás el login.
+Abre la app y toca **Crear cuenta**. Eliges tu usuario y contraseña ahí mismo; no hay credenciales predefinidas. Con `EXPO_PUBLIC_API_URL` apuntando a la API, quedas dentro al terminar.
 
-### 13.3 Probar a mano con curl
+### 13.3 Recuperar las reservas de desarrollo que ya tenías
+
+Las reservas creadas antes de este cambio están guardadas bajo un identificador antiguo (`0197a000-0000-7000-8000-000000000001`), y la cuenta nueva tiene un identificador propio, así que no las verías. `backend/scripts/migrate-tenant.js` las pasa a tu usuario (reservas **y** agenda), y es idempotente:
+
+```powershell
+cd D:\Repositories\Applications\PhotoStudio
+docker exec -i photostudio-mongo mongosh photostudio_dev --quiet --eval "const username='tu.usuario'; $(Get-Content backend/scripts/migrate-tenant.js -Raw)"
+```
+
+Imprime algo como `{"username":"tu.usuario","bookingsMoved":8,"calendarMoved":true}`. Si el usuario no existe, falla con un mensaje claro sin tocar nada. El mismo script sirve con otro origen: `const fromId='<GUID anterior>'`.
+
+### 13.4 Probar a mano
 
 ```bash
-# login
-curl -s -X POST http://localhost:8080/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"email":"tu@correo.com","password":"tu contraseña"}'
-
-# sin token → 401
-curl -i http://localhost:8080/api/bookings
-
-# con token → 200
-curl -s http://localhost:8080/api/bookings -H "Authorization: Bearer <accessToken>"
+curl -s -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' \
+  -d '{"username":"ana.photo","email":"ana@example.com","password":"una clave larga","name":"Ana Perez","phone":"7018-9220"}'
+curl -i http://localhost:8080/api/bookings                                # sin token → 401
+curl -s http://localhost:8080/api/bookings -H "Authorization: Bearer <accessToken>"   # → 200
 ```
+
+(Con tildes, envía el JSON en UTF-8 puro, por ejemplo desde un archivo con `-d @archivo.json`; algunas terminales de Windows lo codifican mal y la API responde 400.)
 
 ---
 
@@ -466,19 +500,20 @@ curl -s http://localhost:8080/api/bookings -H "Authorization: Bearer <accessToke
 
 En el servicio **`photostudio-api`** → *Variables*:
 
-1. **`JWT_SIGNING_KEY`**: genera un secreto aleatorio **solo para producción**, por ejemplo:
+1. **`JWT_SIGNING_KEY`**: genera un secreto aleatorio **solo para producción**:
    - PowerShell: `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))`
    - Git Bash / Linux: `openssl rand -base64 48`
-   
-   Pégalo en Railway. **No lo guardes en el repositorio ni lo reutilices en otro entorno.** Si lo cambias, todos los access tokens vigentes dejan de valer (la app los renueva sola con el refresh token).
-2. **`SEED_PHOTOGRAPHER_EMAIL`**, **`SEED_PHOTOGRAPHER_PASSWORD`** (contraseña larga y única) y **`SEED_PHOTOGRAPHER_ID`** (el GUID de tu fotógrafo en la base de producción; si es una base nueva, puedes omitirlo).
-3. `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TOKEN_MINUTES` y `JWT_REFRESH_TOKEN_DAYS` son opcionales.
 
-Despliega. En los logs de la API debe aparecer `Photographer account Created (id …)`. Si la API no arranca con `'JWT_SIGNING_KEY' is the development key`, copiaste la clave de desarrollo; genera una nueva.
+   Pégalo en Railway. **No lo guardes en el repositorio ni lo reutilices en otro entorno.** Si lo cambias, los access tokens vigentes dejan de valer (la app los renueva sola).
+2. Despliega, abre la app apuntando a la API de producción y **crea tu cuenta** con "Crear cuenta".
+3. **Cierra el registro**: añade `AUTH_REGISTRATION_ENABLED` = `false` y redespliega. A partir de ahí nadie más puede crear cuentas; tú sigues entrando con las tuyas. Para abrirlo otra vez, bórrala o ponla en `true`.
+4. Opcionales: `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TOKEN_MINUTES`, `JWT_REFRESH_TOKEN_DAYS`.
 
-El servicio **`photostudio-worker`** **no necesita** ninguna de estas variables.
+Si la API no arranca con `'JWT_SIGNING_KEY' is the development key`, copiaste la clave de desarrollo; genera una nueva. El servicio **`photostudio-worker`** **no necesita** ninguna de estas variables.
 
-**Detrás del proxy de Railway:** la API usa `X-Forwarded-For` para saber la IP real del cliente (necesaria para el límite de intentos de login por IP); ya está configurado.
+**Detrás del proxy de Railway:** la API usa `X-Forwarded-For` para saber la IP real del cliente (necesaria para los límites por IP); ya está configurado.
+
+> **Si olvidas tu contraseña no hay recuperación automática** (no hay correo configurado). Opciones: crear otra cuenta y pasarle tus reservas con `migrate-tenant.js` (`fromId` = tu `users._id` anterior), o, con acceso a Mongo, borrar tu documento de `users` y volver a registrarte. Es una limitación asumida; ver §18.
 
 ---
 
@@ -486,12 +521,11 @@ El servicio **`photostudio-worker`** **no necesita** ninguna de estas variables.
 
 | Método | Ruta | Auth | Cuerpo | Respuestas |
 |---|---|---|---|---|
-| POST | `/api/auth/login` | Pública (10/min/IP) | `{ email, password }` | 200 sesión · 401 `auth.invalid_credentials` · 429 `auth.account_locked` (+`Retry-After`) · 429 `rate_limit.exceeded` |
+| POST | `/api/auth/register` | Pública (5/hora/IP) | `{ username, email, password, name, phone }` | **201** sesión · 409 `user.username_taken` / `user.email_taken` · 422 `user.invalid_username` / `user.invalid_email` / `user.invalid_name` / `user.invalid_phone` / `user.weak_password` · 403 `auth.registration_disabled` · 429 `rate_limit.exceeded` |
+| POST | `/api/auth/login` | Pública (10/min/IP) | `{ username, password }` | 200 sesión · 401 `auth.invalid_credentials` · 429 `auth.account_locked` (+`Retry-After`) · 429 `rate_limit.exceeded` |
 | POST | `/api/auth/refresh` | Pública (10/min/IP) | `{ refreshToken }` | 200 sesión nueva · 401 `auth.invalid_refresh_token` · 429 `rate_limit.exceeded` |
 | POST | `/api/auth/logout` | Pública (10/min/IP) | `{ refreshToken }` | 204 siempre |
-| `*` | `/api/bookings/**`, `/api/maintenance/run` | **Bearer** | (sin `photographerId`) | 401 sin token o token inválido · 404 si la reserva es de otro fotógrafo |
-
-Cambios incompatibles para cualquier cliente anterior: `CreateBookingRequest` ya no acepta `photographerId` y `GET /api/bookings` ya no lleva `?photographerId=`.
+| `*` | `/api/bookings/**`, `/api/maintenance/run` | **Bearer** | (sin `photographerId`) | 401 sin token o token inválido · 404 si la reserva es de otro usuario |
 
 ---
 
@@ -499,47 +533,51 @@ Cambios incompatibles para cualquier cliente anterior: `CreateBookingRequest` ya
 
 | Amenaza | Defensa | Verificación |
 |---|---|---|
-| Adivinar contraseñas (fuerza bruta) | Bloqueo de cuenta (5 fallos → 15 min) con contador atómico + 10 intentos/min por IP | Pruebas de integración: bloqueo, contador con 25 intentos paralelos, límite por IP |
-| Descubrir qué emails existen | Misma respuesta y mismo tiempo para email desconocido y contraseña mala | Prueba que compara `code` y `detail`; verificación señuelo |
-| Robo de la base de datos | Contraseñas con PBKDF2; refresh tokens guardados solo como hash | — |
-| Robo de un refresh token | Rotación de un solo uso + revocación de toda la familia al reusarlo | Pruebas de `Refresh_WithAnAlreadyUsedToken_RevokesTheWholeLogin` |
-| Dos renovaciones simultáneas | Rotación atómica (gana exactamente una) y, en la app, una sola renovación a la vez | Pruebas con 8 renovaciones paralelas y con 3 peticiones simultáneas |
-| Token falsificado o manipulado | Firma HS256 obligatoria; solo ese algoritmo; emisor, audiencia y vencimiento | Pruebas: payload alterado, otra clave, vencido, otra audiencia/emisor, `alg: none` |
-| Un fotógrafo accede a datos de otro | Tenant solo del token + `GetOwnedAsync` → 404 | Pruebas unitarias y de integración (8 operaciones), más una prueba de mutación que confirma que fallan sin la verificación |
+| Crear cuentas en masa (spam, llenar la base) | 5 registros/hora/IP e interruptor `AUTH_REGISTRATION_ENABLED` para cerrarlo | Prueba del límite por IP y de registro cerrado → 403. **Riesgo residual:** sin verificación de correo, un atacante con muchas IPs puede crear cuentas |
+| Dos personas toman el mismo usuario o correo a la vez | Índices únicos `ix_user_username` e `ix_user_email` (no "buscar y luego insertar") | Prueba con 4 registros paralelos: 1 creado, 3 conflictos; prueba de correo repetido con otras mayúsculas |
+| Descubrir qué correos están registrados | **No se evita:** el registro dice `user.email_taken`, igual que dice `user.username_taken`; es inherente a exigir unicidad. El login sí es opaco (no distingue usuario inexistente de contraseña mala) y no acepta el correo para entrar | — |
+| Adivinar contraseñas (fuerza bruta) | Bloqueo (5 fallos → 15 min) con contador atómico + 10 intentos/min por IP | Pruebas de bloqueo, de 25 intentos paralelos y de límite por IP |
+| Descubrir qué usuarios existen al iniciar sesión | Misma respuesta y mismo tiempo para usuario desconocido y contraseña mala | Prueba que compara `code` y `detail`; verificación señuelo |
+| Robo de la base de datos | Contraseñas solo como hash PBKDF2; refresh tokens solo como hash | Prueba que revisa que la base no contiene la contraseña |
+| Robo de un refresh token | Rotación de un solo uso + revocación de toda la familia al reusarlo | Pruebas de reuso |
+| Dos renovaciones simultáneas | Rotación atómica y, en la app, una sola renovación a la vez | 8 renovaciones paralelas y 3 peticiones simultáneas |
+| Token falsificado o manipulado | Firma HS256 obligatoria; emisor, audiencia y vencimiento | Pruebas: payload alterado, otra clave, vencido, otra audiencia/emisor, `alg: none` |
+| Un usuario accede a datos de otro | Tenant solo del token + `GetOwnedAsync` → 404 | Pruebas unitarias y de integración (8 operaciones), más una prueba de mutación |
 | Un endpoint nuevo olvidado sin protección | Política de respaldo `RequireAuthenticatedUser` | Pruebas que recorren los endpoints protegidos sin token |
+| Contraseña enorme para gastar CPU | Máximo de 128 caracteres, validado antes de hashear | Pruebas de registro |
 | La clave de desarrollo llega a producción | La API se niega a arrancar con una clave `dev-only` fuera de Development | Verificado a mano |
-| Fuga de datos entre cuentas en el mismo teléfono | Se vacía el caché al cerrar sesión; la clave del caché incluye el fotógrafo | — |
+| Fuga de datos entre cuentas en el mismo teléfono | Se vacía el caché al cerrar sesión; la clave del caché incluye el usuario | — |
 | Token en un lugar inseguro del teléfono | Access token solo en memoria; refresh token en `expo-secure-store` | — |
 
 ---
 
 ## 17. Pruebas
 
-Backend (`cd backend && dotnet test`), las de integración usan el Mongo de `docker compose` y se saltan solas si no está:
+Backend (`cd backend && dotnet test`; las de integración usan el Mongo de `docker compose` y se saltan solas si no está):
 
 | Proyecto / archivo | Qué cubre |
 |---|---|
-| `Domain.UnitTests/Identity/PhotographerAccountTests`, `RefreshTokenTests` | Normalización y validación del email, bloqueo, vencimiento y revocación. |
-| `Application.UnitTests/Identity/LoginHandlerTests` | Éxito, normalización, familia nueva por login, reinicio del contador, email desconocido/inválido (y trabajo de hash), fallo, bloqueo al llegar al límite, cuenta bloqueada, fin del bloqueo. |
-| `…/RefreshSessionHandlerTests` | Rotación, token desconocido/vacío, reuso, vencido, cuenta inexistente, carrera. |
-| `…/LogoutHandlerTests`, `EnsurePhotographerAccountHandlerTests` | Cierre idempotente; creación, sin cambios, cambio de contraseña con revocación, validaciones. |
+| `Domain.UnitTests/Identity/UserTests`, `RefreshTokenTests` | Normalización y validación de usuario, correo, nombre, teléfono y contraseña (casos límite), bloqueo, vencimiento y revocación. |
+| `Application.UnitTests/Identity/RegisterUserHandlerTests` | Guarda el usuario normalizado con el hash, abre sesión, identificador propio por usuario, usuario ocupado, validaciones **antes** de hashear, registro cerrado. |
+| `…/LoginHandlerTests`, `RefreshSessionHandlerTests`, `LogoutHandlerTests` | Éxito, normalización, familia nueva por login, usuario desconocido/inválido (y trabajo de hash), fallos y bloqueo, rotación, reuso, vencido, carrera, logout idempotente. |
 | `Application.UnitTests/Bookings/BookingTenantIsolationTests` | Los 8 handlers rechazan la reserva de otro y no guardan nada. |
-| `Infrastructure.IntegrationTests/MongoIdentityRepositoriesTests` | Email único, contador atómico bajo concurrencia, bloqueo, rotación atómica (8 en paralelo → 1 gana), revocación por familia y por fotógrafo. |
-| `Api.IntegrationTests/AuthenticationApiTests` | Login, email sin distinguir mayúsculas, misma respuesta para email/contraseña malos, bloqueo, límite por IP, rotación, reuso, aislamiento de dispositivos, logout. |
-| `…/AccessTokenValidationApiTests` | 401 sin token en cada endpoint, endpoints públicos, token alterado/otra clave/vencido/otra audiencia o emisor/`alg: none`, y el caso de control (token bien formado aceptado). |
-| `…/TenantIsolationApiTests` | El tenant sale del token (ignora el cuerpo y el query), lista solo lo propio, 404 en las 8 operaciones sobre reservas ajenas, el dueño sí puede. |
+| `Infrastructure.IntegrationTests/MongoIdentityRepositoriesTests` | Username y correo únicos (con su código propio), usuarios antiguos sin correo que no chocan entre sí y no impiden crear el índice,  contador atómico bajo concurrencia, bloqueo, rotación atómica (8 en paralelo → 1 gana), revocación por familia. |
+| `Api.IntegrationTests/RegistrationApiTests` | Registro → 201 con sesión válida; login posterior; **solo se guarda el hash**; usuario o correo ocupado (también con otras mayúsculas) → 409 con su código; 4 registros simultáneos → 1; cada campo inválido → 422 con su código; límite por IP; cada usuario es su propio tenant; registro cerrado → 403 y el login sigue funcionando. |
+| `…/AuthenticationApiTests`, `AccessTokenValidationApiTests`, `TenantIsolationApiTests` | Login, bloqueo, límite por IP, rotación, reuso, logout, token alterado/otra clave/vencido/otra audiencia o emisor/`alg: none`, 401 sin token, 404 en las 8 operaciones sobre reservas ajenas. |
 
-App (`cd mobile && npm run verify`): `session/__tests__/sessionManager.test.ts` (restaurar, renovar, una sola renovación, 401 vs. red, cerrar sesión), `api/__tests__/httpClientAuth.test.ts` (token, un reintento, sin bucles), `authApi.test.ts`, `forms/__tests__/loginForm.test.ts`, `hooks/__tests__/useLoginForm.test.tsx`, `components/__tests__/SignOutButton.test.tsx` y los mensajes de error.
+App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `loginForm.test.ts` (reglas y límites), `hooks/__tests__/useRegisterForm.test.tsx` y `useLoginForm.test.tsx`, `components/__tests__/AuthPanel.test.tsx` (alternar login/crear cuenta, mensajes de validación), `KeyboardAwareScreen.test.tsx` (fija `behavior="padding"` y el manejo de toques), `session/__tests__/sessionManager.test.ts` (registrar, restaurar, renovar, una sola renovación, 401 vs. red, cerrar sesión), `api/__tests__/httpClientAuth.test.ts`, `authApi.test.ts` y los mensajes de error.
 
 ---
 
 ## 18. Límites conocidos y siguientes pasos
 
-1. **Un atacante que conozca tu email puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por cuenta). Es la contrapartida habitual del bloqueo de cuentas. Mitigación futura: bloquear por (cuenta, IP) o añadir retardos progresivos.
-2. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión o cambiar la contraseña). Es el precio de no consultar la base en cada petición.
-3. **La IP real depende de `X-Forwarded-For`.** Se confía en el último salto del proxy; si el contenedor fuera alcanzable sin pasar por Railway, alguien podría falsear la IP y evitar el límite *por IP* (no el bloqueo de cuenta).
-4. **Sin cambio de contraseña desde la app ni "olvidé mi contraseña" por correo.** Hoy la recuperación es cambiar `SEED_PHOTOGRAPHER_PASSWORD` y reiniciar (requiere acceso a Railway). Al añadirlo, quitar las variables `SEED_*` para que no pisen la contraseña.
-5. **Una sola cuenta.** Para vender como SaaS: registro con verificación de email, recuperación de contraseña por correo (Resend), y un rol de sistema para `/api/maintenance/run`.
-6. **Cerrar sesión sin conexión** deja vivo el refresh token en el servidor hasta que expire (30 días), aunque el teléfono ya lo olvidó.
-7. **Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.
-8. **Rotar `JWT_SIGNING_KEY`** invalida los access tokens vigentes (la app los renueva sola); no invalida los refresh tokens.
+1. **Sin recuperación de contraseña ni verificación del correo.** El correo y el teléfono se piden y se guardan, pero **no se verifican**: nada envía mensajes todavía (Resend no está configurado y no hay dominio). Así que alguien puede registrarse con el correo de otra persona y **ocupar esa dirección**. El correo está listo para ser la vía de recuperación de contraseña, pero solo será fiable cuando se verifique con un código enviado a esa dirección. Hasta entonces, cerrar el registro en producción (`AUTH_REGISTRATION_ENABLED=false`) una vez creada tu cuenta es la mitigación.
+2. **`/api/maintenance/run` es trabajo global** y ahora cualquier usuario registrado puede dispararlo. Restringirlo a un rol de sistema (o moverlo al worker) antes de abrir el producto a más gente.
+3. **Un atacante que conozca tu usuario puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por usuario). Mitigación futura: bloquear por (usuario, IP) o retardos progresivos.
+4. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión). Es el precio de no consultar la base en cada petición.
+5. **La IP real depende de `X-Forwarded-For`.** Se confía en el último salto del proxy; si el contenedor fuera alcanzable sin pasar por Railway, alguien podría falsear la IP y evitar los límites *por IP* (no el bloqueo de usuario).
+6. **Sin cambio de contraseña desde la app.**
+7. **Un usuario = un fotógrafo = un tenant.** Para estudios con varios fotógrafos habría que separar "cuenta" de "tenant" y añadir roles.
+8. **Cerrar sesión sin conexión** deja vivo el refresh token en el servidor hasta que expire (30 días), aunque el teléfono ya lo olvidó.
+9. **Rotar `JWT_SIGNING_KEY`** invalida los access tokens vigentes (la app los renueva sola); no invalida los refresh tokens.
+10. **Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.

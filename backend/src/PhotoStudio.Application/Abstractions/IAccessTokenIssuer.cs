@@ -16,8 +16,8 @@ public interface IAccessTokenIssuer
     /// Issues an access token for a photographer.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier; becomes the subject of the token.</param>
-    /// <param name="email">Photographer email.</param>
+    /// <param name="username">Username of the photographer.</param>
     /// <param name="now">Current instant.</param>
     /// <returns>The token and its expiry.</returns>
-    AccessToken Issue(Guid photographerId, string email, DateTimeOffset now);
+    AccessToken Issue(Guid photographerId, string username, DateTimeOffset now);
 }

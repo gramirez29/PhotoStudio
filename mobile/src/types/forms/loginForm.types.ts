@@ -1,8 +1,8 @@
 /** Values of the login form, as typed. */
 export interface LoginFormValues {
-  /** Email of the photographer. */
-  readonly email: string;
-  /** Password of the photographer. */
+  /** Username of the user. */
+  readonly username: string;
+  /** Password of the user. */
   readonly password: string;
 }
 
@@ -14,5 +14,5 @@ export type LoginFormErrors = Readonly<Partial<Record<LoginField, string>>>;
 
 /** Result of validating the login form: the credentials to send, or the messages to show. */
 export type LoginFormResult =
-  | { readonly ok: true; readonly email: string; readonly password: string }
+  | { readonly ok: true; readonly username: string; readonly password: string }
   | { readonly ok: false; readonly errors: LoginFormErrors };

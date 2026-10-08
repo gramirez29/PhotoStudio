@@ -15,8 +15,12 @@ export interface ActiveSession {
   readonly accessTokenExpiresAt: number;
   /** Photographer (tenant) identifier. */
   readonly photographerId: string;
-  /** Photographer email. */
+  /** Username of the user. */
+  readonly username: string;
+  /** Email of the user; empty for users created before the email existed. */
   readonly email: string;
+  /** Display name of the user. */
+  readonly name: string;
 }
 
 /** State and setters of the session store. Side effects (network, storage) live in the session manager, not here. */

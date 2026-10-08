@@ -6,12 +6,13 @@ import {
   createBookingErrorMessage,
   loginErrorMessage,
   maintenanceErrorMessage,
+  registerErrorMessage,
   rescheduleBookingErrorMessage,
 } from '../apiErrors';
 
 describe('loginErrorMessage', () => {
-  it('uses one message for wrong credentials, so it never says whether the email exists', () => {
-    expect(loginErrorMessage(new ApiError(401, 'x', 'auth.invalid_credentials'))).toBe('El email o la contraseña no son correctos.');
+  it('uses one message for wrong credentials, so it never says whether the username exists', () => {
+    expect(loginErrorMessage(new ApiError(401, 'x', 'auth.invalid_credentials'))).toBe('El usuario o la contraseña no son correctos.');
   });
 
   it('explains a locked account and the sign-in rate limit', () => {
@@ -26,6 +27,34 @@ describe('loginErrorMessage', () => {
   it('falls back to a generic message and reports connection problems otherwise', () => {
     expect(loginErrorMessage(new ApiError(500, 'x', 'server.error'))).toBe('No se pudo iniciar sesión. Inténtalo de nuevo.');
     expect(loginErrorMessage(new TypeError('Network request failed'))).toBe(NETWORK_ERROR_MESSAGE);
+  });
+});
+
+describe('registerErrorMessage', () => {
+  it('explains a taken username', () => {
+    expect(registerErrorMessage(new ApiError(409, 'x', 'user.username_taken'))).toBe('Ese usuario ya existe. Elige otro.');
+  });
+
+  it('explains a taken email', () => {
+    expect(registerErrorMessage(new ApiError(409, 'x', 'user.email_taken'))).toBe('Ese correo ya está registrado.');
+  });
+
+  it('explains each invalid field', () => {
+    expect(registerErrorMessage(new ApiError(422, 'x', 'user.invalid_username'))).toContain('3 a 30');
+    expect(registerErrorMessage(new ApiError(422, 'x', 'user.invalid_email'))).toBe('El correo no es válido.');
+    expect(registerErrorMessage(new ApiError(422, 'x', 'user.invalid_name'))).toBe('El nombre no es válido.');
+    expect(registerErrorMessage(new ApiError(422, 'x', 'user.invalid_phone'))).toBe('El teléfono no es válido.');
+    expect(registerErrorMessage(new ApiError(422, 'x', 'user.weak_password'))).toContain('8 y 128');
+  });
+
+  it('explains that sign-up is closed and the sign-up rate limit', () => {
+    expect(registerErrorMessage(new ApiError(403, 'x', 'auth.registration_disabled'))).toBe('Por ahora no se pueden crear cuentas nuevas.');
+    expect(registerErrorMessage(new ApiError(429, 'x', 'rate_limit.exceeded'))).toContain('demasiadas cuentas');
+  });
+
+  it('falls back to a generic message and reports connection problems otherwise', () => {
+    expect(registerErrorMessage(new ApiError(500, 'x', 'server.error'))).toBe('No se pudo crear la cuenta. Inténtalo de nuevo.');
+    expect(registerErrorMessage(new TypeError('Network request failed'))).toBe(NETWORK_ERROR_MESSAGE);
   });
 });
 
