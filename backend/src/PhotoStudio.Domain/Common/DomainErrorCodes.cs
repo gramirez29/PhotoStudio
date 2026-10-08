@@ -49,4 +49,10 @@ public static class DomainErrorCodes
 
     /// <summary>The payment is not in a status that allows the requested operation.</summary>
     public const string InvalidPaymentStatus = "payment.invalid_status";
+
+    /// <summary>The email of a photographer account is empty or has no valid shape.</summary>
+    public const string InvalidEmail = "account.invalid_email";
+
+    /// <summary>The password is shorter than the minimum length.</summary>
+    public const string WeakPassword = "account.weak_password";
 }

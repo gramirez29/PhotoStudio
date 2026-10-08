@@ -1,4 +1,4 @@
-import { DEFAULT_API_URL, normalizeApiUrl, normalizePhotographerId } from '../envNormalizers';
+import { DEFAULT_API_URL, normalizeApiUrl } from '../envNormalizers';
 
 describe('normalizeApiUrl', () => {
   it('falls back to the local API when the variable is missing or blank', () => {
@@ -8,16 +8,5 @@ describe('normalizeApiUrl', () => {
 
   it('removes trailing slashes', () => {
     expect(normalizeApiUrl('https://api.photostud.app///')).toBe('https://api.photostud.app');
-  });
-});
-
-describe('normalizePhotographerId', () => {
-  it('returns null when the variable is missing or blank', () => {
-    expect(normalizePhotographerId(undefined)).toBeNull();
-    expect(normalizePhotographerId('   ')).toBeNull();
-  });
-
-  it('trims the identifier', () => {
-    expect(normalizePhotographerId('  0197a000-0000-7000-8000-000000000001 ')).toBe('0197a000-0000-7000-8000-000000000001');
   });
 });

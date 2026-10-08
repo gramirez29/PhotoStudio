@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using PhotoStudio.Application.Exceptions;
@@ -34,6 +35,10 @@ public sealed partial class GlobalExceptionHandler(
                 (StatusCodes.Status422UnprocessableEntity, "A business rule was violated.", domain.Code),
             ConflictException conflict =>
                 (StatusCodes.Status409Conflict, "The request conflicts with the current state.", conflict.Code),
+            AuthenticationFailedException authentication =>
+                (StatusCodes.Status401Unauthorized, "Authentication failed.", authentication.Code),
+            AccountLockedException locked =>
+                (StatusCodes.Status429TooManyRequests, "Too many failed attempts.", locked.Code),
             NotFoundException =>
                 (StatusCodes.Status404NotFound, "The resource was not found.", ApplicationErrorCodes.NotFound),
             BadHttpRequestException badRequest =>
@@ -50,6 +55,15 @@ public sealed partial class GlobalExceptionHandler(
         }
 
         httpContext.Response.StatusCode = status;
+        if (status == StatusCodes.Status401Unauthorized)
+        {
+            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+        }
+
+        if (exception is AccountLockedException accountLocked)
+        {
+            httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(accountLocked.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+        }
 
         var problem = new ProblemDetails
         {

@@ -14,13 +14,3 @@ export function normalizeApiUrl(raw: string | undefined): string {
 
   return value.replace(/\/+$/, '');
 }
-
-/**
- * Normalizes the photographer identifier: trims it and treats a blank value as not configured.
- * @param raw Value of the environment variable, if any.
- * @returns The identifier, or null when it is missing or blank.
- */
-export function normalizePhotographerId(raw: string | undefined): string | null {
-  const value = raw?.trim();
-  return value === undefined || value.length === 0 ? null : value;
-}

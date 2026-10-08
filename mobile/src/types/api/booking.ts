@@ -119,10 +119,8 @@ export interface BookingSummaryResponse {
   readonly balance: MoneyResponse;
 }
 
-/** Body to create a booking (backend `CreateBookingRequest`). */
+/** Body to create a booking (backend `CreateBookingRequest`). The photographer is not sent: the backend takes it from the access token. */
 export interface CreateBookingRequest {
-  /** Photographer (tenant) identifier (GUID). */
-  readonly photographerId: string;
   /** Client name. */
   readonly clientName: string;
   /** Client phone, with country code. */

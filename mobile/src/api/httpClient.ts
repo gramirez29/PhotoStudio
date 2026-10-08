@@ -1,4 +1,4 @@
-import type { FetchFunction, HttpClient, HttpClientOptions, ResponseParser } from '../types/api/http';
+import type { FetchFunction, HttpClient, HttpClientOptions, RawHttpResponse, ResponseParser } from '../types/api/http';
 import { isRecord } from './guards';
 
 /** Default request timeout, in milliseconds. */
@@ -64,17 +64,65 @@ export function toApiError(status: number, body: unknown): ApiError {
 }
 
 /**
- * Creates the HTTP client. Every request has a timeout and can also be cancelled by the caller.
+ * Creates the HTTP client. Every request has a timeout and can also be cancelled by the caller. With an `auth` provider,
+ * every request carries the access token and, when the backend answers 401, the session is renewed and the request is sent
+ * once more with the new token. A second 401 is returned to the caller: the request is never retried more than once.
  * @param baseUrl Base URL of the API, without trailing slash.
- * @param options Optional fetch implementation and timeout.
+ * @param options Optional fetch implementation, timeout and session.
  * @returns The client.
  */
 export function createHttpClient(baseUrl: string, options: HttpClientOptions = {}): HttpClient {
   const fetchFn: FetchFunction = options.fetchFn ?? ((input, init) => fetch(input, init));
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const auth = options.auth;
 
   /**
-   * Sends a request and parses the response.
+   * Sends one HTTP request and reads its response.
+   * @param method HTTP method.
+   * @param path Path relative to the base URL.
+   * @param body Optional JSON body.
+   * @param signal Optional caller cancellation signal.
+   * @param token Access token to send, or null for none.
+   * @returns The response and its body.
+   */
+  async function send(
+    method: 'GET' | 'POST',
+    path: string,
+    body: unknown,
+    signal: AbortSignal | undefined,
+    token: string | null,
+  ): Promise<RawHttpResponse> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const forwardAbort = (): void => controller.abort();
+    signal?.addEventListener('abort', forwardAbort);
+
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    if (token !== null) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetchFn(`${baseUrl}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      return { response, payload: await readBody(response) };
+    } finally {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', forwardAbort);
+    }
+  }
+
+  /**
+   * Sends a request and parses the response, renewing the session once if the backend rejects the token.
    * @param method HTTP method.
    * @param path Path relative to the base URL.
    * @param parse Parser of the response body.
@@ -89,34 +137,21 @@ export function createHttpClient(baseUrl: string, options: HttpClientOptions = {
     body: unknown,
     signal: AbortSignal | undefined,
   ): Promise<T> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const forwardAbort = (): void => controller.abort();
-    signal?.addEventListener('abort', forwardAbort);
+    const token = auth === undefined ? null : await auth.getAccessToken();
+    let result = await send(method, path, body, signal, token);
 
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    try {
-      const response = await fetchFn(`${baseUrl}${path}`, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      const payload = await readBody(response);
-      if (!response.ok) {
-        throw toApiError(response.status, payload);
+    if (result.response.status === 401 && auth !== undefined && token !== null) {
+      const renewed = await auth.renewAfterRejection(token);
+      if (renewed !== null) {
+        result = await send(method, path, body, signal, renewed);
       }
-
-      return parse(payload);
-    } finally {
-      clearTimeout(timeout);
-      signal?.removeEventListener('abort', forwardAbort);
     }
+
+    if (!result.response.ok) {
+      throw toApiError(result.response.status, result.payload);
+    }
+
+    return parse(result.payload);
   }
 
   return {

@@ -19,6 +19,11 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
     public static readonly TimeSpan OutboxRetention = TimeSpan.FromDays(30);
 
     /// <summary>
+    /// How long after they expire refresh tokens are kept before MongoDB removes them.
+    /// </summary>
+    public static readonly TimeSpan RefreshTokenRetention = TimeSpan.FromDays(7);
+
+    /// <summary>
     /// Creates the indexes. The operation is idempotent: existing indexes are left as they are.
     /// </summary>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -57,10 +62,41 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<OutboxMessageDocument>.IndexKeys.Ascending(message => message.ProcessedAt),
             new CreateIndexOptions { Name = "ix_outbox_retention", ExpireAfter = OutboxRetention });
 
+        var accounts = database.GetCollection<PhotographerAccountDocument>(MongoPhotographerAccountRepository.CollectionName);
+
+        // The email identifies the account at login, and uniqueness is enforced here, not by checking first and inserting after.
+        var accountEmailIndex = new CreateIndexModel<PhotographerAccountDocument>(
+            Builders<PhotographerAccountDocument>.IndexKeys.Ascending(account => account.Email),
+            new CreateIndexOptions { Name = "ix_account_email", Unique = true });
+
+        var refreshTokens = database.GetCollection<RefreshTokenDocument>(MongoRefreshTokenRepository.CollectionName);
+
+        // A refresh token is found by the hash of its secret.
+        var refreshHashIndex = new CreateIndexModel<RefreshTokenDocument>(
+            Builders<RefreshTokenDocument>.IndexKeys.Ascending(token => token.TokenHash),
+            new CreateIndexOptions { Name = "ix_refresh_hash", Unique = true });
+
+        // Serves revoking a whole login family and every session of a photographer.
+        var refreshFamilyIndex = new CreateIndexModel<RefreshTokenDocument>(
+            Builders<RefreshTokenDocument>.IndexKeys.Ascending(token => token.FamilyId),
+            new CreateIndexOptions { Name = "ix_refresh_family" });
+        var refreshPhotographerIndex = new CreateIndexModel<RefreshTokenDocument>(
+            Builders<RefreshTokenDocument>.IndexKeys.Ascending(token => token.PhotographerId),
+            new CreateIndexOptions { Name = "ix_refresh_photographer" });
+
+        // Removes tokens a week after they expire. They are kept that long so a replayed expired token is still recognized.
+        var refreshRetentionIndex = new CreateIndexModel<RefreshTokenDocument>(
+            Builders<RefreshTokenDocument>.IndexKeys.Ascending(token => token.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_refresh_retention", ExpireAfter = RefreshTokenRetention });
+
         try
         {
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
+            await accounts.Indexes.CreateOneAsync(accountEmailIndex, cancellationToken: cancellationToken);
+            await refreshTokens.Indexes.CreateManyAsync(
+                [refreshHashIndex, refreshFamilyIndex, refreshPhotographerIndex, refreshRetentionIndex],
+                cancellationToken: cancellationToken);
         }
         catch (Exception exception) when (exception is MongoException or TimeoutException)
         {

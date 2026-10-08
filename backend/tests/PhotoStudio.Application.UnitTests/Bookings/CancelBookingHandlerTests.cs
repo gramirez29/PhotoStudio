@@ -33,7 +33,7 @@ public sealed class CancelBookingHandlerTests
         _repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Booking?)null);
 
         await Should.ThrowAsync<NotFoundException>(
-            () => _handler.HandleAsync(new CancelBookingCommand(Guid.CreateVersion7(), null), TestContext.Current.CancellationToken));
+            () => _handler.HandleAsync(new CancelBookingCommand(Guid.CreateVersion7(), Guid.CreateVersion7(), null), TestContext.Current.CancellationToken));
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public sealed class CancelBookingHandlerTests
         var booking = BookingFactory.Tentative();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
-        var response = await _handler.HandleAsync(new CancelBookingCommand(booking.Id, null), TestContext.Current.CancellationToken);
+        var response = await _handler.HandleAsync(new CancelBookingCommand(booking.PhotographerId, booking.Id, null), TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.Cancelled);
         response.AllowedActions.ShouldBeEmpty();
@@ -64,7 +64,7 @@ public sealed class CancelBookingHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var exception = await Should.ThrowAsync<DomainException>(
-            () => _handler.HandleAsync(new CancelBookingCommand(booking.Id, "  "), TestContext.Current.CancellationToken));
+            () => _handler.HandleAsync(new CancelBookingCommand(booking.PhotographerId, booking.Id, "  "), TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.ReasonRequired);
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<Booking>(), Arg.Any<CancellationToken>());
@@ -81,7 +81,7 @@ public sealed class CancelBookingHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var response = await _handler.HandleAsync(
-            new CancelBookingCommand(booking.Id, "El cliente pidió cancelar"),
+            new CancelBookingCommand(booking.PhotographerId, booking.Id, "El cliente pidió cancelar"),
             TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.Cancelled);
@@ -100,7 +100,7 @@ public sealed class CancelBookingHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var exception = await Should.ThrowAsync<DomainException>(
-            () => _handler.HandleAsync(new CancelBookingCommand(booking.Id, "otra vez"), TestContext.Current.CancellationToken));
+            () => _handler.HandleAsync(new CancelBookingCommand(booking.PhotographerId, booking.Id, "otra vez"), TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.InvalidTransition);
     }

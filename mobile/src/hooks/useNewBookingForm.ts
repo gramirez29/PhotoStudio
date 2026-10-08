@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { env } from '../config/env';
 import { initialFormValues, validateCreateBookingForm } from '../forms/createBookingForm';
 import type {
   CreateBookingField,
@@ -59,11 +58,7 @@ export function useNewBookingForm(): NewBookingFormState {
     },
     setDuration: (hours: number) => setValues((previous) => ({ ...previous, durationHours: hours })),
     submit: () => {
-      if (env.photographerId === null) {
-        return;
-      }
-
-      const result = validateCreateBookingForm(values, env.photographerId, new Date());
+      const result = validateCreateBookingForm(values, new Date());
       if (!result.ok) {
         setErrors(result.errors);
         return;

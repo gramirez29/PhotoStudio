@@ -71,6 +71,29 @@ export function bookingCommandErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed sign-in into a message for the photographer. A wrong email and a wrong password get the
+ * same message on purpose, like the backend.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function loginErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'auth.invalid_credentials':
+      return 'El email o la contraseña no son correctos.';
+    case 'auth.account_locked':
+      return 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
+    case 'rate_limit.exceeded':
+      return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    default:
+      return 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+  }
+}
+
+/**
  * Converts the error of a failed "run maintenance" request into a message for the photographer.
  * @param error Error of the mutation.
  * @returns The message in Spanish.

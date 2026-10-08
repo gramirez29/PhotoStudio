@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Infrastructure.Identity;
 using PhotoStudio.Infrastructure.Persistence;
 using PhotoStudio.Infrastructure.Persistence.Outbox;
 using PhotoStudio.Infrastructure.Policies;
@@ -34,6 +35,10 @@ public static class DependencyInjection
         services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(mongoOptions.DatabaseName));
 
         services.AddScoped<IBookingRepository, MongoBookingRepository>();
+        services.AddScoped<IPhotographerAccountRepository, MongoPhotographerAccountRepository>();
+        services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
+        services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
+        services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<IBookingPolicyProvider, EnvironmentBookingPolicyProvider>();
         services.AddSingleton<OutboxProcessor>();
         services.AddSingleton<IOutboxDispatcher>(provider => provider.GetRequiredService<OutboxProcessor>());

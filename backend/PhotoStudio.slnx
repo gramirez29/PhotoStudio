@@ -9,6 +9,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/PhotoStudio.Domain.UnitTests/PhotoStudio.Domain.UnitTests.csproj" />
     <Project Path="tests/PhotoStudio.Application.UnitTests/PhotoStudio.Application.UnitTests.csproj" />
+    <Project Path="tests/PhotoStudio.Api.IntegrationTests/PhotoStudio.Api.IntegrationTests.csproj" />
     <Project Path="tests/PhotoStudio.Infrastructure.IntegrationTests/PhotoStudio.Infrastructure.IntegrationTests.csproj" />
   </Folder>
 </Solution>

@@ -49,7 +49,7 @@ public sealed class RescheduleBookingHandlerTests
         var booking = BookingFactory.Confirmed();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
-        var response = await _handler.HandleAsync(Command(booking.Id), TestContext.Current.CancellationToken);
+        var response = await _handler.HandleAsync(Command(booking), TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.Confirmed);
         response.SessionStart.ShouldBe(NewStart);
@@ -69,7 +69,7 @@ public sealed class RescheduleBookingHandlerTests
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
 
         var exception = await Should.ThrowAsync<DomainException>(
-            () => _handler.HandleAsync(Command(booking.Id), TestContext.Current.CancellationToken));
+            () => _handler.HandleAsync(Command(booking), TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(DomainErrorCodes.InvalidTransition);
         await _repository.DidNotReceive().UpdateReservingSlotAsync(Arg.Any<Booking>(), Arg.Any<CancellationToken>());
@@ -84,7 +84,7 @@ public sealed class RescheduleBookingHandlerTests
     {
         var booking = BookingFactory.Confirmed();
         _repository.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
-        var command = new RescheduleBookingCommand(booking.Id, Now.AddDays(-1), Now.AddDays(-1).AddHours(2));
+        var command = new RescheduleBookingCommand(booking.PhotographerId, booking.Id, Now.AddDays(-1), Now.AddDays(-1).AddHours(2));
 
         var exception = await Should.ThrowAsync<DomainException>(
             () => _handler.HandleAsync(command, TestContext.Current.CancellationToken));
@@ -107,7 +107,7 @@ public sealed class RescheduleBookingHandlerTests
             .Returns(Task.FromException(new ConflictException(ApplicationErrorCodes.SlotUnavailable, "taken")));
 
         var exception = await Should.ThrowAsync<ConflictException>(
-            () => _handler.HandleAsync(Command(booking.Id), TestContext.Current.CancellationToken));
+            () => _handler.HandleAsync(Command(booking), TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
     }
@@ -118,5 +118,13 @@ public sealed class RescheduleBookingHandlerTests
     /// <param name="bookingId">Booking identifier.</param>
     /// <returns>The command.</returns>
     private static RescheduleBookingCommand Command(Guid bookingId) =>
-        new(bookingId, NewStart, NewStart.AddHours(2));
+        new(Guid.CreateVersion7(), bookingId, NewStart, NewStart.AddHours(2));
+
+    /// <summary>
+    /// Builds the command, issued by the owner of the booking, that moves it to <see cref="NewStart"/> for two hours.
+    /// </summary>
+    /// <param name="booking">Booking to move.</param>
+    /// <returns>The command.</returns>
+    private static RescheduleBookingCommand Command(Booking booking) =>
+        new(booking.PhotographerId, booking.Id, NewStart, NewStart.AddHours(2));
 }

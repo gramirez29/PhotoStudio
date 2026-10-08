@@ -153,8 +153,7 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
       client.post(`/api/bookings/${encodeURIComponent(id)}/client-absent`, undefined, parseBooking, signal),
     revertClientAbsent: (id, request, signal) =>
       client.post(`/api/bookings/${encodeURIComponent(id)}/client-absent/revert`, request, parseBooking, signal),
-    listBookings: (photographerId, signal) =>
-      client.get(`/api/bookings?photographerId=${encodeURIComponent(photographerId)}`, parseBookingSummaries, signal),
+    listBookings: (signal) => client.get('/api/bookings', parseBookingSummaries, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
   };
 }

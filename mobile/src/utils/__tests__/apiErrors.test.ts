@@ -4,9 +4,30 @@ import {
   bookingCommandErrorMessage,
   bookingLoadErrorMessage,
   createBookingErrorMessage,
+  loginErrorMessage,
   maintenanceErrorMessage,
   rescheduleBookingErrorMessage,
 } from '../apiErrors';
+
+describe('loginErrorMessage', () => {
+  it('uses one message for wrong credentials, so it never says whether the email exists', () => {
+    expect(loginErrorMessage(new ApiError(401, 'x', 'auth.invalid_credentials'))).toBe('El email o la contraseña no son correctos.');
+  });
+
+  it('explains a locked account and the sign-in rate limit', () => {
+    expect(loginErrorMessage(new ApiError(429, 'x', 'auth.account_locked'))).toBe(
+      'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.',
+    );
+    expect(loginErrorMessage(new ApiError(429, 'x', 'rate_limit.exceeded'))).toBe(
+      'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.',
+    );
+  });
+
+  it('falls back to a generic message and reports connection problems otherwise', () => {
+    expect(loginErrorMessage(new ApiError(500, 'x', 'server.error'))).toBe('No se pudo iniciar sesión. Inténtalo de nuevo.');
+    expect(loginErrorMessage(new TypeError('Network request failed'))).toBe(NETWORK_ERROR_MESSAGE);
+  });
+});
 
 describe('maintenanceErrorMessage', () => {
   it('explains the rate limit', () => {

@@ -2,7 +2,7 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import { bookingsApi } from '../api/client';
 import type { BookingResponse, CreateBookingRequest } from '../types/api/booking';
 import { bookingQueryKey } from './useBooking';
-import { bookingsQueryKey } from './useBookings';
+import { BOOKINGS_QUERY_PREFIX } from './useBookings';
 
 /**
  * Mutation that creates a booking. On success it seeds the detail cache, so the detail screen opens without another
@@ -14,9 +14,9 @@ export function useCreateBooking(): UseMutationResult<BookingResponse, Error, Cr
 
   return useMutation({
     mutationFn: (request: CreateBookingRequest) => bookingsApi.createBooking(request),
-    onSuccess: async (booking, request) => {
+    onSuccess: async (booking) => {
       queryClient.setQueryData(bookingQueryKey(booking.id), booking);
-      await queryClient.invalidateQueries({ queryKey: bookingsQueryKey(request.photographerId) });
+      await queryClient.invalidateQueries({ queryKey: BOOKINGS_QUERY_PREFIX });
     },
   });
 }

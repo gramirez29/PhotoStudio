@@ -1,7 +1,6 @@
 import type { CreateBookingFormValues } from '../../types/forms/createBookingForm.types';
 import { DEFAULT_START_HOUR, initialFormValues, validateCreateBookingForm } from '../createBookingForm';
 
-const PHOTOGRAPHER_ID = '0197a000-0000-7000-8000-000000000001';
 
 /** A fixed "now" for the tests: 10 October 2026, 10:00 local time. */
 const NOW = new Date(2026, 9, 10, 10, 0, 0, 0);
@@ -35,12 +34,11 @@ describe('initialFormValues', () => {
 
 describe('validateCreateBookingForm', () => {
   it('builds the request with trimmed text, normalized phone, whole price and the end from the duration', () => {
-    const result = validateCreateBookingForm(validValues(), PHOTOGRAPHER_ID, NOW);
+    const result = validateCreateBookingForm(validValues(), NOW);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.request).toEqual({
-        photographerId: PHOTOGRAPHER_ID,
         clientName: 'María Pérez',
         clientPhone: '+50688881111',
         packageName: 'Retrato familiar',
@@ -55,7 +53,6 @@ describe('validateCreateBookingForm', () => {
   it('reports every invalid field at once', () => {
     const result = validateCreateBookingForm(
       validValues({ clientName: ' ', clientPhone: '12', packageName: '', price: '0', start: new Date(2026, 9, 9) }),
-      PHOTOGRAPHER_ID,
       NOW,
     );
 
@@ -66,7 +63,7 @@ describe('validateCreateBookingForm', () => {
   });
 
   it('rejects a session that starts right now or earlier', () => {
-    const result = validateCreateBookingForm(validValues({ start: NOW }), PHOTOGRAPHER_ID, NOW);
+    const result = validateCreateBookingForm(validValues({ start: NOW }), NOW);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {

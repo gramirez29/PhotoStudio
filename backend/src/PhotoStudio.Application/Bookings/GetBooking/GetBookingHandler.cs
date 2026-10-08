@@ -25,8 +25,7 @@ public sealed class GetBookingHandler(
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var booking = await repository.GetByIdAsync(query.BookingId, cancellationToken)
-            ?? throw new NotFoundException(nameof(Booking), query.BookingId);
+        var booking = await repository.GetOwnedAsync(query.BookingId, query.PhotographerId, cancellationToken);
 
         return booking.ToResponse(Actor.Photographer, timeProvider.GetUtcNow());
     }

@@ -49,7 +49,7 @@ public sealed class RecordInPersonPaymentHandlerTests
         booking.SignContract("María Pérez", "v1", Actor.Photographer, Channel.InPerson, Now);
         _repository.GetByIdAsync(Arg.Is(booking.Id), Arg.Any<CancellationToken>()).Returns(booking);
 
-        var response = await _handler.HandleAsync(Command(booking.Id, "key-1"), TestContext.Current.CancellationToken);
+        var response = await _handler.HandleAsync(Command(booking, "key-1"), TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(BookingStatus.Confirmed);
         response.TotalPaid.Amount.ShouldBe(50_000m);
@@ -66,8 +66,8 @@ public sealed class RecordInPersonPaymentHandlerTests
         var booking = TentativeBooking();
         _repository.GetByIdAsync(Arg.Is(booking.Id), Arg.Any<CancellationToken>()).Returns(booking);
 
-        await _handler.HandleAsync(Command(booking.Id, "key-1"), TestContext.Current.CancellationToken);
-        await _handler.HandleAsync(Command(booking.Id, "key-1"), TestContext.Current.CancellationToken);
+        await _handler.HandleAsync(Command(booking, "key-1"), TestContext.Current.CancellationToken);
+        await _handler.HandleAsync(Command(booking, "key-1"), TestContext.Current.CancellationToken);
 
         booking.Payments.Count.ShouldBe(1);
         await _repository.Received(1).UpdateAsync(Arg.Is(booking), Arg.Any<CancellationToken>());
@@ -80,7 +80,16 @@ public sealed class RecordInPersonPaymentHandlerTests
     /// <param name="idempotencyKey">Idempotency key.</param>
     /// <returns>The command.</returns>
     private static RecordInPersonPaymentCommand Command(Guid bookingId, string idempotencyKey) =>
-        new(bookingId, 50_000m, "CRC", PaymentMethod.Cash, idempotencyKey);
+        new(Guid.CreateVersion7(), bookingId, 50_000m, "CRC", PaymentMethod.Cash, idempotencyKey);
+
+    /// <summary>
+    /// Builds a cash payment command, issued by the owner of the booking, for half the package price.
+    /// </summary>
+    /// <param name="booking">Booking that receives the payment.</param>
+    /// <param name="idempotencyKey">Idempotency key.</param>
+    /// <returns>The command.</returns>
+    private static RecordInPersonPaymentCommand Command(Booking booking, string idempotencyKey) =>
+        new(booking.PhotographerId, booking.Id, 50_000m, "CRC", PaymentMethod.Cash, idempotencyKey);
 
     /// <summary>
     /// Builds a tentative booking for a session ten days from now.
