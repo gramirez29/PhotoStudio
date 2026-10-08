@@ -18,6 +18,8 @@ export interface NewBookingFormState {
   readonly submitError: string | null;
   /** Updates a typed field and clears its validation message. */
   readonly setText: (field: CreateBookingTextField, text: string) => void;
+  /** Selects the package (service) and clears its validation message. */
+  readonly setPackage: (packageName: string) => void;
   /** Updates the session start and clears its validation message. */
   readonly setStart: (start: Date) => void;
   /** Updates the session duration, in hours. */

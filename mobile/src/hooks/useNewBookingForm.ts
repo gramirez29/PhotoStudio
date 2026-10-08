@@ -44,6 +44,10 @@ export function useNewBookingForm(): NewBookingFormState {
       setValues((previous) => ({ ...previous, [field]: text }));
       clearError(field);
     },
+    setPackage: (packageName: string) => {
+      setValues((previous) => ({ ...previous, packageName }));
+      clearError('packageName');
+    },
     setStart: (start: Date) => {
       setValues((previous) => ({ ...previous, start }));
       clearError('start');
