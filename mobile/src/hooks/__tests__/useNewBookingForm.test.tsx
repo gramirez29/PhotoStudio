@@ -50,7 +50,7 @@ describe('useNewBookingForm', () => {
 
     act(() => {
       result.current.setText('clientName', 'María Pérez');
-      result.current.setText('clientPhone', '8888 1111');
+      result.current.setPhone('8888 1111');
       result.current.setPackage('Pre-Quinceaños');
       result.current.setText('price', '80000');
     });
@@ -60,5 +60,34 @@ describe('useNewBookingForm', () => {
     expect(bookingsApi.createBooking).toHaveBeenCalledWith(
       expect.objectContaining({ packageName: 'Pre-Quinceaños', clientName: 'María Pérez', packagePrice: 80000 }),
     );
+  });
+
+  it('shows the phone as 0000-0000 while it is typed but sends it in international format', async () => {
+    jest.mocked(bookingsApi.createBooking).mockResolvedValue(parseBooking(bookingPayload));
+    const { result } = renderHook(() => useNewBookingForm(), { wrapper: Wrapper });
+
+    act(() => result.current.setPhone('70189220'));
+
+    expect(result.current.values.clientPhone).toBe('7018-9220');
+
+    act(() => {
+      result.current.setText('clientName', 'María Pérez');
+      result.current.setPackage('Producto');
+      result.current.setText('price', '80000');
+    });
+    act(() => result.current.submit());
+
+    await waitFor(() => expect(bookingsApi.createBooking).toHaveBeenCalled());
+    expect(bookingsApi.createBooking).toHaveBeenCalledWith(expect.objectContaining({ clientPhone: '+50670189220' }));
+  });
+
+  it('clears the phone message as soon as the photographer types', () => {
+    const { result } = renderHook(() => useNewBookingForm(), { wrapper: Wrapper });
+    act(() => result.current.submit());
+    expect(result.current.errors.clientPhone).toBeDefined();
+
+    act(() => result.current.setPhone('7'));
+
+    expect(result.current.errors.clientPhone).toBeUndefined();
   });
 });

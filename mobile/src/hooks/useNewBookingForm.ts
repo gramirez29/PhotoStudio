@@ -10,6 +10,7 @@ import type {
 import { replaceWithBooking } from '../navigation/appNavigation';
 import type { NewBookingFormState } from '../types/hooks/useNewBookingForm.types';
 import { createBookingErrorMessage } from '../utils/apiErrors';
+import { formatPhoneInput } from '../utils/phone';
 import { useCreateBooking } from './useCreateBooking';
 
 /**
@@ -43,6 +44,10 @@ export function useNewBookingForm(): NewBookingFormState {
     setText: (field: CreateBookingTextField, text: string) => {
       setValues((previous) => ({ ...previous, [field]: text }));
       clearError(field);
+    },
+    setPhone: (text: string) => {
+      setValues((previous) => ({ ...previous, clientPhone: formatPhoneInput(text) }));
+      clearError('clientPhone');
     },
     setPackage: (packageName: string) => {
       setValues((previous) => ({ ...previous, packageName }));

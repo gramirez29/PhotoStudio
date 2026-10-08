@@ -28,4 +28,4 @@ export type CreateBookingFormResult =
   | { readonly ok: false; readonly errors: CreateBookingFormErrors };
 
 /** Form fields edited by typing text. */
-export type CreateBookingTextField = 'clientName' | 'clientPhone' | 'price';
+export type CreateBookingTextField = 'clientName' | 'price';

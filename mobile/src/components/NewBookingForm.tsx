@@ -31,11 +31,11 @@ export function NewBookingForm(): ReactElement {
         <FormInput
           label="Teléfono"
           value={form.values.clientPhone}
-          onChangeText={(text) => form.setText('clientPhone', text)}
+          onChangeText={form.setPhone}
           error={form.errors.clientPhone}
           keyboardType="phone-pad"
           textContentType="telephoneNumber"
-          placeholder="8888 8888"
+          placeholder="8888-8888"
         />
         <SelectField
           label="Paquete"
