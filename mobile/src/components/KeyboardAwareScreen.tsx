@@ -13,12 +13,12 @@ import type { KeyboardAwareScreenProps } from '../types/components/KeyboardAware
  * @param props Component props.
  * @returns The container with its content.
  */
-export function KeyboardAwareScreen({ children }: KeyboardAwareScreenProps): ReactElement {
+export function KeyboardAwareScreen({ children, align = 'center' }: KeyboardAwareScreenProps): ReactElement {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, align === 'top' && styles.top]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets
@@ -39,5 +39,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+  top: {
+    justifyContent: 'flex-start',
+    padding: spacing.md,
   },
 });

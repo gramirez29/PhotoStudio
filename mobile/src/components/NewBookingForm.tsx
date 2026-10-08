@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { SERVICES } from '../constants/services';
 import { DURATION_OPTIONS_HOURS } from '../forms/createBookingForm';
 import { useNewBookingForm } from '../hooks/useNewBookingForm';
@@ -7,6 +7,7 @@ import { colors, radius, spacing } from '../theme/tokens';
 import { DateTimeField } from './DateTimeField';
 import { DurationPicker } from './DurationPicker';
 import { FormInput } from './FormInput';
+import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { SelectField } from './SelectField';
 
 /**
@@ -17,8 +18,7 @@ export function NewBookingForm(): ReactElement {
   const form = useNewBookingForm();
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScreen align="top">
         <FormInput
           label="Cliente"
           value={form.values.clientName}
@@ -82,20 +82,12 @@ export function NewBookingForm(): ReactElement {
             <Text style={styles.submitLabel}>Crear reserva</Text>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScreen>
   );
 }
 
 /** Styles of the form. */
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    gap: spacing.md,
-    padding: spacing.md,
-  },
   submitError: {
     color: colors.danger,
     fontSize: 14,

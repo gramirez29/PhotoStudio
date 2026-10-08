@@ -1,12 +1,13 @@
 import type { ReactElement } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useReasonForm } from '../hooks/useReasonForm';
-import { colors, spacing } from '../theme/tokens';
+import { colors } from '../theme/tokens';
 import type { ReasonFormProps } from '../types/components/ReasonForm.types';
 import { ACTION_VARIANTS, reasonFormCopy } from '../utils/bookingActions';
 import { formatDateTime } from '../utils/format';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
+import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 
 /**
  * Form shown once the booking is loaded: which booking it is, the reason field and the button that performs the action.
@@ -18,7 +19,7 @@ export function ReasonForm({ booking, action }: ReasonFormProps): ReactElement {
   const copy = reasonFormCopy(action);
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScreen align="top">
       <Text style={styles.title}>{booking.clientName}</Text>
       <Text style={styles.subtitle}>
         {booking.packageName} · {formatDateTime(booking.sessionStart)}
@@ -44,16 +45,12 @@ export function ReasonForm({ booking, action }: ReasonFormProps): ReactElement {
         disabled={form.isPending}
         onPress={form.submit}
       />
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 
 /** Styles of the form. */
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.md,
-    padding: spacing.md,
-  },
   title: {
     color: colors.textPrimary,
     fontSize: 22,
