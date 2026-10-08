@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.GetBooking;
+using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
 using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
@@ -25,6 +26,7 @@ public static class BookingEndpoints
         var group = endpoints.MapGroup("/api/bookings").WithTags("Bookings");
 
         group.MapPost("/", CreateAsync).WithName("CreateBooking");
+        group.MapGet("/", ListAsync).WithName("ListBookings");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
         group.MapPost("/{id:guid}/contract/in-person", SignContractInPersonAsync).WithName("SignContractInPerson");
         group.MapPost("/{id:guid}/payments/in-person", RecordInPersonPaymentAsync).WithName("RecordInPersonPayment");
@@ -47,6 +49,19 @@ public static class BookingEndpoints
         var response = await handler.HandleAsync(request.ToCommand(), cancellationToken);
         return TypedResults.Created($"/api/bookings/{response.Id}", response);
     }
+
+    /// <summary>
+    /// Lists the photographer's bookings. The photographer comes from the query string until authentication exists.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier; required.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the booking summaries, earliest session first.</returns>
+    private static async Task<Ok<IReadOnlyList<BookingSummaryResponse>>> ListAsync(
+        Guid photographerId,
+        IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ListBookingsQuery(photographerId), cancellationToken));
 
     /// <summary>
     /// Reads a booking.

@@ -132,3 +132,18 @@ export function readLiteral<T extends string>(record: JsonRecord, key: string, a
 
   return value;
 }
+
+/**
+ * Asserts that a value is a JSON array.
+ * @param value Value to check.
+ * @param path Location of the value, for error messages.
+ * @returns The array, with elements still unknown.
+ */
+export function expectArray(value: unknown, path: string): readonly unknown[] {
+  if (!Array.isArray(value)) {
+    throw new ResponseShapeError(path, 'an array');
+  }
+
+  const items: readonly unknown[] = value;
+  return items;
+}

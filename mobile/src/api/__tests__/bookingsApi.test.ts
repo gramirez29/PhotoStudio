@@ -1,7 +1,7 @@
-import { createBookingsApi, parseBooking } from '../bookingsApi';
+import { createBookingsApi, parseBooking, parseBookingSummaries } from '../bookingsApi';
 import { ResponseShapeError } from '../guards';
 import { createHttpClient } from '../httpClient';
-import { bookingPayload, jsonResponse, stubFetch } from '../__fixtures__/testResponses';
+import { bookingPayload, bookingSummaryPayload, jsonResponse, stubFetch } from '../__fixtures__/testResponses';
 
 describe('parseBooking', () => {
   it('parses a valid backend payload', () => {
@@ -37,6 +37,32 @@ describe('parseBooking', () => {
   });
 });
 
+describe('parseBookingSummaries', () => {
+  it('parses a list and keeps the order sent by the backend', () => {
+    const second = { ...bookingSummaryPayload, id: 'second', clientName: 'Luis Mora', status: 'Tentative' };
+
+    const summaries = parseBookingSummaries([bookingSummaryPayload, second]);
+
+    expect(summaries.map((summary) => summary.clientName)).toEqual(['María Pérez', 'Luis Mora']);
+    expect(summaries[1]?.status).toBe('Tentative');
+    expect(summaries[0]?.balance).toEqual({ amount: 50000, currency: 'CRC' });
+  });
+
+  it('accepts an empty list', () => {
+    expect(parseBookingSummaries([])).toEqual([]);
+  });
+
+  it('rejects a body that is not an array', () => {
+    expect(() => parseBookingSummaries({ items: [] })).toThrow('bookings should be an array');
+  });
+
+  it('points to the element that is invalid', () => {
+    expect(() => parseBookingSummaries([bookingSummaryPayload, { ...bookingSummaryPayload, status: 'Archived' }])).toThrow(
+      'bookings[1].status',
+    );
+  });
+});
+
 describe('createBookingsApi', () => {
   it('requests the booking by encoded identifier', async () => {
     const { fetchFn, urls } = stubFetch(jsonResponse(200, bookingPayload));
@@ -46,5 +72,15 @@ describe('createBookingsApi', () => {
 
     expect(urls).toEqual([`https://api.example.test/api/bookings/${bookingPayload.id}`]);
     expect(booking.id).toBe(bookingPayload.id);
+  });
+
+  it('lists the bookings of the photographer with the identifier encoded in the query string', async () => {
+    const { fetchFn, urls } = stubFetch(jsonResponse(200, [bookingSummaryPayload]));
+    const api = createBookingsApi(createHttpClient('https://api.example.test', { fetchFn }));
+
+    const bookings = await api.listBookings('a b');
+
+    expect(urls).toEqual(['https://api.example.test/api/bookings?photographerId=a%20b']);
+    expect(bookings).toHaveLength(1);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  expectArray,
   expectRecord,
   readArray,
   readLiteral,
@@ -15,6 +16,7 @@ import {
   PAYMENT_STATUSES,
   type BookingAction,
   type BookingResponse,
+  type BookingSummaryResponse,
   type ContractResponse,
   type MoneyResponse,
   type PaymentResponse,
@@ -107,8 +109,45 @@ export function parseBooking(value: unknown): BookingResponse {
   };
 }
 
+/**
+ * Parses a compact booking of a list.
+ * @param value Unknown element of the response.
+ * @param path Location of the element, for error messages.
+ * @returns The typed summary.
+ */
+export function parseBookingSummary(value: unknown, path: string): BookingSummaryResponse {
+  const record = expectRecord(value, path);
+  return {
+    id: readString(record, 'id', path),
+    clientName: readString(record, 'clientName', path),
+    packageName: readString(record, 'packageName', path),
+    status: readLiteral(record, 'status', BOOKING_STATUSES, path),
+    sessionStart: readString(record, 'sessionStart', path),
+    sessionEnd: readString(record, 'sessionEnd', path),
+    packagePrice: parseMoney(record.packagePrice, `${path}.packagePrice`),
+    balance: parseMoney(record.balance, `${path}.balance`),
+  };
+}
+
+/**
+ * Parses the list of compact bookings.
+ * @param value Unknown response body.
+ * @returns The typed summaries, in the order the backend sent them.
+ */
+export function parseBookingSummaries(value: unknown): readonly BookingSummaryResponse[] {
+  return expectArray(value, 'bookings').map((item, index) => parseBookingSummary(item, `bookings[${index}]`));
+}
+
 /** Booking endpoints used by the photographer app. */
 export interface BookingsApi {
+  /**
+   * Lists the photographer's bookings, earliest session first.
+   * @param photographerId Photographer (tenant) identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The booking summaries.
+   */
+  listBookings(photographerId: string, signal?: AbortSignal): Promise<readonly BookingSummaryResponse[]>;
+
   /**
    * Reads a booking.
    * @param id Booking identifier.
@@ -125,6 +164,8 @@ export interface BookingsApi {
  */
 export function createBookingsApi(client: HttpClient): BookingsApi {
   return {
+    listBookings: (photographerId, signal) =>
+      client.get(`/api/bookings?photographerId=${encodeURIComponent(photographerId)}`, parseBookingSummaries, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
   };
 }

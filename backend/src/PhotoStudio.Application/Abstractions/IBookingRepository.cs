@@ -17,6 +17,20 @@ public interface IBookingRepository
     Task<Booking?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lists a photographer's bookings whose session has not ended before the given instant, earliest session first.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="endingAfter">Sessions that ended before this instant are left out.</param>
+    /// <param name="limit">Maximum number of bookings to return.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The bookings, possibly empty.</returns>
+    Task<IReadOnlyList<Booking>> ListByPhotographerAsync(
+        Guid photographerId,
+        DateTimeOffset endingAfter,
+        int limit,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Indicates whether the photographer has a tentative or confirmed booking that overlaps the slot.
     /// </summary>
     /// <param name="photographerId">Photographer identifier.</param>

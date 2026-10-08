@@ -69,3 +69,15 @@ export const bookingPayload = {
   ],
   allowedActions: ['RecordInPersonPayment', 'Reschedule', 'Cancel'],
 } as const;
+
+/** A valid booking summary as produced by the list endpoint of the backend. */
+export const bookingSummaryPayload = {
+  id: '0199a1b2-0000-7000-8000-000000000001',
+  clientName: 'María Pérez',
+  packageName: 'Retrato familiar',
+  status: 'Confirmed',
+  sessionStart: '2026-10-11T12:00:00+00:00',
+  sessionEnd: '2026-10-11T14:00:00+00:00',
+  packagePrice: { amount: 100000, currency: 'CRC' },
+  balance: { amount: 50000, currency: 'CRC' },
+} as const;

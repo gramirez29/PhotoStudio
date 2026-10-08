@@ -185,6 +185,75 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The list returns only the photographer's own bookings, earliest session first.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListByPhotographerAsync_ReturnsOnlyOwnBookingsOrderedBySessionStart()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var later = NewBooking(photographerId, SessionStart.AddDays(3), SessionStart.AddDays(3).AddHours(2));
+        var earlier = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var foreign = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(later, TestContext.Current.CancellationToken);
+        await repository.AddAsync(earlier, TestContext.Current.CancellationToken);
+        await repository.AddAsync(foreign, TestContext.Current.CancellationToken);
+
+        var bookings = await repository.ListByPhotographerAsync(photographerId, Now, 50, TestContext.Current.CancellationToken);
+
+        bookings.Select(booking => booking.Id).ShouldBe([earlier.Id, later.Id]);
+    }
+
+    /// <summary>
+    /// Sessions that ended before the cut-off instant are left out of the list.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListByPhotographerAsync_LeavesOutSessionsThatEndedBeforeTheCutOff()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var old = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var recent = NewBooking(photographerId, SessionStart.AddDays(10), SessionStart.AddDays(10).AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(old, TestContext.Current.CancellationToken);
+        await repository.AddAsync(recent, TestContext.Current.CancellationToken);
+
+        var bookings = await repository.ListByPhotographerAsync(
+            photographerId,
+            SessionStart.AddDays(5),
+            50,
+            TestContext.Current.CancellationToken);
+
+        bookings.Select(booking => booking.Id).ShouldBe([recent.Id]);
+    }
+
+    /// <summary>
+    /// The list never returns more bookings than the limit, keeping the earliest sessions.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListByPhotographerAsync_RespectsTheLimit()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var bookings = Enumerable.Range(0, 4)
+            .Select(day => NewBooking(photographerId, SessionStart.AddDays(day), SessionStart.AddDays(day).AddHours(2)))
+            .ToList();
+        var repository = NewRepository();
+        foreach (var booking in bookings)
+        {
+            await repository.AddAsync(booking, TestContext.Current.CancellationToken);
+        }
+
+        var listed = await repository.ListByPhotographerAsync(photographerId, Now, 2, TestContext.Current.CancellationToken);
+
+        listed.Select(booking => booking.Id).ShouldBe([bookings[0].Id, bookings[1].Id]);
+    }
+
+    /// <summary>
     /// Adds a booking with its own repository instance, like concurrent HTTP requests would.
     /// </summary>
     /// <param name="booking">Booking to add.</param>
