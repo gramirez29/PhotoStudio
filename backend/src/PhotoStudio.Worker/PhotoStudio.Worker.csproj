@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!-- Worker: background jobs (outbox delivery, tentative booking expiration). Same image as the API, different command. -->
+  <PropertyGroup>
+    <RootNamespace>PhotoStudio.Worker</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoStudio.Application\PhotoStudio.Application.csproj" />
+    <ProjectReference Include="..\PhotoStudio.Infrastructure\PhotoStudio.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

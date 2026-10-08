@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using PhotoStudio.Api.Endpoints;
 using PhotoStudio.Api.Errors;
+using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application;
 using PhotoStudio.Infrastructure;
 
@@ -22,12 +23,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddProblemDetails();
+builder.Services.AddApiRateLimiting();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseRateLimiter();
 
 // The OpenAPI document is the source for the generated TypeScript types of the mobile app and the client portal.
 app.MapOpenApi();
@@ -40,5 +43,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 });
 
 app.MapBookingEndpoints();
+app.MapMaintenanceEndpoints();
 
 await app.RunAsync();

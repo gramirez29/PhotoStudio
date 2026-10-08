@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { ApiStatus } from '../components/ApiStatus';
 import { BookingListItem } from '../components/BookingListItem';
 import { ListSeparator } from '../components/ListSeparator';
+import { MaintenanceButton } from '../components/MaintenanceButton';
 import { Placeholder } from '../components/Placeholder';
 import { env } from '../config/env';
 import { useBookings } from '../hooks/useBookings';
@@ -43,6 +44,7 @@ export default function HomeScreen(): ReactElement {
       ListHeaderComponent={
         <View>
           <ApiStatus />
+          <MaintenanceButton />
           <Text style={styles.sectionTitle}>Mis reservas</Text>
         </View>
       }

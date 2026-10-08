@@ -6,6 +6,7 @@
   <ItemGroup Label="Runtime">
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
     <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
   </ItemGroup>
   <ItemGroup Label="Testing">

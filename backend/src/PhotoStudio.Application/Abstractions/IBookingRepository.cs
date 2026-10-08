@@ -31,6 +31,16 @@ public interface IBookingRepository
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lists tentative bookings whose hold ended at or before the given instant, oldest hold first. Whether each one can
+    /// really expire is decided by the domain (a pending proof of payment blocks it).
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <param name="limit">Maximum number of bookings to return.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The bookings, possibly empty.</returns>
+    Task<IReadOnlyList<Booking>> ListExpiredTentativeAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Indicates whether the photographer has a tentative or confirmed booking that overlaps the slot.
     /// </summary>
     /// <param name="photographerId">Photographer identifier.</param>

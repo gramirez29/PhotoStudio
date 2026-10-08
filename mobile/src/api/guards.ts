@@ -99,6 +99,22 @@ export function readNumber(record: JsonRecord, key: string, path: string): numbe
 }
 
 /**
+ * Reads a required boolean property.
+ * @param record Object to read from.
+ * @param key Property name.
+ * @param path Location of the object, for error messages.
+ * @returns The boolean value.
+ */
+export function readBoolean(record: JsonRecord, key: string, path: string): boolean {
+  const value = record[key];
+  if (typeof value !== 'boolean') {
+    throw new ResponseShapeError(`${path}.${key}`, 'a boolean');
+  }
+
+  return value;
+}
+
+/**
  * Reads a required array property.
  * @param record Object to read from.
  * @param key Property name.

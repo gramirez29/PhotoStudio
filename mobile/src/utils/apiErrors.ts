@@ -71,6 +71,23 @@ export function bookingCommandErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed "run maintenance" request into a message for the photographer.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function maintenanceErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  if (error.code === 'rate_limit.exceeded') {
+    return 'Ya se ejecutó hace un momento. Espera un minuto e inténtalo de nuevo.';
+  }
+
+  return 'No se pudo actualizar las reservas. Inténtalo de nuevo.';
+}
+
+/**
  * Converts the error of a failed "reschedule booking" request into a message for the photographer.
  * @param error Error of the mutation.
  * @returns The message in Spanish.

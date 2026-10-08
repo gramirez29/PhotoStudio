@@ -4,8 +4,24 @@ import {
   bookingCommandErrorMessage,
   bookingLoadErrorMessage,
   createBookingErrorMessage,
+  maintenanceErrorMessage,
   rescheduleBookingErrorMessage,
 } from '../apiErrors';
+
+describe('maintenanceErrorMessage', () => {
+  it('explains the rate limit', () => {
+    expect(maintenanceErrorMessage(new ApiError(429, 'x', 'rate_limit.exceeded'))).toBe(
+      'Ya se ejecutó hace un momento. Espera un minuto e inténtalo de nuevo.',
+    );
+  });
+
+  it('falls back to a generic message for other API errors and reports connection problems otherwise', () => {
+    expect(maintenanceErrorMessage(new ApiError(500, 'x', 'server.error'))).toBe(
+      'No se pudo actualizar las reservas. Inténtalo de nuevo.',
+    );
+    expect(maintenanceErrorMessage(new TypeError('Network request failed'))).toBe(NETWORK_ERROR_MESSAGE);
+  });
+});
 
 describe('createBookingErrorMessage', () => {
   it('explains a taken slot', () => {
