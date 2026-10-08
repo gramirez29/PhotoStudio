@@ -41,13 +41,16 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
 
         var outbox = database.GetCollection<OutboxMessageDocument>(Outbox.OutboxProcessor.CollectionName);
 
-        // Serves the outbox claim: pending messages that are due, oldest first.
-        var outboxPendingIndex = new CreateIndexModel<OutboxMessageDocument>(
+        // Serves the outbox claim, which takes the oldest due message: the index follows the sort order (status, then
+        // occurredAt, then _id) so MongoDB walks the pending messages oldest first and stops at the first one that is due.
+        // Putting nextAttemptAt in the index would turn the sort into an in-memory sort of the whole backlog, which made
+        // every claim examine every pending message (20 000 keys and documents to take one).
+        var outboxClaimIndex = new CreateIndexModel<OutboxMessageDocument>(
             Builders<OutboxMessageDocument>.IndexKeys
                 .Ascending(message => message.Status)
-                .Ascending(message => message.NextAttemptAt)
-                .Ascending(message => message.OccurredAt),
-            new CreateIndexOptions { Name = "ix_outbox_pending" });
+                .Ascending(message => message.OccurredAt)
+                .Ascending(message => message.Id),
+            new CreateIndexOptions { Name = "ix_outbox_claim" });
 
         // Removes delivered messages after the retention period; messages that are not delivered have no processedAt.
         var outboxRetentionIndex = new CreateIndexModel<OutboxMessageDocument>(
@@ -57,7 +60,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
         try
         {
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
-            await outbox.Indexes.CreateManyAsync([outboxPendingIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
+            await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
         }
         catch (Exception exception) when (exception is MongoException or TimeoutException)
         {

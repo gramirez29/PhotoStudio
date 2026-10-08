@@ -28,6 +28,7 @@ Documento de referencia del mecanismo que entrega los eventos de dominio de Phot
 15. [Pruebas](#15-pruebas)
 16. [Garantías, límites y decisiones](#16-garantías-límites-y-decisiones)
 17. [Ejecución diaria y a demanda (modo "una pasada")](#17-ejecución-diaria-y-a-demanda-modo-una-pasada)
+18. [Auditoría de memoria y rendimiento](#18-auditoría-de-memoria-y-rendimiento)
 
 ---
 
@@ -575,7 +576,7 @@ Se crean al arrancar la API o el worker. Si Mongo no responde, se registra un Wa
 |---|---|---|---|
 | `bookings` | `ix_photographer_slot` | `photographerId`, `slotStart` | (ya existía) listado por fotógrafo. |
 | `bookings` | `ix_status_expires` | `status`, `expiresAt` | Consulta de expiración B7. |
-| `outbox_messages` | `ix_outbox_pending` | `status`, `nextAttemptAt`, `occurredAt` | Reclamo del siguiente mensaje vencido, en orden. |
+| `outbox_messages` | `ix_outbox_claim` | `status`, `occurredAt`, `_id` | Reclamo del mensaje pendiente más antiguo. Sigue el orden del `sort` del reclamo para que Mongo recorra los pendientes del más viejo al más nuevo y se detenga en el primero vencido (ver §18.3). |
 | `outbox_messages` | `ix_outbox_retention` | `processedAt` (TTL 30 días) | Borra solo los mensajes entregados. |
 
 Sobre el TTL: MongoDB elimina un documento cuando `processedAt` es una fecha más vieja que 30 días. Los mensajes `Pending` o `Failed` no tienen `processedAt`, por lo que **nunca** se borran automáticamente. La retención existe porque Atlas M0 tiene solo 0.5 GB. La constante es `MongoIndexInitializer.OutboxRetention`.
@@ -979,3 +980,79 @@ Detalles de los cron de Railway: el servicio debe **terminar por sí mismo** (aq
 | `mobile/src/components/__tests__/MaintenanceButton.test.tsx` | Pulsar ejecuta y muestra el resultado, botón deshabilitado mientras corre, mensaje del límite de frecuencia. |
 
 **Verificación manual realizada** (API y worker locales contra el Mongo del compose): se creó una reserva, se forzó su vencimiento y `POST /api/maintenance/run` devolvió `{"bookingsExpired":1,"bookingsSkipped":0,"eventsProcessed":2,...}` con la reserva en `Expired`; la segunda llamada inmediata dio `429`. Con `WORKER_RUN_ONCE=true` el worker expiró otra reserva, registró `Maintenance pass completed: 1 bookings expired, 0 skipped, 2 events processed.` y terminó con código `0`; con una cadena de conexión inválida terminó con código `1`.
+
+---
+
+## 18. Auditoría de memoria y rendimiento
+
+Auditoría hecha para descartar que el worker dispare el uso de memoria (y el costo) en Railway. Combina revisión del código y mediciones reales dentro de un contenedor Linux construido con el mismo `Dockerfile`, contra un Mongo con datos sembrados.
+
+### 18.1 Revisión del código
+
+Se buscaron los patrones que suelen acumular memoria. Resultado:
+
+| Patrón | Resultado |
+|---|---|
+| Cachés o colecciones estáticas que crezcan | Ninguna. Solo `DomainEventSerializer.EventTypes`, que se llena una vez con los tipos de evento (12 entradas). |
+| `JsonSerializerOptions` creado por llamada (fuga clásica) | No: es un campo `static readonly` reutilizado. |
+| `HttpClient` nuevo, `Task.Run`, timers, suscripciones a eventos sin soltar | No hay. |
+| Cargas sin límite de la base | No: las únicas listas (`ListExpiredTentativeAsync`) están acotadas por `limit` (100) y cada pasada procesa lotes secuenciales sin acumular resultados. |
+| Sesiones de Mongo sin liberar | Todas con `using`; el cliente de Mongo es un singleton. |
+| Scopes de DI sin liberar | Todos con `await using` y de vida corta (uno por mensaje o por corrida). |
+| Pasada sin cota de duración | Acotada: máximo 10 lotes por tarea (1 000 reservas y 500 mensajes). |
+
+### 18.2 Mediciones (contenedor Linux, imagen del `Dockerfile`)
+
+| Escenario | Resultado |
+|---|---|
+| Modo una pasada, base vacía | Pico de 76 MB de RSS; termina en ~1 s. |
+| Modo una pasada con atraso de 1 000 reservas vencidas + 500 eventos | Pico de 109 MB de RSS; ~20 s de duración. Procesó 1 000 expiraciones y 500 eventos. |
+| Siempre encendido, 3 000 eventos al arrancar, 150 s | Estable en 105–110 MB de RSS; sin crecimiento. |
+| Siempre encendido, **soak de 5 min con carga continua** (1 000 eventos y 100 reservas vencidas cada 30 s) | Se estabiliza desde el ciclo 5 en ~42 MB propios (anónimos) y ~70 MB de cgroup; sin crecimiento. |
+| Siempre encendido con **Mongo caído**, 9 min | Sube de 22 a 35 MB propios durante los primeros 90 s (calentamiento de excepciones y JIT) y luego queda plano en 35 MB. Sin fuga. |
+
+**Cómo leer estas cifras.** El `VmRSS` (~105 MB) no es lo que se cobra: incluye ~53 MB de DLL del framework mapeadas desde disco (compartidas y recuperables) y ~22 MB de memoria compartida del runtime. La memoria realmente propia del proceso (`RssAnon`) es de ~32 MB en reposo, y lo que el cgroup del contenedor carga (`memory.current`) es de ~56 MB. En Railway lo esperable para el worker siempre encendido es del orden de **40–70 MB**, y para el modo una pasada, unos segundos de 75–110 MB una vez al día.
+
+### 18.3 Problema encontrado y corregido: reclamo del outbox con costo O(N) por mensaje
+
+Al revisar cómo resuelve Mongo la consulta con la que el worker reclama cada mensaje, `explain` mostró que, con un atraso de 20 000 mensajes pendientes, **examinaba las 20 000 claves y los 20 000 documentos para tomar uno solo** (39 ms por reclamo). El índice original (`status`, `nextAttemptAt`, `occurredAt`) tenía un campo de rango antes de `occurredAt`, así que no podía entregar los mensajes ya ordenados y Mongo debía ordenar todo el atraso en cada reclamo. Drenar N mensajes costaba N² lecturas: con un atraso grande (por ejemplo tras días con el worker apagado) habría saturado Atlas M0 y alargado cada pasada.
+
+No era un problema de memoria del worker, pero sí de rendimiento y se agrava justo en el escenario que más importa (acumulación).
+
+**Corrección:** el índice pasó a `ix_outbox_claim` = (`status`, `occurredAt`, `_id`), que sigue el orden del `sort`. Resultado medido con el mismo atraso de 20 000 mensajes:
+
+| | Claves examinadas | Documentos examinados | Tiempo |
+|---|---|---|---|
+| Índice anterior | 20 000 | 20 000 | 39 ms |
+| `ix_outbox_claim` | 1 | 1 | 0–2 ms |
+| `ix_outbox_claim`, con 50 mensajes en espera de reintento al frente | 51 | 51 | 0 ms |
+
+**Protección contra regresiones:** `tests/PhotoStudio.Infrastructure.IntegrationTests/OutboxClaimIndexTests.cs` crea los índices reales, inserta 500 mensajes pendientes y exige (con `explain`) que el reclamo examine menos de 10 documentos. Se comprobó que la prueba **falla con el índice anterior** y pasa con el nuevo.
+
+> Si ya existía una base creada con la versión anterior del índice (por ejemplo la de desarrollo), el índice viejo `ix_outbox_pending` queda como sobrante inofensivo; se puede borrar con `db.outbox_messages.dropIndex("ix_outbox_pending")`. En producción no hay nada que migrar porque esta versión aún no se había desplegado.
+
+### 18.4 Consulta de expiración
+
+Verificada con 5 000 reservas tentativas vencidas y 100 reservas con comprobante pendiente al frente de la cola: usa `ix_status_expires`, examina 200 documentos para devolver 100 y tarda ~2 ms. Las reservas con comprobante pendiente se excluyen en la consulta, pero siguen costando una lectura por pasada mientras exista el comprobante; solo sería relevante con miles de comprobantes pendientes a la vez.
+
+### 18.5 Ajustes del runtime evaluados y descartados
+
+Se midieron variantes de configuración de .NET con la misma carga. Ninguna justifica el cambio:
+
+| Variante | Efecto medido |
+|---|---|
+| `DOTNET_gcConcurrent=0` | Sin cambio (108 MB). |
+| `DOTNET_TieredPGO=0` | −3 MB de RSS. |
+| `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1` | −6 MB de RSS (el proyecto fija `InvariantGlobalization=false` a propósito). |
+| `DOTNET_GCgen0size=16MB`, `DOTNET_GCConserveMemory=9` | Sin mejora (+4 MB). |
+| `DOTNET_EnableWriteXorExecute=0` | Solo mueve ~21 MB de memoria compartida a anónima; sin ahorro neto y debilita una protección de seguridad. |
+| Todas combinadas | 51 MB frente a 56 MB de cgroup (−9 %). |
+
+Conclusión: la huella ya es baja y está dominada por el propio runtime de .NET, no por el código de PhotoStudio. No se tocó la configuración del runtime.
+
+### 18.6 Observaciones menores (sin acción)
+
+- **Logs con Mongo caído:** el modo siempre encendido escribe una advertencia con traza de pila cada ciclo (~45 KB en 140 s, ~1 MB por hora), sin impacto en memoria. En modo una pasada solo se escribe una vez.
+- **Rendimiento de la expiración en modo siempre encendido:** procesa hasta 100 reservas por minuto (≈144 000 al día), muy por encima de lo necesario. El modo una pasada procesa hasta 1 000 por ejecución.
+- **Un intento de entrega interrumpido por un apagado** cuenta como intento usado (el contador sube al reclamar). Solo importaría si un mismo mensaje se interrumpiera 8 veces seguidas.
+- **Mediciones locales, no de Railway:** los números vienen de Docker Desktop (Linux). Railway puede reportar el consumo de otra forma (con o sin caché de archivos), por eso se dan tanto el RSS como los valores de cgroup.
