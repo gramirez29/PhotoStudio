@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { openNewBooking } from '../navigation/appNavigation';
 import { colors, spacing } from '../theme/tokens';
-import { openNewBooking } from '../utils/navigation';
 
 /**
  * Header button that opens the create-booking form.

@@ -1,10 +1,10 @@
 import type { ReactElement } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { openReschedule } from '../navigation/appNavigation';
 import { colors, radius, spacing } from '../theme/tokens';
 import type { BookingDetailsProps } from '../types/components/BookingDetails.types';
 import { formatDateTime } from '../utils/format';
 import { BOOKING_ACTION_LABELS } from '../utils/labels';
-import { openReschedule } from '../utils/navigation';
 import { AmountRow } from './AmountRow';
 import { StatusBadge } from './StatusBadge';
 

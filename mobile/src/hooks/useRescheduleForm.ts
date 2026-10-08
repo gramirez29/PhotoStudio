@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { validateReschedule } from '../forms/rescheduleBookingForm';
+import { goBack } from '../navigation/appNavigation';
 import type { BookingResponse } from '../types/api/booking';
 import type { RescheduleFormState } from '../types/hooks/useRescheduleForm.types';
 import { rescheduleBookingErrorMessage } from '../utils/apiErrors';
-import { goBack } from '../utils/navigation';
 import { useRescheduleBooking } from './useRescheduleBooking';
 
 /**

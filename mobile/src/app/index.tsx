@@ -6,9 +6,9 @@ import { ListSeparator } from '../components/ListSeparator';
 import { Placeholder } from '../components/Placeholder';
 import { env } from '../config/env';
 import { useBookings } from '../hooks/useBookings';
+import { openBooking } from '../navigation/appNavigation';
 import { colors, spacing } from '../theme/tokens';
 import type { BookingSummaryResponse } from '../types/api/booking';
-import { openBooking } from '../utils/navigation';
 
 /**
  * Home screen: server status and the photographer's bookings, ordered by session date.

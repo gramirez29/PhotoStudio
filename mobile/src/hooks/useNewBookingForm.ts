@@ -7,9 +7,9 @@ import type {
   CreateBookingFormValues,
   CreateBookingTextField,
 } from '../types/forms/createBookingForm.types';
+import { replaceWithBooking } from '../navigation/appNavigation';
 import type { NewBookingFormState } from '../types/hooks/useNewBookingForm.types';
 import { createBookingErrorMessage } from '../utils/apiErrors';
-import { replaceWithBooking } from '../utils/navigation';
 import { useCreateBooking } from './useCreateBooking';
 
 /**
