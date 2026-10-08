@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Integration tests of the MongoDB persistence. They need a replica set (docker compose up -d) and skip themselves when none is reachable. -->
+  <PropertyGroup>
+    <RootNamespace>PhotoStudio.Infrastructure.IntegrationTests</RootNamespace>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PhotoStudio.Infrastructure\PhotoStudio.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>
