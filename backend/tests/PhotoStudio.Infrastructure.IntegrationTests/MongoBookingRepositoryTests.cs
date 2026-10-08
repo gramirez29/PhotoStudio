@@ -455,6 +455,79 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// Reverting a client-absent mark takes the slot back when nobody else took it meanwhile.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task RevertingClientAbsent_WhenTheSlotIsStillFree_ConfirmsAgainAndReservesTheSlot()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+        var markedAt = await MarkClientAbsentAsync(repository, original.Id);
+
+        var absent = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        absent.ShouldNotBeNull();
+        absent.RevertClientAbsent("Marcado por error", markedAt.AddHours(1));
+        await repository.UpdateReservingSlotAsync(absent, TestContext.Current.CancellationToken);
+
+        var stored = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        stored.ShouldNotBeNull();
+        stored.Status.ShouldBe(BookingStatus.Confirmed);
+        var intruder = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var exception = await Should.ThrowAsync<ConflictException>(
+            () => repository.AddAsync(intruder, TestContext.Current.CancellationToken));
+        exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
+    }
+
+    /// <summary>
+    /// Marking the client absent frees the slot; if another booking takes it, the reversal is rejected and the mark stays.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task RevertingClientAbsent_WhenAnotherBookingTookTheSlot_IsRejectedAndKeepsTheMark()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+        var markedAt = await MarkClientAbsentAsync(repository, original.Id);
+        var replacement = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        await repository.AddAsync(replacement, TestContext.Current.CancellationToken);
+
+        var absent = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        absent.ShouldNotBeNull();
+        absent.RevertClientAbsent("Marcado por error", markedAt.AddHours(1));
+        var exception = await Should.ThrowAsync<ConflictException>(
+            () => repository.UpdateReservingSlotAsync(absent, TestContext.Current.CancellationToken));
+
+        exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
+        var stored = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        stored.ShouldNotBeNull();
+        stored.Status.ShouldBe(BookingStatus.ClientAbsent);
+        stored.Version.ShouldBe(2);
+    }
+
+    /// <summary>
+    /// Loads a confirmed booking, marks its client absent once the tolerance has passed and saves it, which frees its slot.
+    /// </summary>
+    /// <param name="repository">Repository to use.</param>
+    /// <param name="bookingId">Booking to mark.</param>
+    /// <returns>The instant at which the client was marked absent.</returns>
+    private static async Task<DateTimeOffset> MarkClientAbsentAsync(MongoBookingRepository repository, Guid bookingId)
+    {
+        var markedAt = SessionStart.AddMinutes(BookingPolicy.Default.ClientAbsentToleranceMinutes);
+        var booking = await repository.GetByIdAsync(bookingId, TestContext.Current.CancellationToken);
+        booking.ShouldNotBeNull();
+        booking.MarkClientAbsent(markedAt);
+        await repository.UpdateAsync(booking, TestContext.Current.CancellationToken);
+        return markedAt;
+    }
+
+    /// <summary>
     /// Loads a booking, moves it to the given slot as the photographer and saves it reserving the slot.
     /// </summary>
     /// <param name="repository">Repository to use.</param>
