@@ -53,12 +53,25 @@ public interface IBookingRepository
     /// <summary>
     /// Persists the changes of an existing booking using optimistic concurrency on <see cref="AggregateRoot{TId}.Version"/>.
     /// When the booking is no longer tentative or confirmed, its slot is released in the same atomic operation.
-    /// Moving a booking to another slot or reactivating it (reschedule, revert client absence) is not handled here: those use
-    /// cases must reserve the new slot explicitly.
+    /// This method never changes the reserved slot: a booking that is still active must keep the slot it has stored, and
+    /// moving it (reschedule) or reactivating it (revert client absence) goes through <see cref="UpdateReservingSlotAsync"/>.
     /// </summary>
     /// <param name="booking">Booking to update.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A task that completes when the booking is stored.</returns>
     /// <exception cref="Exceptions.ConflictException">When another write changed the booking first.</exception>
+    /// <exception cref="InvalidOperationException">When an active booking has a different slot than the stored one.</exception>
     Task UpdateAsync(Booking booking, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Persists a tentative or confirmed booking and reserves its current slot in the photographer's calendar as one atomic
+    /// operation, releasing any slot the booking held before. The slot may overlap the booking's own previous slot, but not
+    /// the slot of any other active booking. Uses optimistic concurrency on <see cref="AggregateRoot{TId}.Version"/>.
+    /// </summary>
+    /// <param name="booking">Booking to update; must be tentative or confirmed.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the booking is stored.</returns>
+    /// <exception cref="Exceptions.ConflictException">When another active booking overlaps the slot, or another write changed the booking first.</exception>
+    /// <exception cref="ArgumentException">When the booking is not tentative or confirmed, because it holds no slot.</exception>
+    Task UpdateReservingSlotAsync(Booking booking, CancellationToken cancellationToken);
 }

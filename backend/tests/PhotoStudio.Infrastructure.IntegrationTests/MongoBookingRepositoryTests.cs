@@ -1,7 +1,9 @@
+using MongoDB.Driver;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Common;
 using PhotoStudio.Infrastructure.Persistence;
+using PhotoStudio.Infrastructure.Persistence.Documents;
 
 namespace PhotoStudio.Infrastructure.IntegrationTests;
 
@@ -254,6 +256,242 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// Rescheduling frees the old slot for others and takes the new one.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_MovesTheReservation()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+
+        var moved = await RescheduleAsync(repository, original.Id, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2));
+        var intoOldSlot = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var intoNewSlot = NewBooking(photographerId, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2));
+        await repository.AddAsync(intoOldSlot, TestContext.Current.CancellationToken);
+        var exception = await Should.ThrowAsync<ConflictException>(
+            () => repository.AddAsync(intoNewSlot, TestContext.Current.CancellationToken));
+
+        moved.Slot.Start.ShouldBe(SessionStart.AddDays(1));
+        moved.RescheduleCount.ShouldBe(1);
+        exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
+    }
+
+    /// <summary>
+    /// A slot that overlaps another booking is rejected and the booking keeps its stored slot and reservation.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_WhenTheNewSlotIsTaken_KeepsTheBookingAndItsOldReservation()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var blocker = NewBooking(photographerId, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+        await repository.AddAsync(blocker, TestContext.Current.CancellationToken);
+
+        var exception = await Should.ThrowAsync<ConflictException>(
+            () => RescheduleAsync(repository, original.Id, SessionStart.AddDays(1).AddHours(1), SessionStart.AddDays(1).AddHours(3)));
+
+        exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
+        var stored = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        stored.ShouldNotBeNull();
+        stored.Slot.Start.ShouldBe(SessionStart);
+        stored.Version.ShouldBe(1);
+        var intoOldSlot = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var stillReserved = await Should.ThrowAsync<ConflictException>(
+            () => repository.AddAsync(intoOldSlot, TestContext.Current.CancellationToken));
+        stillReserved.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
+    }
+
+    /// <summary>
+    /// A booking can move to a slot that overlaps its own previous slot: it does not conflict with itself.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_WhenShiftingInsideItsOwnSlot_Succeeds()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+
+        var moved = await RescheduleAsync(repository, original.Id, SessionStart.AddHours(1), SessionStart.AddHours(3));
+
+        moved.Slot.Start.ShouldBe(SessionStart.AddHours(1));
+        var before = NewBooking(photographerId, SessionStart.AddHours(-1), SessionStart.AddHours(1));
+        await repository.AddAsync(before, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// A stale copy cannot reschedule, and its target slot is not left reserved by the failed attempt.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_WithStaleVersion_ThrowsConcurrencyConflictAndReservesNothing()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+        var staleCopy = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        staleCopy.ShouldNotBeNull();
+        await RescheduleAsync(repository, original.Id, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2));
+        staleCopy.Reschedule(TimeSlot.Create(SessionStart.AddDays(5), SessionStart.AddDays(5).AddHours(2)), Actor.Photographer, Now);
+
+        var exception = await Should.ThrowAsync<ConflictException>(
+            () => repository.UpdateReservingSlotAsync(staleCopy, TestContext.Current.CancellationToken));
+
+        exception.Code.ShouldBe(ApplicationErrorCodes.ConcurrencyConflict);
+        var intoStaleTarget = NewBooking(photographerId, SessionStart.AddDays(5), SessionStart.AddDays(5).AddHours(2));
+        await repository.AddAsync(intoStaleTarget, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// A booking whose calendar range is missing (created before the calendar existed) still reschedules, restoring the range.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_WhenTheCalendarRangeIsMissing_ReservesTheNewSlot()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+        await fixture.Database
+            .GetCollection<PhotographerCalendarDocument>(MongoBookingRepository.CalendarCollectionName)
+            .UpdateOneAsync(
+                calendar => calendar.Id == photographerId,
+                Builders<PhotographerCalendarDocument>.Update.Set(calendar => calendar.Entries, []),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        await RescheduleAsync(repository, original.Id, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2));
+
+        var intoNewSlot = NewBooking(photographerId, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2));
+        var exception = await Should.ThrowAsync<ConflictException>(
+            () => repository.AddAsync(intoNewSlot, TestContext.Current.CancellationToken));
+        exception.Code.ShouldBe(ApplicationErrorCodes.SlotUnavailable);
+    }
+
+    /// <summary>
+    /// A reschedule racing many new bookings for the same slot: exactly one request wins and the stored data is consistent.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_RacingNewBookingsForTheSameSlot_LetsExactlyOneWin()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        const int competitors = 10;
+        var photographerId = Guid.CreateVersion7();
+        var original = NewConfirmedBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        await NewRepository().AddAsync(original, TestContext.Current.CancellationToken);
+        var contested = TimeSlot.Create(SessionStart.AddDays(2), SessionStart.AddDays(2).AddHours(2));
+        var newcomers = Enumerable.Range(0, competitors)
+            .Select(_ => NewBooking(photographerId, contested.Start, contested.End))
+            .ToList();
+
+        var reschedule = TryRescheduleAsync(original.Id, contested);
+        var additions = newcomers.Select(booking => TryAddAsync(booking)).ToList();
+        var outcomes = await Task.WhenAll(additions.Prepend(reschedule));
+
+        outcomes.Count(succeeded => succeeded).ShouldBe(1);
+        var holders = 0;
+        foreach (var booking in newcomers.Prepend(original))
+        {
+            var stored = await NewRepository().GetByIdAsync(booking.Id, TestContext.Current.CancellationToken);
+            if (stored is not null && stored.Slot.Overlaps(contested))
+            {
+                holders++;
+            }
+        }
+
+        holders.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// <c>UpdateAsync</c> refuses to save a moved active booking, because it would leave the calendar stale.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateAsync_WhenAnActiveBookingChangedItsSlot_Throws()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var original = NewConfirmedBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
+        var repository = NewRepository();
+        await repository.AddAsync(original, TestContext.Current.CancellationToken);
+        var loaded = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        loaded.ShouldNotBeNull();
+        loaded.Reschedule(TimeSlot.Create(SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2)), Actor.Photographer, Now);
+
+        await Should.ThrowAsync<InvalidOperationException>(
+            () => repository.UpdateAsync(loaded, TestContext.Current.CancellationToken));
+
+        var stored = await repository.GetByIdAsync(original.Id, TestContext.Current.CancellationToken);
+        stored.ShouldNotBeNull();
+        stored.Slot.Start.ShouldBe(SessionStart);
+    }
+
+    /// <summary>
+    /// A booking that no longer holds a slot cannot be saved through the slot-reserving operation.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateReservingSlotAsync_WithAnInactiveBooking_Throws()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var booking = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
+        booking.Cancel(Actor.Photographer, null, Now.AddDays(1));
+
+        await Should.ThrowAsync<ArgumentException>(
+            () => NewRepository().UpdateReservingSlotAsync(booking, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// Loads a booking, moves it to the given slot as the photographer and saves it reserving the slot.
+    /// </summary>
+    /// <param name="repository">Repository to use.</param>
+    /// <param name="bookingId">Booking to move.</param>
+    /// <param name="start">New session start.</param>
+    /// <param name="end">New session end.</param>
+    /// <returns>The booking as saved.</returns>
+    private static async Task<Booking> RescheduleAsync(MongoBookingRepository repository, Guid bookingId, DateTimeOffset start, DateTimeOffset end)
+    {
+        var booking = await repository.GetByIdAsync(bookingId, TestContext.Current.CancellationToken);
+        booking.ShouldNotBeNull();
+        booking.Reschedule(TimeSlot.Create(start, end), Actor.Photographer, Now);
+        await repository.UpdateReservingSlotAsync(booking, TestContext.Current.CancellationToken);
+        return booking;
+    }
+
+    /// <summary>
+    /// Tries to move a booking with its own repository instance, like a concurrent HTTP request would.
+    /// </summary>
+    /// <param name="bookingId">Booking to move.</param>
+    /// <param name="slot">Target slot.</param>
+    /// <returns><see langword="true"/> when moved; <see langword="false"/> when the slot was taken.</returns>
+    private async Task<bool> TryRescheduleAsync(Guid bookingId, TimeSlot slot)
+    {
+        try
+        {
+            await Task.Yield();
+            await RescheduleAsync(NewRepository(), bookingId, slot.Start, slot.End);
+            return true;
+        }
+        catch (ConflictException exception) when (exception.Code == ApplicationErrorCodes.SlotUnavailable)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Adds a booking with its own repository instance, like concurrent HTTP requests would.
     /// </summary>
     /// <param name="booking">Booking to add.</param>
@@ -277,6 +515,21 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     /// </summary>
     /// <returns>A new repository.</returns>
     private MongoBookingRepository NewRepository() => new(fixture.Database);
+
+    /// <summary>
+    /// Creates a confirmed booking for the slot: contract signed and the deposit paid in person.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="start">Session start.</param>
+    /// <param name="end">Session end.</param>
+    /// <returns>The new booking.</returns>
+    private static Booking NewConfirmedBooking(Guid photographerId, DateTimeOffset start, DateTimeOffset end)
+    {
+        var booking = NewBooking(photographerId, start, end);
+        booking.SignContract("María Pérez", "v1", Actor.Photographer, Channel.InPerson, Now);
+        booking.RecordInPersonPayment(Guid.CreateVersion7(), Money.Create(50_000m, "CRC"), PaymentMethod.Cash, "deposit-1", Now);
+        return booking;
+    }
 
     /// <summary>
     /// Creates a tentative booking for the slot.
