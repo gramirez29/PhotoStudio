@@ -24,7 +24,7 @@ public sealed partial class OutboxProcessor(
     IMongoDatabase database,
     IServiceScopeFactory scopeFactory,
     TimeProvider timeProvider,
-    ILogger<OutboxProcessor> logger)
+    ILogger<OutboxProcessor> logger) : IOutboxDispatcher
 {
     /// <summary>
     /// Name of the outbox collection.
@@ -46,12 +46,7 @@ public sealed partial class OutboxProcessor(
 
     private readonly IMongoCollection<OutboxMessageDocument> _messages = database.GetCollection<OutboxMessageDocument>(CollectionName);
 
-    /// <summary>
-    /// Claims and delivers up to <paramref name="batchSize"/> due messages, oldest first.
-    /// </summary>
-    /// <param name="batchSize">Maximum number of messages to deliver in this call.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The number of messages that were claimed, whether or not their delivery succeeded.</returns>
+    /// <inheritdoc />
     public async Task<int> ProcessBatchAsync(int batchSize, CancellationToken cancellationToken)
     {
         var claimed = 0;

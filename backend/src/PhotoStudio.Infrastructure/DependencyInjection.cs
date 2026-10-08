@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IBookingRepository, MongoBookingRepository>();
         services.AddSingleton<IBookingPolicyProvider, EnvironmentBookingPolicyProvider>();
         services.AddSingleton<OutboxProcessor>();
+        services.AddSingleton<IOutboxDispatcher>(provider => provider.GetRequiredService<OutboxProcessor>());
 
         services.AddHostedService<MongoIndexInitializer>();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", tags: [ReadinessTag]);

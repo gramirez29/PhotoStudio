@@ -3,7 +3,8 @@
 Documento de referencia del mecanismo que entrega los eventos de dominio de PhotoStudio y ejecuta los trabajos en segundo plano. Está escrito para que alguien que no vio el código pueda entender qué hace, por qué existe, dónde vive cada pieza y cómo se opera.
 
 - **Rama de origen:** `feature/outbox-and-worker`
-- **Alcance:** backend (.NET 10 + MongoDB). La app móvil no cambia.
+- **Alcance:** backend (.NET 10 + MongoDB) y un botón en la app móvil para ejecutar el mantenimiento a demanda (ver §17).
+- **Cómo corre en producción:** una vez al día como trabajo programado (Railway cron) y a demanda desde la app. El modo "siempre encendido" descrito en §8 sigue disponible pero no es el que se usa hoy (ver §17).
 - **Estado:** implementado y verificado de punta a punta. Todavía **no existe ningún consumidor** de eventos (ver §12).
 
 ---
@@ -26,6 +27,7 @@ Documento de referencia del mecanismo que entrega los eventos de dominio de Phot
 14. [Operación: inspeccionar y reparar](#14-operación-inspeccionar-y-reparar)
 15. [Pruebas](#15-pruebas)
 16. [Garantías, límites y decisiones](#16-garantías-límites-y-decisiones)
+17. [Ejecución diaria y a demanda (modo "una pasada")](#17-ejecución-diaria-y-a-demanda-modo-una-pasada)
 
 ---
 
@@ -446,6 +448,8 @@ Mensajes estructurados con `[LoggerMessage]` (los tres incluyen `MessageId` y `E
 
 ## 8. Parte 5: el Worker
 
+> Esta sección describe el modo **siempre encendido** (sondeo continuo). El worker tiene además un modo **una pasada** (`WORKER_RUN_ONCE=true`) pensado para ejecutarse una vez al día como trabajo programado; es el que se usa en producción. Ver §17.
+
 **Proyecto:** `src/PhotoStudio.Worker/` (`Microsoft.NET.Sdk.Worker`)
 
 Es un proceso independiente de la API. Comparte las capas Application e Infrastructure, pero no expone HTTP.
@@ -820,3 +824,158 @@ Se corrió la imagen Docker (API + worker) contra el Mongo local: se creó una r
 - Recordatorios programados por el worker (dependen de Notifications).
 - Respaldo semanal `mongodump` → R2 como otra tarea del worker.
 - Crear el servicio `photostudio-worker` en Railway.
+
+---
+
+## 17. Ejecución diaria y a demanda (modo "una pasada")
+
+Mientras no haya clientes que atender, mantener un proceso encendido las 24 horas solo para sondear cada 5 s o cada minuto es un gasto sin beneficio: Railway cobra la memoria mientras el proceso esté vivo, haga o no algo. Por eso se agregó una segunda forma de ejecutar el mismo trabajo.
+
+### 17.1 La idea
+
+| Forma | Quién la dispara | Qué hace | Costo |
+|---|---|---|---|
+| **Programada (diaria)** | Railway (cron) arranca el worker con `WORKER_RUN_ONCE=true` | Una *pasada* completa y el proceso termina | Solo los segundos que dura la pasada |
+| **A demanda** | El botón "Liberar reservas vencidas" de la app, que llama a `POST /api/maintenance/run` | La misma *pasada*, ejecutada dentro de la API | Una petición HTTP |
+| **Siempre encendido** (§8) | Arranque normal del worker, sin `WORKER_RUN_ONCE` | Sondeo continuo (outbox cada 5 s, expiración cada minuto) | RAM permanente. No se usa hoy; queda para cuando haya clientes y recordatorios |
+
+Las tres formas reutilizan el mismo código de negocio: el caso de uso de expiración y el `OutboxProcessor`.
+
+### 17.2 Qué es una "pasada"
+
+**Archivos:**
+- `src/PhotoStudio.Application/Maintenance/RunMaintenance/RunMaintenanceCommand.cs` (comando y `MaintenanceResponse`)
+- `src/PhotoStudio.Application/Maintenance/RunMaintenance/RunMaintenanceHandler.cs`
+- `src/PhotoStudio.Application/Abstractions/IOutboxDispatcher.cs` (puerto al outbox)
+
+Una pasada hace dos tareas, **en este orden**:
+
+1. **Expirar** reservas tentativas vencidas (B7), en lotes de 100, repitiendo mientras el lote venga lleno.
+2. **Entregar** los mensajes pendientes del outbox, en lotes de 50, repitiendo mientras el lote venga lleno.
+
+Expirar va primero a propósito: al expirar una reserva se genera el evento `BookingExpired`, y así se entrega en la misma pasada y no 24 horas después.
+
+Cada tarea tiene un tope de **10 lotes** (`MaxBatches`), es decir hasta 1 000 reservas y 500 mensajes por pasada. Así una pasada siempre tiene duración acotada aunque haya un atraso grande. Si se llega al tope, la respuesta trae `moreWorkPending = true` y la siguiente pasada continúa. Un lote donde ninguna reserva pudo expirar (todas omitidas) detiene la repetición, porque volvería a dar el mismo resultado.
+
+El `OutboxProcessor` implementa el puerto `IOutboxDispatcher`, de modo que Application puede pedir "entrega lo pendiente" sin conocer MongoDB. Se registra con el mismo singleton:
+
+```csharp
+services.AddSingleton<OutboxProcessor>();
+services.AddSingleton<IOutboxDispatcher>(provider => provider.GetRequiredService<OutboxProcessor>());
+```
+
+Respuesta de la pasada:
+
+```json
+{ "bookingsExpired": 2, "bookingsSkipped": 0, "eventsProcessed": 4, "moreWorkPending": false }
+```
+
+| Campo | Significado |
+|---|---|
+| `bookingsExpired` | Reservas que pasaron a `Expired` y liberaron su horario. |
+| `bookingsSkipped` | Reservas que no se pudieron expirar ahora (otra escritura ganó la carrera o falló una guarda). Se reintentan en la siguiente pasada. |
+| `eventsProcessed` | Mensajes del outbox que se reclamaron para entrega (incluye los que fallaron y quedaron para reintento). |
+| `moreWorkPending` | La pasada se detuvo en su tope y queda más por hacer. |
+
+### 17.3 Modo "una pasada" del worker
+
+**Archivos:** `src/PhotoStudio.Worker/Program.cs` y `src/PhotoStudio.Worker/RunOnceJob.cs`
+
+`Program.cs` decide el modo según la variable de entorno `WORKER_RUN_ONCE`:
+
+```csharp
+var runOnce = RunOnceJob.IsEnabled();          // WORKER_RUN_ONCE == "true" (sin distinguir mayúsculas)
+if (!runOnce)
+{
+    builder.Services.AddHostedService<OutboxDispatcherService>();
+    builder.Services.AddHostedService<BookingExpirationService>();
+}
+
+using var host = builder.Build();
+if (!runOnce) { await host.RunAsync(); return RunOnceJob.SuccessExitCode; }
+
+await host.StartAsync();                       // asegura los índices de Mongo
+var exitCode = await RunOnceJob.RunAsync(host.Services, lifetime.ApplicationStopping);
+await host.StopAsync();
+return exitCode;
+```
+
+- En modo una pasada **no se registran** los servicios de sondeo: el proceso hace una pasada y termina.
+- `RunOnceJob.RunAsync` abre un scope, resuelve `RunMaintenanceHandler`, lo ejecuta y escribe en el log: `Maintenance pass completed: N bookings expired, M skipped, K events processed.`
+- **Código de salida:** `0` si la pasada terminó; `1` si MongoDB no respondió (`MongoException` o `TimeoutException`), de modo que Railway muestre la ejecución como fallida y se vea en el panel.
+- Si la pasada queda al tope de lotes, se registra un Warning (`more work is pending`); la ejecución sigue contando como exitosa y la próxima pasada continúa.
+
+### 17.4 Endpoint a demanda
+
+**Archivos:**
+- `src/PhotoStudio.Api/Endpoints/MaintenanceEndpoints.cs`
+- `src/PhotoStudio.Api/RateLimiting/RateLimitingExtensions.cs`
+- `src/PhotoStudio.Api/Program.cs` (`AddApiRateLimiting`, `UseRateLimiter`, `MapMaintenanceEndpoints`)
+
+| Método | Ruta | Respuesta |
+|---|---|---|
+| POST | `/api/maintenance/run` | `200` con el JSON de la pasada. `429` si se llamó hace menos de un minuto. |
+
+**Límite de frecuencia:** política `maintenance` del rate limiter nativo de .NET, ventana fija de **1 llamada por minuto para toda la API** (no por usuario ni IP). Una segunda llamada dentro del minuto recibe:
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+
+{ "title": "Too many requests.", "status": 429,
+  "detail": "This action was requested too recently. Wait a minute and try again.",
+  "instance": "/api/maintenance/run", "code": "rate_limit.exceeded" }
+```
+
+> **El endpoint no tiene autenticación**, igual que el resto de `/api/bookings`, por decisión consciente mientras el único usuario es el dueño del proyecto. El riesgo es acotado: la pasada es idempotente y de duración acotada, y el rate limiter evita que repetirla cargue la base. **Cuando se implemente la autenticación del fotógrafo, este endpoint debe quedar detrás de ella.**
+
+El límite vive en la memoria de cada instancia de la API; con una sola instancia (hoy) es exacto.
+
+### 17.5 Botón en la app móvil
+
+| Archivo (`mobile/src/`) | Rol |
+|---|---|
+| `components/MaintenanceButton.tsx` | Botón "Liberar reservas vencidas" y el mensaje del resultado. Se muestra en la cabecera de la pantalla de inicio (`app/index.tsx`). |
+| `hooks/useRunMaintenance.ts` | Mutación de TanStack Query. Al terminar, invalida las consultas `['bookings']` y `['booking']` para que las listas muestren los nuevos estados. Sin reintentos. |
+| `api/maintenanceApi.ts` | `createMaintenanceApi` y `parseMaintenance` (validación de la respuesta en tiempo de ejecución). |
+| `api/client.ts` | Exporta la instancia `maintenanceApi`. |
+| `api/guards.ts` | Nuevo `readBoolean`. |
+| `types/api/maintenance.ts`, `types/api/maintenanceApi.ts` | Tipos de la respuesta y de la API. |
+| `utils/maintenance.ts` | `describeMaintenanceResult`: convierte el resultado en texto en español. |
+| `utils/apiErrors.ts` | `maintenanceErrorMessage`: traduce el `429` (`rate_limit.exceeded`) y otros errores. |
+
+Mensajes que ve el usuario, por ejemplo: "2 reservas vencidas liberadas.", "No había reservas vencidas.", "Ya se ejecutó hace un momento. Espera un minuto e inténtalo de nuevo."
+
+### 17.6 Consecuencias de correr una vez al día
+
+- **Un apartado vencido sigue bloqueando el horario hasta la siguiente pasada** (máximo 24 h). Para eso existe el botón: libera el horario al instante.
+- **Los eventos del outbox se entregan una vez al día** (o al pulsar el botón). Hoy no hay consumidores, así que no importa. **Cuando existan avisos al cliente o recordatorios habrá que volver al modo siempre encendido o a un cron frecuente** (cada pocos minutos); el cambio es de configuración, no de código.
+- Los recordatorios futuros (por ejemplo "mañana tienes sesión") no pueden depender de una ejecución diaria a una hora fija si deben salir a una hora precisa.
+
+### 17.7 Configuración en Railway
+
+1. **Crear el servicio.** En el proyecto de Railway: *New → GitHub Repo* y elegir este repositorio (el mismo que usa `photostudio-api`). Nómbralo `photostudio-worker`.
+2. **Root Directory:** `backend` (igual que la API; usa el mismo `Dockerfile`).
+3. **Custom Start Command** (Settings → Deploy): `dotnet worker/PhotoStudio.Worker.dll`
+4. **Cron Schedule** (Settings → Deploy): por ejemplo `0 11 * * *`. **Railway usa UTC**: Costa Rica es UTC-6 todo el año (no tiene horario de verano), así que `0 11 * * *` equivale a las 5:00 a. m. en Costa Rica.
+5. **Variables** (Variables → New Variable):
+   - `MONGODB_CONNECTION_STRING`: la misma que usa la API. Se puede referenciar con `${{photostudio-api.MONGODB_CONNECTION_STRING}}`.
+   - `MONGODB_DATABASE_NAME`: la misma que la API (`photostudio`).
+   - `WORKER_RUN_ONCE` = `true`
+6. **Health check:** dejar vacío (el worker no sirve HTTP). No asignarle dominio público.
+7. **Restart policy:** un trabajo programado debe terminar y no reiniciarse; si el panel ofrece la política, elegir *Never* (o *On Failure* con pocos reintentos).
+8. **Verificar:** ejecutarlo a mano (o esperar la hora del cron) y revisar el log: debe aparecer `Maintenance pass completed: ...` y el servicio debe quedar como terminado con éxito.
+
+Detalles de los cron de Railway: el servicio debe **terminar por sí mismo** (aquí lo hace), si una ejecución anterior sigue corriendo Railway omite la siguiente, y la frecuencia mínima es de 5 minutos. Los nombres exactos de los campos pueden variar con la versión del panel.
+
+### 17.8 Pruebas de esta parte
+
+| Archivo | Qué cubre |
+|---|---|
+| `tests/PhotoStudio.Application.UnitTests/Maintenance/RunMaintenanceHandlerTests.cs` | Sin trabajo; orden expirar→outbox; repetir lotes llenos y sumar; tope de lotes y `MoreWorkPending`; lote todo omitido no se repite. |
+| `mobile/src/api/__tests__/maintenanceApi.test.ts` | Validación de la respuesta, URL del POST y `429` como `ApiError`. |
+| `mobile/src/utils/__tests__/maintenance.test.ts` | Textos del resultado (singular/plural, omitidas, pendientes). |
+| `mobile/src/utils/__tests__/apiErrors.test.ts` | Mensajes de error del mantenimiento. |
+| `mobile/src/components/__tests__/MaintenanceButton.test.tsx` | Pulsar ejecuta y muestra el resultado, botón deshabilitado mientras corre, mensaje del límite de frecuencia. |
+
+**Verificación manual realizada** (API y worker locales contra el Mongo del compose): se creó una reserva, se forzó su vencimiento y `POST /api/maintenance/run` devolvió `{"bookingsExpired":1,"bookingsSkipped":0,"eventsProcessed":2,...}` con la reserva en `Expired`; la segunda llamada inmediata dio `429`. Con `WORKER_RUN_ONCE=true` el worker expiró otra reserva, registró `Maintenance pass completed: 1 bookings expired, 0 skipped, 2 events processed.` y terminó con código `0`; con una cadena de conexión inválida terminó con código `1`.
