@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- API layer: HTTP endpoints, request DTOs, error handling and composition root. -->
+  <PropertyGroup>
+    <RootNamespace>PhotoStudio.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoStudio.Application\PhotoStudio.Application.csproj" />
+    <ProjectReference Include="..\PhotoStudio.Infrastructure\PhotoStudio.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+</Project>

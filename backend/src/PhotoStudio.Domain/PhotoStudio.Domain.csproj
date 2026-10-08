@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Domain layer: entities, value objects, domain events and business rules. No external dependencies. -->
+  <PropertyGroup>
+    <RootNamespace>PhotoStudio.Domain</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PhotoStudio.Domain.UnitTests" />
+  </ItemGroup>
+
+</Project>

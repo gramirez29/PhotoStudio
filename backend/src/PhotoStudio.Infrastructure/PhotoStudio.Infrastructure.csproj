@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Infrastructure layer: MongoDB persistence, health checks and adapters for the application ports. -->
+  <PropertyGroup>
+    <RootNamespace>PhotoStudio.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoStudio.Application\PhotoStudio.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,50 @@
+# Local development stack. Usage (from the backend folder):
+#   docker compose up -d                 -> MongoDB only; run the API with `dotnet run` or from the IDE.
+#   docker compose --profile api up -d --build -> MongoDB + API container (same image as production).
+name: photostudio
+
+services:
+  # Single-node replica set, the same topology as Atlas M0, so retryable writes and transactions behave like production.
+  mongo:
+    image: mongo:8
+    container_name: photostudio-mongo
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      # Host port 27019 avoids clashes with other local Mongo containers (27017, 27018). Published on loopback only: the dev database has no authentication.
+      - "127.0.0.1:27019:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Initiates the replica set on first start; afterwards it only reports status. Healthy once a primary is elected.
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status().myState === 1 ? quit(0) : quit(1) } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }); quit(1) }"
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  # Production image of the API. Only started with `--profile api`.
+  api:
+    profiles: ["api"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: photostudio-api
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # directConnection avoids replica-set host discovery, whose advertised host is "localhost" inside the mongo container.
+      MONGODB_CONNECTION_STRING: mongodb://mongo:27017/?directConnection=true
+      MONGODB_DATABASE_NAME: photostudio_dev
+    ports:
+      - "8080:8080"
+
+volumes:
+  mongo-data:

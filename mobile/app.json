@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "PhotoStud.io",
+    "slug": "photostudio",
+    "scheme": "photostudio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    }
+  }
+}

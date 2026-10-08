@@ -1,0 +1,14 @@
+<Project>
+  <!-- Shared build settings applied to every .NET project in the PhotoStudio solution. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Generates XML documentation so every public member must carry a doc comment (warning CS1591 otherwise). -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- The first local build was clean, so any new warning fails the build. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+</Project>
