@@ -76,9 +76,9 @@ public sealed class BookingDocument
     [BsonElement("rescheduleCount")]
     public int RescheduleCount { get; set; }
 
-    /// <summary>Gets or sets the instant the no-show was marked (UTC).</summary>
-    [BsonElement("noShowMarkedAt")]
-    public DateTime? NoShowMarkedAt { get; set; }
+    /// <summary>Gets or sets the instant the client was marked absent (UTC).</summary>
+    [BsonElement("clientAbsentMarkedAt")]
+    public DateTime? ClientAbsentMarkedAt { get; set; }
 
     /// <summary>Gets or sets the recorded payments.</summary>
     [BsonElement("payments")]
@@ -115,13 +115,13 @@ public sealed class BookingPolicyDocument
     [BsonElement("maxReschedules")]
     public int MaxReschedules { get; set; }
 
-    /// <summary>Gets or sets the no-show tolerance, in minutes.</summary>
-    [BsonElement("noShowToleranceMinutes")]
-    public int NoShowToleranceMinutes { get; set; }
+    /// <summary>Gets or sets the client-absent tolerance, in minutes.</summary>
+    [BsonElement("clientAbsentToleranceMinutes")]
+    public int ClientAbsentToleranceMinutes { get; set; }
 
-    /// <summary>Gets or sets the no-show revert window, in days.</summary>
-    [BsonElement("noShowRevertWindowDays")]
-    public int NoShowRevertWindowDays { get; set; }
+    /// <summary>Gets or sets the client-absent revert window, in days.</summary>
+    [BsonElement("clientAbsentRevertWindowDays")]
+    public int ClientAbsentRevertWindowDays { get; set; }
 }
 
 /// <summary>

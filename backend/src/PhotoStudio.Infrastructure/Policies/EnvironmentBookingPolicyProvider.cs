@@ -24,8 +24,8 @@ public sealed class EnvironmentBookingPolicyProvider : IBookingPolicyProvider
             ReadInt("BOOKING_FREE_CANCELLATION_WINDOW_HOURS", defaults.FreeCancellationWindowHours),
             ReadInt("BOOKING_RESCHEDULE_MIN_NOTICE_HOURS", defaults.RescheduleMinNoticeHours),
             ReadInt("BOOKING_MAX_RESCHEDULES", defaults.MaxReschedules),
-            ReadInt("BOOKING_NO_SHOW_TOLERANCE_MINUTES", defaults.NoShowToleranceMinutes),
-            ReadInt("BOOKING_NO_SHOW_REVERT_WINDOW_DAYS", defaults.NoShowRevertWindowDays));
+            ReadInt("BOOKING_CLIENT_ABSENT_TOLERANCE_MINUTES", defaults.ClientAbsentToleranceMinutes),
+            ReadInt("BOOKING_CLIENT_ABSENT_REVERT_WINDOW_DAYS", defaults.ClientAbsentRevertWindowDays));
     }
 
     /// <inheritdoc />

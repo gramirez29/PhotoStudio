@@ -77,13 +77,13 @@ public sealed record BookingRescheduled(Guid BookingId, DateTimeOffset PreviousS
 /// <param name="OccurredAt">Instant of the event (UTC).</param>
 public sealed record SessionCompleted(Guid BookingId, Guid PhotographerId, DateTimeOffset OccurredAt) : IDomainEvent;
 
-/// <summary>Raised when the photographer marks a no-show (B12).</summary>
+/// <summary>Raised when the photographer marks the client absent (B12).</summary>
 /// <param name="BookingId">Booking identifier.</param>
 /// <param name="OccurredAt">Instant of the event (UTC).</param>
-public sealed record ClientNoShow(Guid BookingId, DateTimeOffset OccurredAt) : IDomainEvent;
+public sealed record ClientMarkedAbsent(Guid BookingId, DateTimeOffset OccurredAt) : IDomainEvent;
 
-/// <summary>Raised when a no-show is reverted (B13).</summary>
+/// <summary>Raised when a client-absent mark is reverted (B13).</summary>
 /// <param name="BookingId">Booking identifier.</param>
-/// <param name="Reason">Why the no-show was reverted.</param>
+/// <param name="Reason">Why the client-absent mark was reverted.</param>
 /// <param name="OccurredAt">Instant of the event (UTC).</param>
-public sealed record NoShowReverted(Guid BookingId, string Reason, DateTimeOffset OccurredAt) : IDomainEvent;
+public sealed record ClientAbsenceReverted(Guid BookingId, string Reason, DateTimeOffset OccurredAt) : IDomainEvent;

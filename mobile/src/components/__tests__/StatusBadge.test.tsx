@@ -3,9 +3,9 @@ import { StatusBadge } from '../StatusBadge';
 
 describe('StatusBadge', () => {
   it('shows the Spanish label of the status', () => {
-    render(<StatusBadge status="NoShow" />);
+    render(<StatusBadge status="ClientAbsent" />);
 
-    expect(screen.getByText('No se presentó')).toBeTruthy();
+    expect(screen.getByText('Cliente ausente')).toBeTruthy();
   });
 
   it('exposes the status to screen readers', () => {

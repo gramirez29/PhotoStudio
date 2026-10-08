@@ -38,7 +38,7 @@ public sealed class BookingAllowedActionsTests
     }
 
     /// <summary>
-    /// Complete and no-show only appear once the session has started and the tolerance passed.
+    /// Complete and client-absent only appear once the session has started and the tolerance passed.
     /// </summary>
     [Fact]
     public void Confirmed_ForPhotographer_SessionActionsDependOnTime()
@@ -49,7 +49,7 @@ public sealed class BookingAllowedActionsTests
 
         var afterTolerance = booking.GetAllowedActions(Actor.Photographer, SessionStart.AddMinutes(30));
         afterTolerance.ShouldContain(BookingAction.Complete);
-        afterTolerance.ShouldContain(BookingAction.MarkNoShow);
+        afterTolerance.ShouldContain(BookingAction.MarkClientAbsent);
     }
 
     /// <summary>
