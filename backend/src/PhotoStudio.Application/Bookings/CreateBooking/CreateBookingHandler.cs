@@ -31,6 +31,8 @@ public sealed class CreateBookingHandler(
         var now = timeProvider.GetUtcNow();
         var slot = TimeSlot.Create(command.SessionStart, command.SessionEnd);
 
+        // Fast path that rejects an obviously taken slot before building the aggregate. It is not race-safe on its own:
+        // the authoritative check is the atomic reservation inside AddAsync, which throws the same conflict.
         if (await repository.HasOverlappingActiveBookingAsync(command.PhotographerId, slot, cancellationToken))
         {
             throw new ConflictException(ApplicationErrorCodes.SlotUnavailable, "The photographer already has a booking in that slot.");
