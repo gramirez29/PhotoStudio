@@ -1,11 +1,13 @@
 import type { ReactElement } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { SERVICES } from '../constants/services';
 import { DURATION_OPTIONS_HOURS } from '../forms/createBookingForm';
 import { useNewBookingForm } from '../hooks/useNewBookingForm';
 import { colors, radius, spacing } from '../theme/tokens';
 import { DateTimeField } from './DateTimeField';
 import { DurationPicker } from './DurationPicker';
 import { FormInput } from './FormInput';
+import { SelectField } from './SelectField';
 
 /**
  * Form to create a booking in a few taps: client, package, price, day, time and duration.
@@ -29,19 +31,19 @@ export function NewBookingForm(): ReactElement {
         <FormInput
           label="Teléfono"
           value={form.values.clientPhone}
-          onChangeText={(text) => form.setText('clientPhone', text)}
+          onChangeText={form.setPhone}
           error={form.errors.clientPhone}
           keyboardType="phone-pad"
           textContentType="telephoneNumber"
-          placeholder="8888 8888"
+          placeholder="8888-8888"
         />
-        <FormInput
+        <SelectField
           label="Paquete"
+          options={SERVICES}
           value={form.values.packageName}
-          onChangeText={(text) => form.setText('packageName', text)}
+          onChange={form.setPackage}
+          placeholder="Selecciona un paquete"
           error={form.errors.packageName}
-          autoCapitalize="sentences"
-          placeholder="Retrato familiar"
         />
         <FormInput
           label="Precio (₡)"

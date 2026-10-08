@@ -61,7 +61,7 @@ export function validateCreateBookingForm(
 
   const packageName = values.packageName.trim();
   if (packageName.length === 0) {
-    errors.packageName = 'Escribe el nombre del paquete.';
+    errors.packageName = 'Elige un paquete.';
   }
 
   const packagePrice = parsePrice(values.price);

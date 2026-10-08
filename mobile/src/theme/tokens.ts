@@ -15,6 +15,7 @@ export const colors = {
   danger: '#B91C1C',
   info: '#1D4ED8',
   muted: '#71717A',
+  overlay: 'rgba(24, 24, 27, 0.45)',
 } as const;
 
 /** Spacing scale in density-independent pixels. */
