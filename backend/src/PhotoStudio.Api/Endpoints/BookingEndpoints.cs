@@ -4,6 +4,7 @@ using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
+using PhotoStudio.Application.Bookings.RescheduleBooking;
 using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
 
@@ -30,6 +31,7 @@ public static class BookingEndpoints
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
         group.MapPost("/{id:guid}/contract/in-person", SignContractInPersonAsync).WithName("SignContractInPerson");
         group.MapPost("/{id:guid}/payments/in-person", RecordInPersonPaymentAsync).WithName("RecordInPersonPayment");
+        group.MapPost("/{id:guid}/reschedule", RescheduleAsync).WithName("RescheduleBooking");
 
         return endpoints;
     }
@@ -88,6 +90,21 @@ public static class BookingEndpoints
         Guid id,
         SignContractInPersonRequest request,
         ICommandHandler<SignContractInPersonCommand, BookingResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(request.ToCommand(id), cancellationToken));
+
+    /// <summary>
+    /// Moves a confirmed booking to another slot. Photographer-only until authentication and the client portal exist.
+    /// </summary>
+    /// <param name="id">Booking identifier.</param>
+    /// <param name="request">New slot.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the updated booking; 409 when the slot is taken or the booking is not confirmed.</returns>
+    private static async Task<Ok<BookingResponse>> RescheduleAsync(
+        Guid id,
+        RescheduleBookingRequest request,
+        ICommandHandler<RescheduleBookingCommand, BookingResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(request.ToCommand(id), cancellationToken));
 

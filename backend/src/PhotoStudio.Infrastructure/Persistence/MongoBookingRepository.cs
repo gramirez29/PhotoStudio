@@ -97,25 +97,44 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
                         Builders<CalendarEntryDocument>.Filter.Lte(entry => entry.End, booking.CreatedAt.UtcDateTime)),
                     cancellationToken: token);
 
-                // The reservation is one conditional update: it matches only while no stored range overlaps the new one.
-                // Concurrent transactions write the same calendar document, so the server aborts the loser with a
-                // transient error that the driver retries; the retry then sees the winner's range and fails the filter.
-                var reservation = await _calendars.UpdateOneAsync(
+                await ReserveSlotAsync(transactionSession, document, token);
+                await _collection.InsertOneAsync(transactionSession, document, cancellationToken: token);
+                return true;
+            },
+            MajorityTransaction,
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateReservingSlotAsync(Booking booking, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(booking);
+
+        if (!IsActive(booking.Status))
+        {
+            throw new ArgumentException("Only tentative or confirmed bookings hold a slot.", nameof(booking));
+        }
+
+        var expectedVersion = booking.Version;
+        var document = booking.ToDocument(expectedVersion + 1);
+        await EnsureCalendarExistsAsync(booking.PhotographerId, cancellationToken);
+
+        using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+        await session.WithTransactionAsync(
+            async (transactionSession, token) =>
+            {
+                var result = await _collection.ReplaceOneAsync(
                     transactionSession,
-                    OverlapFreeFilter(booking.PhotographerId, document.SlotStart, document.SlotEnd),
-                    Builders<PhotographerCalendarDocument>.Update.Push(
-                        calendar => calendar.Entries,
-                        new CalendarEntryDocument { BookingId = booking.Id, Start = document.SlotStart, End = document.SlotEnd }),
+                    stored => stored.Id == booking.Id && stored.Version == expectedVersion,
+                    document,
                     cancellationToken: token);
 
-                if (reservation.MatchedCount == 0)
-                {
-                    throw new ConflictException(
-                        ApplicationErrorCodes.SlotUnavailable,
-                        "The photographer already has a booking in that slot.");
-                }
+                EnsureMatched(result, booking.Id);
 
-                await _collection.InsertOneAsync(transactionSession, document, cancellationToken: token);
+                // Drop the range the booking held (if any), then reserve the new one against every other booking. If the
+                // new range is taken the exception aborts the transaction and the old range stays reserved.
+                await ReleaseSlotAsync(transactionSession, booking.PhotographerId, booking.Id, token);
+                await ReserveSlotAsync(transactionSession, document, token);
                 return true;
             },
             MajorityTransaction,
@@ -130,15 +149,23 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
         var expectedVersion = booking.Version;
         var document = booking.ToDocument(expectedVersion + 1);
 
-        // Booking still holds its slot: only the booking document changes.
+        // Booking still holds its slot: only the booking document changes. The stored slot must equal the new one, so a
+        // caller that moved the booking and used this method by mistake fails loudly instead of leaving the calendar stale.
         if (IsActive(booking.Status))
         {
             var result = await _collection.ReplaceOneAsync(
-                stored => stored.Id == booking.Id && stored.Version == expectedVersion,
+                stored => stored.Id == booking.Id
+                    && stored.Version == expectedVersion
+                    && stored.SlotStart == document.SlotStart
+                    && stored.SlotEnd == document.SlotEnd,
                 document,
                 cancellationToken: cancellationToken);
 
-            EnsureMatched(result, booking.Id);
+            if (result.MatchedCount == 0)
+            {
+                await ThrowForUnmatchedActiveUpdateAsync(booking.Id, expectedVersion, cancellationToken);
+            }
+
             return;
         }
 
@@ -155,18 +182,85 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
 
                 EnsureMatched(result, booking.Id);
 
-                await _calendars.UpdateOneAsync(
-                    transactionSession,
-                    Builders<PhotographerCalendarDocument>.Filter.Eq(calendar => calendar.Id, booking.PhotographerId),
-                    Builders<PhotographerCalendarDocument>.Update.PullFilter(
-                        calendar => calendar.Entries,
-                        Builders<CalendarEntryDocument>.Filter.Eq(entry => entry.BookingId, booking.Id)),
-                    cancellationToken: token);
-
+                await ReleaseSlotAsync(transactionSession, booking.PhotographerId, booking.Id, token);
                 return true;
             },
             MajorityTransaction,
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Reserves the booking's slot in the photographer's calendar, inside the given transaction. The reservation is one
+    /// conditional update: it matches only while no stored range overlaps the new one. Concurrent transactions write the
+    /// same calendar document, so the server aborts the loser with a transient error that the driver retries; the retry
+    /// then sees the winner's range and fails the filter.
+    /// </summary>
+    /// <param name="session">Session of the running transaction.</param>
+    /// <param name="document">Booking document that carries the photographer, the identifier and the slot.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the slot is reserved.</returns>
+    /// <exception cref="ConflictException">When another range overlaps the slot.</exception>
+    private async Task ReserveSlotAsync(IClientSessionHandle session, BookingDocument document, CancellationToken cancellationToken)
+    {
+        var reservation = await _calendars.UpdateOneAsync(
+            session,
+            OverlapFreeFilter(document.PhotographerId, document.SlotStart, document.SlotEnd),
+            Builders<PhotographerCalendarDocument>.Update.Push(
+                calendar => calendar.Entries,
+                new CalendarEntryDocument { BookingId = document.Id, Start = document.SlotStart, End = document.SlotEnd }),
+            cancellationToken: cancellationToken);
+
+        if (reservation.MatchedCount == 0)
+        {
+            throw new ConflictException(
+                ApplicationErrorCodes.SlotUnavailable,
+                "The photographer already has a booking in that slot.");
+        }
+    }
+
+    /// <summary>
+    /// Removes the range a booking holds from the photographer's calendar, inside the given transaction. Does nothing
+    /// when the booking holds no range.
+    /// </summary>
+    /// <param name="session">Session of the running transaction.</param>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="bookingId">Booking whose range is removed.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the range is removed.</returns>
+    private Task ReleaseSlotAsync(IClientSessionHandle session, Guid photographerId, Guid bookingId, CancellationToken cancellationToken) =>
+        _calendars.UpdateOneAsync(
+            session,
+            Builders<PhotographerCalendarDocument>.Filter.Eq(calendar => calendar.Id, photographerId),
+            Builders<PhotographerCalendarDocument>.Update.PullFilter(
+                calendar => calendar.Entries,
+                Builders<CalendarEntryDocument>.Filter.Eq(entry => entry.BookingId, bookingId)),
+            cancellationToken: cancellationToken);
+
+    /// <summary>
+    /// Explains why the update of an active booking matched nothing: a newer version means a concurrency conflict, while
+    /// the expected version with another slot means the caller used the wrong method to move the booking.
+    /// </summary>
+    /// <param name="bookingId">Booking identifier.</param>
+    /// <param name="expectedVersion">Version the caller loaded.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that always ends with an exception.</returns>
+    /// <exception cref="ConflictException">When the stored booking is not at the expected version.</exception>
+    /// <exception cref="InvalidOperationException">When only the slot differs.</exception>
+    private async Task ThrowForUnmatchedActiveUpdateAsync(Guid bookingId, long expectedVersion, CancellationToken cancellationToken)
+    {
+        var versionMatches = await _collection
+            .Find(stored => stored.Id == bookingId && stored.Version == expectedVersion)
+            .AnyAsync(cancellationToken);
+
+        if (versionMatches)
+        {
+            throw new InvalidOperationException(
+                $"Booking {bookingId} changed its slot; use {nameof(UpdateReservingSlotAsync)} to move an active booking.");
+        }
+
+        throw new ConflictException(
+            ApplicationErrorCodes.ConcurrencyConflict,
+            $"Booking {bookingId} was modified by another request. Reload it and try again.");
     }
 
     /// <summary>
