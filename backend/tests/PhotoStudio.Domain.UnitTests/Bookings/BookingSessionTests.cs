@@ -6,7 +6,7 @@ using static PhotoStudio.Domain.UnitTests.Bookings.BookingTestData;
 namespace PhotoStudio.Domain.UnitTests.Bookings;
 
 /// <summary>
-/// Tests of transitions B9 (reschedule), B11 (complete), B12 (no-show) and B13 (revert no-show).
+/// Tests of transitions B9 (reschedule), B11 (complete), B12 (client absent) and B13 (revert client absent).
 /// </summary>
 public sealed class BookingSessionTests
 {
@@ -88,45 +88,45 @@ public sealed class BookingSessionTests
     }
 
     /// <summary>
-    /// A no-show can only be marked after the tolerance of the policy.
+    /// The client can only be marked absent after the tolerance of the policy.
     /// </summary>
     [Fact]
-    public void MarkNoShow_BeforeTolerance_Throws()
+    public void MarkClientAbsent_BeforeTolerance_Throws()
     {
         var booking = CreateConfirmed();
 
-        var exception = Should.Throw<DomainException>(() => booking.MarkNoShow(SessionStart.AddMinutes(10)));
+        var exception = Should.Throw<DomainException>(() => booking.MarkClientAbsent(SessionStart.AddMinutes(10)));
 
         exception.Code.ShouldBe(DomainErrorCodes.GuardFailed);
     }
 
     /// <summary>
-    /// Scenario 7 of the workbook: a no-show marked by mistake can be reverted with a reason.
+    /// Scenario 7 of the workbook: a client-absent mark made by mistake can be reverted with a reason.
     /// </summary>
     [Fact]
-    public void MarkNoShow_ThenRevert_ReturnsToConfirmed()
+    public void MarkClientAbsent_ThenRevert_ReturnsToConfirmed()
     {
         var booking = CreateConfirmed();
-        booking.MarkNoShow(SessionStart.AddMinutes(30));
+        booking.MarkClientAbsent(SessionStart.AddMinutes(30));
 
-        booking.RevertNoShow("Marcado por error", SessionStart.AddHours(2));
+        booking.RevertClientAbsent("Marcado por error", SessionStart.AddHours(2));
 
         booking.Status.ShouldBe(BookingStatus.Confirmed);
-        booking.NoShowMarkedAt.ShouldBeNull();
-        booking.DomainEvents.OfType<NoShowReverted>().ShouldHaveSingleItem();
+        booking.ClientAbsentMarkedAt.ShouldBeNull();
+        booking.DomainEvents.OfType<ClientAbsenceReverted>().ShouldHaveSingleItem();
     }
 
     /// <summary>
-    /// The no-show cannot be reverted after the window of the policy.
+    /// The client-absent mark cannot be reverted after the window of the policy.
     /// </summary>
     [Fact]
-    public void RevertNoShow_AfterWindow_Throws()
+    public void RevertClientAbsent_AfterWindow_Throws()
     {
         var booking = CreateConfirmed();
         var markedAt = SessionStart.AddMinutes(30);
-        booking.MarkNoShow(markedAt);
+        booking.MarkClientAbsent(markedAt);
 
-        var exception = Should.Throw<DomainException>(() => booking.RevertNoShow("Tarde", markedAt.AddDays(8)));
+        var exception = Should.Throw<DomainException>(() => booking.RevertClientAbsent("Tarde", markedAt.AddDays(8)));
 
         exception.Code.ShouldBe(DomainErrorCodes.GuardFailed);
     }

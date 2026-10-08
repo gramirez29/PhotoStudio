@@ -17,16 +17,16 @@ public sealed record BookingPolicy
         int freeCancellationWindowHours,
         int rescheduleMinNoticeHours,
         int maxReschedules,
-        int noShowToleranceMinutes,
-        int noShowRevertWindowDays)
+        int clientAbsentToleranceMinutes,
+        int clientAbsentRevertWindowDays)
     {
         TentativeHoldHours = tentativeHoldHours;
         DepositPercentage = depositPercentage;
         FreeCancellationWindowHours = freeCancellationWindowHours;
         RescheduleMinNoticeHours = rescheduleMinNoticeHours;
         MaxReschedules = maxReschedules;
-        NoShowToleranceMinutes = noShowToleranceMinutes;
-        NoShowRevertWindowDays = noShowRevertWindowDays;
+        ClientAbsentToleranceMinutes = clientAbsentToleranceMinutes;
+        ClientAbsentRevertWindowDays = clientAbsentRevertWindowDays;
     }
 
     /// <summary>
@@ -49,11 +49,11 @@ public sealed record BookingPolicy
     /// <summary>Gets how many times the client can reschedule the session.</summary>
     public int MaxReschedules { get; }
 
-    /// <summary>Gets the minutes after the session start before the photographer can mark a no-show.</summary>
-    public int NoShowToleranceMinutes { get; }
+    /// <summary>Gets the minutes after the session start before the photographer can mark the client absent.</summary>
+    public int ClientAbsentToleranceMinutes { get; }
 
-    /// <summary>Gets the days during which a no-show can be reverted.</summary>
-    public int NoShowRevertWindowDays { get; }
+    /// <summary>Gets the days during which a client-absent mark can be reverted.</summary>
+    public int ClientAbsentRevertWindowDays { get; }
 
     /// <summary>
     /// Creates a policy after validating every value.
@@ -63,8 +63,8 @@ public sealed record BookingPolicy
     /// <param name="freeCancellationWindowHours">Hours of notice for a cancellation without retention; zero or greater.</param>
     /// <param name="rescheduleMinNoticeHours">Hours of notice for a client reschedule; zero or greater.</param>
     /// <param name="maxReschedules">Maximum client reschedules; zero or greater.</param>
-    /// <param name="noShowToleranceMinutes">Tolerance before a no-show can be marked; zero or greater.</param>
-    /// <param name="noShowRevertWindowDays">Days during which a no-show can be reverted; zero or greater.</param>
+    /// <param name="clientAbsentToleranceMinutes">Tolerance before the client can be marked absent; zero or greater.</param>
+    /// <param name="clientAbsentRevertWindowDays">Days during which a client-absent mark can be reverted; zero or greater.</param>
     /// <returns>The validated policy.</returns>
     /// <exception cref="DomainException">When any value is out of range.</exception>
     public static BookingPolicy Create(
@@ -73,8 +73,8 @@ public sealed record BookingPolicy
         int freeCancellationWindowHours,
         int rescheduleMinNoticeHours,
         int maxReschedules,
-        int noShowToleranceMinutes,
-        int noShowRevertWindowDays)
+        int clientAbsentToleranceMinutes,
+        int clientAbsentRevertWindowDays)
     {
         if (tentativeHoldHours <= 0)
         {
@@ -87,7 +87,7 @@ public sealed record BookingPolicy
         }
 
         if (freeCancellationWindowHours < 0 || rescheduleMinNoticeHours < 0 || maxReschedules < 0
-            || noShowToleranceMinutes < 0 || noShowRevertWindowDays < 0)
+            || clientAbsentToleranceMinutes < 0 || clientAbsentRevertWindowDays < 0)
         {
             throw new DomainException(DomainErrorCodes.InvalidPolicy, "Policy windows and limits cannot be negative.");
         }
@@ -98,7 +98,7 @@ public sealed record BookingPolicy
             freeCancellationWindowHours,
             rescheduleMinNoticeHours,
             maxReschedules,
-            noShowToleranceMinutes,
-            noShowRevertWindowDays);
+            clientAbsentToleranceMinutes,
+            clientAbsentRevertWindowDays);
     }
 }

@@ -11,7 +11,7 @@ export const STATUS_COLOR_TOKENS: Readonly<Record<BookingStatus, ColorToken>> = 
   Completed: 'info',
   Cancelled: 'muted',
   Expired: 'muted',
-  NoShow: 'danger',
+  ClientAbsent: 'danger',
 };
 
 /** Props of {@link StatusBadge}. */

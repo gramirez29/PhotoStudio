@@ -29,7 +29,7 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="expiresAt">End of the tentative hold, if any.</param>
     /// <param name="contract">Contract signature, if signed.</param>
     /// <param name="rescheduleCount">Number of reschedules performed.</param>
-    /// <param name="noShowMarkedAt">Instant the no-show was marked, if any.</param>
+    /// <param name="clientAbsentMarkedAt">Instant the client was marked absent, if any.</param>
     /// <param name="payments">Payments recorded against the booking.</param>
     /// <param name="history">Transition audit trail.</param>
     private Booking(
@@ -46,7 +46,7 @@ public sealed class Booking : AggregateRoot<Guid>
         DateTimeOffset? expiresAt,
         ContractSignature? contract,
         int rescheduleCount,
-        DateTimeOffset? noShowMarkedAt,
+        DateTimeOffset? clientAbsentMarkedAt,
         List<Payment> payments,
         List<StatusTransition> history)
         : base(id, version)
@@ -62,7 +62,7 @@ public sealed class Booking : AggregateRoot<Guid>
         ExpiresAt = expiresAt;
         Contract = contract;
         RescheduleCount = rescheduleCount;
-        NoShowMarkedAt = noShowMarkedAt;
+        ClientAbsentMarkedAt = clientAbsentMarkedAt;
         _payments = payments;
         _history = history;
     }
@@ -100,8 +100,8 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <summary>Gets how many times the session was rescheduled.</summary>
     public int RescheduleCount { get; private set; }
 
-    /// <summary>Gets the instant the no-show was marked, while the booking is in <see cref="BookingStatus.NoShow"/>.</summary>
-    public DateTimeOffset? NoShowMarkedAt { get; private set; }
+    /// <summary>Gets the instant the client was marked absent, while the booking is in <see cref="BookingStatus.ClientAbsent"/>.</summary>
+    public DateTimeOffset? ClientAbsentMarkedAt { get; private set; }
 
     /// <summary>Gets the payments recorded against the booking.</summary>
     public IReadOnlyList<Payment> Payments => _payments.AsReadOnly();
@@ -211,7 +211,7 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="expiresAt">End of the tentative hold.</param>
     /// <param name="contract">Contract signature.</param>
     /// <param name="rescheduleCount">Reschedule count.</param>
-    /// <param name="noShowMarkedAt">No-show instant.</param>
+    /// <param name="clientAbsentMarkedAt">Instant the client was marked absent.</param>
     /// <param name="payments">Recorded payments.</param>
     /// <param name="history">Transition audit trail.</param>
     /// <returns>The restored booking.</returns>
@@ -229,7 +229,7 @@ public sealed class Booking : AggregateRoot<Guid>
         DateTimeOffset? expiresAt,
         ContractSignature? contract,
         int rescheduleCount,
-        DateTimeOffset? noShowMarkedAt,
+        DateTimeOffset? clientAbsentMarkedAt,
         IEnumerable<Payment> payments,
         IEnumerable<StatusTransition> history) =>
         new(
@@ -246,7 +246,7 @@ public sealed class Booking : AggregateRoot<Guid>
             expiresAt,
             contract,
             rescheduleCount,
-            noShowMarkedAt,
+            clientAbsentMarkedAt,
             [.. payments],
             [.. history]);
 
@@ -485,39 +485,39 @@ public sealed class Booking : AggregateRoot<Guid>
     /// </summary>
     /// <param name="now">Current instant.</param>
     /// <exception cref="DomainException">When the booking is not confirmed or the tolerance has not passed.</exception>
-    public void MarkNoShow(DateTimeOffset now)
+    public void MarkClientAbsent(DateTimeOffset now)
     {
-        EnsureStatus(nameof(MarkNoShow), BookingStatus.Confirmed);
+        EnsureStatus(nameof(MarkClientAbsent), BookingStatus.Confirmed);
 
-        if (now < NoShowAllowedFrom)
+        if (now < ClientAbsentAllowedFrom)
         {
-            throw new DomainException(DomainErrorCodes.GuardFailed, "The no-show tolerance has not passed yet.");
+            throw new DomainException(DomainErrorCodes.GuardFailed, "The client-absent tolerance has not passed yet.");
         }
 
-        NoShowMarkedAt = now;
-        TransitionTo(BookingStatus.NoShow, Actor.Photographer, Channel.PhotographerApp, null, now);
-        Raise(new ClientNoShow(Id, now));
+        ClientAbsentMarkedAt = now;
+        TransitionTo(BookingStatus.ClientAbsent, Actor.Photographer, Channel.PhotographerApp, null, now);
+        Raise(new ClientMarkedAbsent(Id, now));
     }
 
     /// <summary>
-    /// B13. Reverts a no-show marked by mistake, within the window of the policy. The booking returns to <see cref="BookingStatus.Confirmed"/>.
+    /// B13. Reverts a client-absent mark made by mistake, within the window of the policy. The booking returns to <see cref="BookingStatus.Confirmed"/>.
     /// </summary>
-    /// <param name="reason">Why the no-show is reverted.</param>
+    /// <param name="reason">Why the client-absent mark is reverted.</param>
     /// <param name="now">Current instant.</param>
-    /// <exception cref="DomainException">When the booking is not a no-show, the reason is empty or the window has closed.</exception>
-    public void RevertNoShow(string reason, DateTimeOffset now)
+    /// <exception cref="DomainException">When the client is not marked absent, the reason is empty or the window has closed.</exception>
+    public void RevertClientAbsent(string reason, DateTimeOffset now)
     {
-        EnsureStatus(nameof(RevertNoShow), BookingStatus.NoShow);
+        EnsureStatus(nameof(RevertClientAbsent), BookingStatus.ClientAbsent);
         var trimmedReason = RequireReason(reason);
 
-        if (!CanRevertNoShow(now))
+        if (!CanRevertClientAbsent(now))
         {
-            throw new DomainException(DomainErrorCodes.GuardFailed, "The window to revert the no-show has closed.");
+            throw new DomainException(DomainErrorCodes.GuardFailed, "The window to revert the client-absent mark has closed.");
         }
 
-        NoShowMarkedAt = null;
+        ClientAbsentMarkedAt = null;
         TransitionTo(BookingStatus.Confirmed, Actor.Photographer, Channel.PhotographerApp, trimmedReason, now);
-        Raise(new NoShowReverted(Id, trimmedReason, now));
+        Raise(new ClientAbsenceReverted(Id, trimmedReason, now));
     }
 
     /// <summary>
@@ -567,9 +567,9 @@ public sealed class Booking : AggregateRoot<Guid>
                     actions.Add(BookingAction.Complete);
                 }
 
-                if (actor == Actor.Photographer && now >= NoShowAllowedFrom)
+                if (actor == Actor.Photographer && now >= ClientAbsentAllowedFrom)
                 {
-                    actions.Add(BookingAction.MarkNoShow);
+                    actions.Add(BookingAction.MarkClientAbsent);
                 }
 
                 break;
@@ -578,10 +578,10 @@ public sealed class Booking : AggregateRoot<Guid>
                 AddPaymentActions(actions, actor, hasBalance);
                 break;
 
-            case BookingStatus.NoShow:
-                if (actor == Actor.Photographer && CanRevertNoShow(now))
+            case BookingStatus.ClientAbsent:
+                if (actor == Actor.Photographer && CanRevertClientAbsent(now))
                 {
-                    actions.Add(BookingAction.RevertNoShow);
+                    actions.Add(BookingAction.RevertClientAbsent);
                 }
 
                 break;
@@ -595,8 +595,8 @@ public sealed class Booking : AggregateRoot<Guid>
         return actions;
     }
 
-    /// <summary>Gets the earliest instant at which a no-show can be marked.</summary>
-    private DateTimeOffset NoShowAllowedFrom => Slot.Start.AddMinutes(Policy.NoShowToleranceMinutes);
+    /// <summary>Gets the earliest instant at which the client can be marked absent.</summary>
+    private DateTimeOffset ClientAbsentAllowedFrom => Slot.Start.AddMinutes(Policy.ClientAbsentToleranceMinutes);
 
     /// <summary>
     /// Returns the channel used by an actor for actions that are not tied to a specific channel.
@@ -686,12 +686,12 @@ public sealed class Booking : AggregateRoot<Guid>
         && Slot.Start - now >= TimeSpan.FromHours(Policy.RescheduleMinNoticeHours);
 
     /// <summary>
-    /// Indicates whether the no-show can still be reverted.
+    /// Indicates whether the client-absent mark can still be reverted.
     /// </summary>
     /// <param name="now">Current instant.</param>
     /// <returns><see langword="true"/> while the revert window of the policy is open.</returns>
-    private bool CanRevertNoShow(DateTimeOffset now) =>
-        NoShowMarkedAt is not null && now <= NoShowMarkedAt.Value.AddDays(Policy.NoShowRevertWindowDays);
+    private bool CanRevertClientAbsent(DateTimeOffset now) =>
+        ClientAbsentMarkedAt is not null && now <= ClientAbsentMarkedAt.Value.AddDays(Policy.ClientAbsentRevertWindowDays);
 
     /// <summary>
     /// Validates that the current status is one of the allowed statuses.

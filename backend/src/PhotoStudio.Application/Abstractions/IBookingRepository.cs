@@ -39,7 +39,7 @@ public interface IBookingRepository
     /// <summary>
     /// Persists the changes of an existing booking using optimistic concurrency on <see cref="AggregateRoot{TId}.Version"/>.
     /// When the booking is no longer tentative or confirmed, its slot is released in the same atomic operation.
-    /// Moving a booking to another slot or reactivating it (reschedule, revert no-show) is not handled here: those use
+    /// Moving a booking to another slot or reactivating it (reschedule, revert client absence) is not handled here: those use
     /// cases must reserve the new slot explicitly.
     /// </summary>
     /// <param name="booking">Booking to update.</param>

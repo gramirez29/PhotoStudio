@@ -21,7 +21,7 @@ public enum BookingStatus
     Expired,
 
     /// <summary>The client did not show up. Final, but the photographer can revert it within a window.</summary>
-    NoShow,
+    ClientAbsent,
 }
 
 /// <summary>
@@ -114,8 +114,8 @@ public enum BookingAction
     Complete,
 
     /// <summary>Mark that the client did not show up.</summary>
-    MarkNoShow,
+    MarkClientAbsent,
 
-    /// <summary>Undo a no-show marked by mistake.</summary>
-    RevertNoShow,
+    /// <summary>Undo a client-absent mark made by mistake.</summary>
+    RevertClientAbsent,
 }

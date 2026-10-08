@@ -125,7 +125,7 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
             return;
         }
 
-        // Booking left the active states (cancelled, expired, completed, no-show): free its slot in the same transaction.
+        // Booking left the active states (cancelled, expired, completed, client absent): free its slot in the same transaction.
         using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
         await session.WithTransactionAsync(
             async (transactionSession, token) =>

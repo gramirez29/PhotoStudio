@@ -5,7 +5,7 @@
  */
 
 /** Every value of the backend `BookingStatus` enum. */
-export const BOOKING_STATUSES = ['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Expired', 'NoShow'] as const;
+export const BOOKING_STATUSES = ['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Expired', 'ClientAbsent'] as const;
 
 /** Lifecycle status of a booking. */
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
@@ -37,8 +37,8 @@ export const BOOKING_ACTIONS = [
   'Reschedule',
   'Cancel',
   'Complete',
-  'MarkNoShow',
-  'RevertNoShow',
+  'MarkClientAbsent',
+  'RevertClientAbsent',
 ] as const;
 
 /** Action the caller is allowed to perform on a booking right now. */

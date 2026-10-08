@@ -7,7 +7,7 @@ export const BOOKING_STATUS_LABELS: Readonly<Record<BookingStatus, string>> = {
   Completed: 'Completada',
   Cancelled: 'Cancelada',
   Expired: 'Vencida',
-  NoShow: 'No se presentó',
+  ClientAbsent: 'Cliente ausente',
 };
 
 /** Spanish label of each booking action. */
@@ -19,6 +19,6 @@ export const BOOKING_ACTION_LABELS: Readonly<Record<BookingAction, string>> = {
   Reschedule: 'Reprogramar',
   Cancel: 'Cancelar',
   Complete: 'Marcar sesión completada',
-  MarkNoShow: 'Marcar no-show',
-  RevertNoShow: 'Revertir no-show',
+  MarkClientAbsent: 'Marcar cliente ausente',
+  RevertClientAbsent: 'Revertir ausencia',
 };

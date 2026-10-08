@@ -36,7 +36,7 @@ public static class BookingDocumentMappings
             ExpiresAt = booking.ExpiresAt?.UtcDateTime,
             Contract = booking.Contract?.ToDocument(),
             RescheduleCount = booking.RescheduleCount,
-            NoShowMarkedAt = booking.NoShowMarkedAt?.UtcDateTime,
+            ClientAbsentMarkedAt = booking.ClientAbsentMarkedAt?.UtcDateTime,
             Payments = [.. booking.Payments.Select(payment => payment.ToDocument())],
             History = [.. booking.History.Select(transition => transition.ToDocument())],
         };
@@ -65,7 +65,7 @@ public static class BookingDocumentMappings
             ToNullableOffset(document.ExpiresAt),
             document.Contract?.ToDomain(),
             document.RescheduleCount,
-            ToNullableOffset(document.NoShowMarkedAt),
+            ToNullableOffset(document.ClientAbsentMarkedAt),
             document.Payments.Select(payment => payment.ToDomain()),
             document.History.Select(transition => transition.ToDomain()));
     }
@@ -82,8 +82,8 @@ public static class BookingDocumentMappings
         FreeCancellationWindowHours = policy.FreeCancellationWindowHours,
         RescheduleMinNoticeHours = policy.RescheduleMinNoticeHours,
         MaxReschedules = policy.MaxReschedules,
-        NoShowToleranceMinutes = policy.NoShowToleranceMinutes,
-        NoShowRevertWindowDays = policy.NoShowRevertWindowDays,
+        ClientAbsentToleranceMinutes = policy.ClientAbsentToleranceMinutes,
+        ClientAbsentRevertWindowDays = policy.ClientAbsentRevertWindowDays,
     };
 
     /// <summary>
@@ -97,8 +97,8 @@ public static class BookingDocumentMappings
         document.FreeCancellationWindowHours,
         document.RescheduleMinNoticeHours,
         document.MaxReschedules,
-        document.NoShowToleranceMinutes,
-        document.NoShowRevertWindowDays);
+        document.ClientAbsentToleranceMinutes,
+        document.ClientAbsentRevertWindowDays);
 
     /// <summary>
     /// Maps a contract signature to its document.
