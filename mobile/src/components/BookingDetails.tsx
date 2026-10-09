@@ -5,6 +5,7 @@ import type { BookingDetailsProps } from '../types/components/BookingDetails.typ
 import { formatDateTime } from '../utils/format';
 import { AmountRow } from './AmountRow';
 import { BookingActions } from './BookingActions';
+import { SettlementCard } from './SettlementCard';
 import { StatusBadge } from './StatusBadge';
 
 /**
@@ -38,6 +39,8 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
             : `Firmado por ${booking.contract.signerName} el ${formatDateTime(booking.contract.signedAt)}`}
         </Text>
       </View>
+
+      <SettlementCard booking={booking} />
 
       <BookingActions booking={booking} />
     </ScrollView>

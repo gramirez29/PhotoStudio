@@ -135,6 +135,21 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<NotificationDocument>.IndexKeys.Ascending(notification => notification.RetainUntil),
             new CreateIndexOptions { Name = "ix_notification_retention", ExpireAfter = TimeSpan.Zero });
 
+        var settlements = database.GetCollection<SettlementDocument>(MongoSettlementRepository.CollectionName);
+
+        // One settlement per booking: two events that settle the same booking cannot create two.
+        var settlementBookingIndex = new CreateIndexModel<SettlementDocument>(
+            Builders<SettlementDocument>.IndexKeys.Ascending(settlement => settlement.BookingId),
+            new CreateIndexOptions { Name = "ix_settlement_booking", Unique = true });
+
+        // Serves the list of refunds a photographer still has to give back, the oldest first.
+        var settlementRefundIndex = new CreateIndexModel<SettlementDocument>(
+            Builders<SettlementDocument>.IndexKeys
+                .Ascending(settlement => settlement.PhotographerId)
+                .Ascending(settlement => settlement.RefundStatus)
+                .Ascending(settlement => settlement.CreatedAt),
+            new CreateIndexOptions { Name = "ix_settlement_refund" });
+
         try
         {
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
@@ -143,6 +158,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             await notifications.Indexes.CreateManyAsync(
                 [notificationKeyIndex, notificationDueIndex, notificationInboxIndex, notificationBookingIndex, notificationRetentionIndex],
                 cancellationToken: cancellationToken);
+            await settlements.Indexes.CreateManyAsync([settlementBookingIndex, settlementRefundIndex], cancellationToken: cancellationToken);
             await refreshTokens.Indexes.CreateManyAsync(
                 [refreshHashIndex, refreshFamilyIndex, refreshPhotographerIndex, refreshRetentionIndex],
                 cancellationToken: cancellationToken);

@@ -60,6 +60,19 @@ export function goBack(): void {
   router.back();
 }
 
+/** Opens the list of refunds the photographer still has to give back. */
+export function openRefunds(): void {
+  router.push('/refunds');
+}
+
+/**
+ * Opens the form to record that the refund of a booking was given back.
+ * @param bookingId Booking identifier.
+ */
+export function openRefund(bookingId: string): void {
+  router.push({ pathname: '/bookings/refund', params: { id: bookingId } });
+}
+
 /** Opens the inbox of notices. */
 export function openNotifications(): void {
   router.push('/notifications');

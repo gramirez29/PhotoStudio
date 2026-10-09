@@ -1,6 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Application.Billing;
+using PhotoStudio.Application.Billing.CompleteRefund;
+using PhotoStudio.Application.Billing.GetSettlement;
+using PhotoStudio.Application.Billing.ListRefunds;
 using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
@@ -59,6 +63,17 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<ListNotificationsQuery, NotificationListResponse>, ListNotificationsHandler>();
 
         // Consumers of the outbox: they keep the notifications of a booking in line with it.
+        services.AddScoped<ICommandHandler<CompleteRefundCommand, SettlementResponse>, CompleteRefundHandler>();
+        services.AddScoped<IQueryHandler<GetSettlementQuery, SettlementResponse>, GetSettlementHandler>();
+        services.AddScoped<IQueryHandler<ListRefundsQuery, RefundListResponse>, ListRefundsHandler>();
+
+        // Billing: the money of a booking that ended is settled from the outbox events; the planner works from the current state.
+        services.AddScoped<SettlementPlanner>();
+        services.AddScoped<IDomainEventHandler<BookingCancelled>, BookingSettlementHandler>();
+        services.AddScoped<IDomainEventHandler<BookingExpired>, BookingSettlementHandler>();
+        services.AddScoped<IDomainEventHandler<ClientMarkedAbsent>, BookingSettlementHandler>();
+        services.AddScoped<IDomainEventHandler<ClientAbsenceReverted>, BookingSettlementHandler>();
+
         services.AddScoped<NotificationPlanner>();
         services.AddScoped<IDomainEventHandler<BookingConfirmed>, BookingNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<BookingRescheduled>, BookingNotificationsHandler>();

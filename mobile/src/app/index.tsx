@@ -6,6 +6,7 @@ import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
 import { NotificationsButton } from '../components/NotificationsButton';
 import { Placeholder } from '../components/Placeholder';
+import { RefundsButton } from '../components/RefundsButton';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
 import { colors, spacing } from '../theme/tokens';
@@ -43,6 +44,7 @@ export default function HomeScreen(): ReactElement {
         <View>
           <ApiStatus />
           <NotificationsButton />
+          <RefundsButton />
           <MaintenanceButton />
           <Text style={styles.sectionTitle}>Mis reservas</Text>
         </View>
