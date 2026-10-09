@@ -120,6 +120,13 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Gets the services of the API under test, to run a use case in-process (for example one maintenance pass) without going
+    /// through an endpoint and its rate limit.
+    /// </summary>
+    public IServiceProvider Services =>
+        _factory?.Services ?? throw new InvalidOperationException("MongoDB is not available.");
+
+    /// <summary>
     /// Gets the throwaway database the API under test writes to, to check what was really stored.
     /// </summary>
     public IMongoDatabase Database =>

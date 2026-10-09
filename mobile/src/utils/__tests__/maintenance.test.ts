@@ -7,7 +7,7 @@ import { describeMaintenanceResult } from '../maintenance';
  * @returns The result.
  */
 function result(overrides: Partial<MaintenanceResponse> = {}): MaintenanceResponse {
-  return { bookingsExpired: 0, bookingsSkipped: 0, eventsProcessed: 0, moreWorkPending: false, ...overrides };
+  return { bookingsExpired: 0, bookingsSkipped: 0, eventsProcessed: 0, notificationsDelivered: 0, moreWorkPending: false, ...overrides };
 }
 
 describe('describeMaintenanceResult', () => {
@@ -25,6 +25,11 @@ describe('describeMaintenanceResult', () => {
       '2 reservas vencidas liberadas. 1 no se pudo actualizar; inténtalo de nuevo en un momento.',
     );
     expect(describeMaintenanceResult(result({ bookingsSkipped: 2 }))).toContain('2 no se pudieron actualizar');
+  });
+
+  it('mentions the notifications delivered', () => {
+    expect(describeMaintenanceResult(result({ notificationsDelivered: 1 }))).toBe('No había reservas vencidas. 1 aviso nuevo en tu bandeja.');
+    expect(describeMaintenanceResult(result({ notificationsDelivered: 3 }))).toContain('3 avisos nuevos');
   });
 
   it('asks to run it again when the pass stopped at its limit', () => {

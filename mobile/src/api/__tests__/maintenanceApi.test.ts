@@ -3,7 +3,7 @@ import { createHttpClient, ApiError } from '../httpClient';
 import { createMaintenanceApi, parseMaintenance } from '../maintenanceApi';
 import { jsonResponse, stubFetch } from '../__fixtures__/testResponses';
 
-const maintenancePayload = { bookingsExpired: 2, bookingsSkipped: 1, eventsProcessed: 4, moreWorkPending: false } as const;
+const maintenancePayload = { bookingsExpired: 2, bookingsSkipped: 1, eventsProcessed: 4, notificationsDelivered: 1, moreWorkPending: false } as const;
 
 describe('parseMaintenance', () => {
   it('parses a valid backend payload', () => {

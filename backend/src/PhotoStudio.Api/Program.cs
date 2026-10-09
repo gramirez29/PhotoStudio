@@ -61,6 +61,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 app.MapAuthEndpoints();
 app.MapBookingEndpoints();
+app.MapNotificationEndpoints();
 app.MapMaintenanceEndpoints();
 
 await app.RunAsync();

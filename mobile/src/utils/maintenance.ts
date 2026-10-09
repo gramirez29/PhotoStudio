@@ -22,6 +22,12 @@ export function describeMaintenanceResult(result: MaintenanceResponse): string {
     parts.push(`${result.bookingsSkipped} no se pudieron actualizar; inténtalo de nuevo en un momento.`);
   }
 
+  if (result.notificationsDelivered === 1) {
+    parts.push('1 aviso nuevo en tu bandeja.');
+  } else if (result.notificationsDelivered > 1) {
+    parts.push(`${result.notificationsDelivered} avisos nuevos en tu bandeja.`);
+  }
+
   if (result.moreWorkPending) {
     parts.push('Quedan más por procesar: vuelve a ejecutarlo en un minuto.');
   }

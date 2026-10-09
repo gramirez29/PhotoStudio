@@ -100,11 +100,49 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<RefreshTokenDocument>.IndexKeys.Ascending(token => token.ExpiresAt),
             new CreateIndexOptions { Name = "ix_refresh_retention", ExpireAfter = RefreshTokenRetention });
 
+        var notifications = database.GetCollection<NotificationDocument>(MongoNotificationRepository.CollectionName);
+
+        // The key makes scheduling idempotent: the same notice cannot exist twice, whatever delivers the event that asks for it.
+        var notificationKeyIndex = new CreateIndexModel<NotificationDocument>(
+            Builders<NotificationDocument>.IndexKeys.Ascending(notification => notification.DedupKey),
+            new CreateIndexOptions { Name = "ix_notification_dedup", Unique = true });
+
+        // Serves the delivery job: scheduled notifications that came due.
+        var notificationDueIndex = new CreateIndexModel<NotificationDocument>(
+            Builders<NotificationDocument>.IndexKeys
+                .Ascending(notification => notification.Status)
+                .Ascending(notification => notification.DueAt),
+            new CreateIndexOptions { Name = "ix_notification_due" });
+
+        // Serves the inbox: the delivered notifications of a photographer, the most recent first.
+        var notificationInboxIndex = new CreateIndexModel<NotificationDocument>(
+            Builders<NotificationDocument>.IndexKeys
+                .Ascending(notification => notification.PhotographerId)
+                .Ascending(notification => notification.Status)
+                .Descending(notification => notification.DeliveredAt),
+            new CreateIndexOptions { Name = "ix_notification_inbox" });
+
+        // Serves dropping the scheduled notifications of a booking when it changes.
+        var notificationBookingIndex = new CreateIndexModel<NotificationDocument>(
+            Builders<NotificationDocument>.IndexKeys
+                .Ascending(notification => notification.BookingId)
+                .Ascending(notification => notification.Type)
+                .Ascending(notification => notification.Status),
+            new CreateIndexOptions { Name = "ix_notification_booking" });
+
+        // Removes notifications after their retention period (retainUntil is in the document, so the delay here is zero).
+        var notificationRetentionIndex = new CreateIndexModel<NotificationDocument>(
+            Builders<NotificationDocument>.IndexKeys.Ascending(notification => notification.RetainUntil),
+            new CreateIndexOptions { Name = "ix_notification_retention", ExpireAfter = TimeSpan.Zero });
+
         try
         {
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
             await users.Indexes.CreateManyAsync([usernameIndex, emailIndex], cancellationToken: cancellationToken);
+            await notifications.Indexes.CreateManyAsync(
+                [notificationKeyIndex, notificationDueIndex, notificationInboxIndex, notificationBookingIndex, notificationRetentionIndex],
+                cancellationToken: cancellationToken);
             await refreshTokens.Indexes.CreateManyAsync(
                 [refreshHashIndex, refreshFamilyIndex, refreshPhotographerIndex, refreshRetentionIndex],
                 cancellationToken: cancellationToken);
