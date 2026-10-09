@@ -15,6 +15,10 @@ export function executeBookingCommand(
   command: BookingCommand,
 ): Promise<BookingResponse> {
   switch (command.kind) {
+    case 'signContract':
+      return api.signContractInPerson(bookingId, command.request);
+    case 'recordPayment':
+      return api.recordInPersonPayment(bookingId, command.request);
     case 'cancel':
       return api.cancelBooking(bookingId, command.reason === null ? {} : { reason: command.reason });
     case 'complete':

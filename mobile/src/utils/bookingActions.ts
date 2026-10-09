@@ -11,6 +11,8 @@ import type {
 
 /** Visual weight of each action the app can perform: the ones that free the slot or end the booking are red. */
 export const ACTION_VARIANTS: Readonly<Record<SupportedAction, ActionVariant>> = {
+  SignContract: 'primary',
+  RecordInPersonPayment: 'primary',
   Reschedule: 'primary',
   Complete: 'primary',
   RevertClientAbsent: 'primary',

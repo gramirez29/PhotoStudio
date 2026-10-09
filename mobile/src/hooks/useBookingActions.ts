@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { openReason, openReschedule } from '../navigation/appNavigation';
+import { openContract, openPayment, openReason, openReschedule } from '../navigation/appNavigation';
 import type { BookingResponse } from '../types/api/booking';
 import type { BookingActionsState } from '../types/hooks/useBookingActions.types';
 import type { BookingCommand } from '../types/hooks/useBookingCommand.types';
@@ -36,6 +36,8 @@ export function useBookingActions(booking: BookingResponse): BookingActionsState
   return {
     isPending: command.isPending,
     errorMessage: command.isError ? bookingCommandErrorMessage(command.error) : null,
+    signContract: () => openContract(booking.id),
+    recordPayment: () => openPayment(booking.id),
     reschedule: () => openReschedule(booking.id),
     cancel: () => openReason(booking.id, 'Cancel'),
     complete: () => confirmAndSend('Complete', { kind: 'complete' }),

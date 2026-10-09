@@ -19,6 +19,8 @@ export function BookingActions({ booking }: BookingActionsProps): ReactElement {
   const { supported, pending } = splitActions(booking.allowedActions);
 
   const handlers: Readonly<Record<SupportedAction, () => void>> = {
+    SignContract: actions.signContract,
+    RecordInPersonPayment: actions.recordPayment,
     Reschedule: actions.reschedule,
     Complete: actions.complete,
     MarkClientAbsent: actions.markClientAbsent,

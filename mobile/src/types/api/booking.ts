@@ -11,6 +11,7 @@ import type {
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
 } from '../../constants/booking';
+import type { IN_PERSON_PAYMENT_METHODS } from '../../constants/payments';
 
 /** Lifecycle status of a booking. */
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
@@ -149,6 +150,28 @@ export interface RescheduleBookingRequest {
 export interface CancelBookingRequest {
   /** Cancellation reason; required by the backend once the booking is confirmed. */
   readonly reason?: string;
+}
+
+/** Body to record the signature of a contract in person or on paper (backend `SignContractInPersonRequest`). */
+export interface SignContractInPersonRequest {
+  /** Name of the person who signs. */
+  readonly signerName: string;
+  /** Version of the contract template that was signed. */
+  readonly templateVersion: string;
+  /** True when the contract is a paper one (channel `External`), false when the client signs on the phone (`InPerson`). */
+  readonly isPaperContract: boolean;
+}
+
+/** Body to record a payment received in person (backend `RecordInPersonPaymentRequest`). */
+export interface RecordInPersonPaymentRequest {
+  /** Amount received. */
+  readonly amount: number;
+  /** ISO 4217 currency code; the one of the booking. */
+  readonly currency: string;
+  /** Method used: cash or SINPE Móvil. */
+  readonly method: (typeof IN_PERSON_PAYMENT_METHODS)[number];
+  /** Key that makes repeating the request safe: the same key records the payment once. */
+  readonly idempotencyKey: string;
 }
 
 /** Body to revert a client-absent mark (backend `RevertClientAbsentRequest`). */

@@ -19,6 +19,8 @@ function actionsState(overrides: Partial<BookingActionsState> = {}): BookingActi
   return {
     isPending: false,
     errorMessage: null,
+    signContract: jest.fn(),
+    recordPayment: jest.fn(),
     reschedule: jest.fn(),
     cancel: jest.fn(),
     complete: jest.fn(),
@@ -65,10 +67,22 @@ describe('BookingActions', () => {
   it('lists the allowed actions the app cannot perform yet instead of showing dead buttons', () => {
     mockedUseBookingActions.mockReturnValue(actionsState());
 
-    render(<BookingActions booking={bookingWith(['RecordInPersonPayment', 'Cancel'])} />);
+    render(<BookingActions booking={bookingWith(['VerifyPayment', 'Cancel'])} />);
 
-    expect(screen.getByText(/Próximamente en la app: Registrar pago presencial\./)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Registrar pago presencial/ })).toBeNull();
+    expect(screen.getByText(/Próximamente en la app: Verificar pago\./)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Verificar pago/ })).toBeNull();
+  });
+
+  it('opens the contract and payment forms from their buttons', () => {
+    const state = actionsState();
+    mockedUseBookingActions.mockReturnValue(state);
+    render(<BookingActions booking={bookingWith(['SignContract', 'RecordInPersonPayment'])} />);
+
+    fireEvent.press(screen.getByText('Firmar contrato'));
+    fireEvent.press(screen.getByText('Registrar pago presencial'));
+
+    expect(state.signContract).toHaveBeenCalledTimes(1);
+    expect(state.recordPayment).toHaveBeenCalledTimes(1);
   });
 
   it('says there is nothing to do when the booking has no allowed actions', () => {

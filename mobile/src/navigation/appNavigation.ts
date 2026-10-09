@@ -23,6 +23,22 @@ export function openReschedule(bookingId: string): void {
 }
 
 /**
+ * Opens the form to record the signature of the contract of a booking.
+ * @param bookingId Booking identifier.
+ */
+export function openContract(bookingId: string): void {
+  router.push({ pathname: '/bookings/contract', params: { id: bookingId } });
+}
+
+/**
+ * Opens the form to record a payment received in person.
+ * @param bookingId Booking identifier.
+ */
+export function openPayment(bookingId: string): void {
+  router.push({ pathname: '/bookings/payment', params: { id: bookingId } });
+}
+
+/**
  * Opens the form to type the reason of an action on a booking.
  * @param bookingId Booking identifier.
  * @param action Action that needs the reason.
