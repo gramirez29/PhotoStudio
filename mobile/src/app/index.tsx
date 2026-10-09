@@ -4,6 +4,7 @@ import { ApiStatus } from '../components/ApiStatus';
 import { BookingListItem } from '../components/BookingListItem';
 import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
+import { NotificationsButton } from '../components/NotificationsButton';
 import { Placeholder } from '../components/Placeholder';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
@@ -41,6 +42,7 @@ export default function HomeScreen(): ReactElement {
       ListHeaderComponent={
         <View>
           <ApiStatus />
+          <NotificationsButton />
           <MaintenanceButton />
           <Text style={styles.sectionTitle}>Mis reservas</Text>
         </View>

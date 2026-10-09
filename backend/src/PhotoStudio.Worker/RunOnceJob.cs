@@ -8,7 +8,7 @@ namespace PhotoStudio.Worker;
 /// "Run once" mode of the worker, meant for a scheduled job (Railway cron): it performs one maintenance pass and exits, so
 /// the service only runs, and only costs, for the few seconds the pass takes. It is selected with the
 /// <see cref="EnvironmentVariable"/> variable; without it the worker stays alive and polls (see
-/// <see cref="OutboxDispatcherService"/> and <see cref="BookingExpirationService"/>).
+/// <see cref="OutboxDispatcherService"/> and <see cref="MaintenanceService"/>).
 /// </summary>
 public static partial class RunOnceJob
 {
@@ -53,7 +53,7 @@ public static partial class RunOnceJob
                 .GetRequiredService<ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>>();
 
             var result = await handler.HandleAsync(new RunMaintenanceCommand(), cancellationToken);
-            LogPassCompleted(logger, result.BookingsExpired, result.BookingsSkipped, result.EventsProcessed);
+            LogPassCompleted(logger, result.BookingsExpired, result.BookingsSkipped, result.EventsProcessed, result.NotificationsDelivered);
             if (result.MoreWorkPending)
             {
                 LogMoreWorkPending(logger);
@@ -75,8 +75,9 @@ public static partial class RunOnceJob
     /// <param name="expired">Bookings expired.</param>
     /// <param name="skipped">Bookings skipped.</param>
     /// <param name="events">Outbox messages processed.</param>
-    [LoggerMessage(Level = LogLevel.Information, Message = "Maintenance pass completed: {Expired} bookings expired, {Skipped} skipped, {Events} events processed.")]
-    private static partial void LogPassCompleted(ILogger logger, int expired, int skipped, int events);
+    /// <param name="notifications">Notifications delivered.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Maintenance pass completed: {Expired} bookings expired, {Skipped} skipped, {Events} events processed, {Notifications} notifications delivered.")]
+    private static partial void LogPassCompleted(ILogger logger, int expired, int skipped, int events, int notifications);
 
     /// <summary>
     /// Logs that the pass stopped at its size limit.

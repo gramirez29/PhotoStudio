@@ -13,6 +13,11 @@ using PhotoStudio.Application.Identity.Logout;
 using PhotoStudio.Application.Identity.RefreshSession;
 using PhotoStudio.Application.Identity.Register;
 using PhotoStudio.Application.Maintenance.RunMaintenance;
+using PhotoStudio.Application.Notifications;
+using PhotoStudio.Application.Notifications.DeliverDue;
+using PhotoStudio.Application.Notifications.List;
+using PhotoStudio.Application.Notifications.MarkRead;
+using PhotoStudio.Domain.Bookings.Events;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
 using PhotoStudio.Application.Bookings.RescheduleBooking;
@@ -48,6 +53,20 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RevertClientAbsentCommand, BookingResponse>, RevertClientAbsentHandler>();
         services.AddScoped<ICommandHandler<ExpireTentativeBookingsCommand, ExpireTentativeBookingsResult>, ExpireTentativeBookingsHandler>();
         services.AddScoped<ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>, RunMaintenanceHandler>();
+        services.AddScoped<ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult>, DeliverDueNotificationsHandler>();
+        services.AddScoped<ICommandHandler<MarkNotificationReadCommand, NotificationResponse>, MarkNotificationReadHandler>();
+        services.AddScoped<ICommandHandler<MarkAllNotificationsReadCommand, MarkAllReadResponse>, MarkAllNotificationsReadHandler>();
+        services.AddScoped<IQueryHandler<ListNotificationsQuery, NotificationListResponse>, ListNotificationsHandler>();
+
+        // Consumers of the outbox: they keep the notifications of a booking in line with it.
+        services.AddScoped<NotificationPlanner>();
+        services.AddScoped<IDomainEventHandler<BookingConfirmed>, BookingNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<BookingRescheduled>, BookingNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<BookingCancelled>, BookingNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<BookingExpired>, BookingNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<ClientMarkedAbsent>, BookingNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<SessionCompleted>, SessionCompletedNotificationsHandler>();
+
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();
 

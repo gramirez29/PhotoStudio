@@ -43,3 +43,8 @@ export function replaceWithBooking(bookingId: string): void {
 export function goBack(): void {
   router.back();
 }
+
+/** Opens the inbox of notices. */
+export function openNotifications(): void {
+  router.push('/notifications');
+}

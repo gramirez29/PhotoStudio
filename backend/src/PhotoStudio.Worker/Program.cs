@@ -14,7 +14,7 @@ var runOnce = RunOnceJob.IsEnabled();
 if (!runOnce)
 {
     builder.Services.AddHostedService<OutboxDispatcherService>();
-    builder.Services.AddHostedService<BookingExpirationService>();
+    builder.Services.AddHostedService<MaintenanceService>();
 }
 
 using var host = builder.Build();

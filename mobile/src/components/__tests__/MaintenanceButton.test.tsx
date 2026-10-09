@@ -24,6 +24,7 @@ describe('MaintenanceButton', () => {
       bookingsExpired: 2,
       bookingsSkipped: 0,
       eventsProcessed: 3,
+      notificationsDelivered: 0,
       moreWorkPending: false,
     });
     render(<MaintenanceButton />, { wrapper: Wrapper });
@@ -39,7 +40,7 @@ describe('MaintenanceButton', () => {
     jest.mocked(maintenanceApi.runMaintenance).mockImplementation(
       () =>
         new Promise((resolve) => {
-          finish = () => resolve({ bookingsExpired: 0, bookingsSkipped: 0, eventsProcessed: 0, moreWorkPending: false });
+          finish = () => resolve({ bookingsExpired: 0, bookingsSkipped: 0, eventsProcessed: 0, notificationsDelivered: 0, moreWorkPending: false });
         }),
     );
     render(<MaintenanceButton />, { wrapper: Wrapper });

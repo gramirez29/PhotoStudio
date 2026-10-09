@@ -6,6 +6,8 @@ export interface MaintenanceResponse {
   readonly bookingsSkipped: number;
   /** Outbox messages that were claimed for delivery. */
   readonly eventsProcessed: number;
+  /** Notifications (session reminders, balance notices) that came due and reached the inbox. */
+  readonly notificationsDelivered: number;
   /** Whether the pass stopped at its size limit and a new pass would find more to do. */
   readonly moreWorkPending: boolean;
 }

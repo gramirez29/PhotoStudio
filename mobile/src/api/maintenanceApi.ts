@@ -15,6 +15,7 @@ export function parseMaintenance(value: unknown): MaintenanceResponse {
     bookingsExpired: readNumber(record, 'bookingsExpired', path),
     bookingsSkipped: readNumber(record, 'bookingsSkipped', path),
     eventsProcessed: readNumber(record, 'eventsProcessed', path),
+    notificationsDelivered: readNumber(record, 'notificationsDelivered', path),
     moreWorkPending: readBoolean(record, 'moreWorkPending', path),
   };
 }

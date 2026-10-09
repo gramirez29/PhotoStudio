@@ -950,7 +950,7 @@ Mensajes que ve el usuario, por ejemplo: "2 reservas vencidas liberadas.", "No h
 ### 17.6 Consecuencias de correr una vez al día
 
 - **Un apartado vencido sigue bloqueando el horario hasta la siguiente pasada** (máximo 24 h). Para eso existe el botón: libera el horario al instante.
-- **Los eventos del outbox se entregan una vez al día** (o al pulsar el botón). Hoy no hay consumidores, así que no importa. **Cuando existan avisos al cliente o recordatorios habrá que volver al modo siempre encendido o a un cron frecuente** (cada pocos minutos); el cambio es de configuración, no de código.
+- **Los eventos del outbox se entregan una vez al día** (o al pulsar el botón). Hoy no hay consumidores, así que no importa. **Ya existen recordatorios** (ver `Notifications.md`): para que lleguen a tiempo el cron debe correr cada 15 minutos (`*/15 * * * *`) en lugar de una vez al día; el cambio es solo de configuración en Railway.
 - Los recordatorios futuros (por ejemplo "mañana tienes sesión") no pueden depender de una ejecución diaria a una hora fija si deben salir a una hora precisa.
 
 ### 17.7 Configuración en Railway
@@ -958,7 +958,7 @@ Mensajes que ve el usuario, por ejemplo: "2 reservas vencidas liberadas.", "No h
 1. **Crear el servicio.** En el proyecto de Railway: *New → GitHub Repo* y elegir este repositorio (el mismo que usa `photostudio-api`). Nómbralo `photostudio-worker`.
 2. **Root Directory:** `backend` (igual que la API; usa el mismo `Dockerfile`).
 3. **Custom Start Command** (Settings → Deploy): `dotnet worker/PhotoStudio.Worker.dll`
-4. **Cron Schedule** (Settings → Deploy): por ejemplo `0 11 * * *`. **Railway usa UTC**: Costa Rica es UTC-6 todo el año (no tiene horario de verano), así que `0 11 * * *` equivale a las 5:00 a. m. en Costa Rica.
+4. **Cron Schedule** (Settings → Deploy): con recordatorios activos usa `*/15 * * * *` (cada 15 minutos; ver `Notifications.md` §7). Para solo expirar reservas bastaba, por ejemplo, `0 11 * * *`. **Railway usa UTC**: Costa Rica es UTC-6 todo el año (no tiene horario de verano), así que `0 11 * * *` equivale a las 5:00 a. m. en Costa Rica.
 5. **Variables** (Variables → New Variable):
    - `MONGODB_CONNECTION_STRING`: la misma que usa la API. Se puede referenciar con `${{photostudio-api.MONGODB_CONNECTION_STRING}}`.
    - `MONGODB_DATABASE_NAME`: la misma que la API (`photostudio`).

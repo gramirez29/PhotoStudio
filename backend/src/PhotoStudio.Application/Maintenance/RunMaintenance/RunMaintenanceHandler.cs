@@ -1,18 +1,22 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
+using PhotoStudio.Application.Notifications.DeliverDue;
 
 namespace PhotoStudio.Application.Maintenance.RunMaintenance;
 
 /// <summary>
-/// Runs one maintenance pass. Expiration goes first so the <c>BookingExpired</c> events it raises are delivered in the same
-/// pass. Each task repeats in batches until nothing is left, up to <see cref="MaxBatches"/> batches, so one pass has a
+/// Runs one maintenance pass, in this order: expire bookings, deliver the outbox, deliver due notifications. Expiration goes
+/// first so the <c>BookingExpired</c> events it raises are delivered in the same pass; the outbox goes before notifications
+/// because its consumers are the ones that schedule them, so a notice that is already due is delivered in the same pass. Each task repeats in batches until nothing is left, up to <see cref="MaxBatches"/> batches, so one pass has a
 /// bounded duration even with a large backlog; when the limit is reached the response says more work is pending.
 /// </summary>
 /// <param name="expiration">Handler that expires tentative bookings.</param>
 /// <param name="outbox">Delivers the pending outbox messages.</param>
+/// <param name="notificationDelivery">Delivers the notifications that came due.</param>
 public sealed class RunMaintenanceHandler(
     ICommandHandler<ExpireTentativeBookingsCommand, ExpireTentativeBookingsResult> expiration,
-    IOutboxDispatcher outbox) : ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>
+    IOutboxDispatcher outbox,
+    ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult> notificationDelivery) : ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>
 {
     /// <summary>
     /// Bookings examined per expiration batch.
@@ -23,6 +27,11 @@ public sealed class RunMaintenanceHandler(
     /// Messages delivered per outbox batch.
     /// </summary>
     public const int OutboxBatchSize = 50;
+
+    /// <summary>
+    /// Notifications examined per delivery batch.
+    /// </summary>
+    public const int NotificationBatchSize = 100;
 
     /// <summary>
     /// Maximum batches per task in one pass.
@@ -71,6 +80,22 @@ public sealed class RunMaintenanceHandler(
             morePending |= batch == MaxBatches;
         }
 
-        return new MaintenanceResponse(expired, skipped, processed, morePending);
+        var delivered = 0;
+        for (var batch = 1; batch <= MaxBatches; batch++)
+        {
+            var result = await notificationDelivery.HandleAsync(new DeliverDueNotificationsCommand(NotificationBatchSize), cancellationToken);
+            delivered += result.Delivered;
+            var handled = result.Delivered + result.Cancelled;
+
+            // A short batch means nothing is left. A batch where every notification was skipped would only repeat itself.
+            if (handled == 0 || handled + result.Skipped < NotificationBatchSize)
+            {
+                break;
+            }
+
+            morePending |= batch == MaxBatches;
+        }
+
+        return new MaintenanceResponse(expired, skipped, processed, delivered, morePending);
     }
 }
