@@ -138,6 +138,32 @@ export function registerErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed "complete refund" request into a message for the photographer.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function refundErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'booking.invalid_transition':
+      return 'Este reembolso ya no está pendiente. Vuelve a la lista para ver su estado actual.';
+    case 'payment.invalid_method':
+      return 'El reembolso solo se puede registrar en efectivo o por SINPE Móvil.';
+    case 'domain.required_value':
+      return 'La nota es demasiado larga.';
+    case 'concurrency.conflict':
+      return 'El reembolso cambió mientras lo registrabas. Vuelve a la lista e inténtalo de nuevo.';
+    case 'resource.not_found':
+      return 'El reembolso ya no existe.';
+    default:
+      return 'No se pudo registrar el reembolso. Inténtalo de nuevo.';
+  }
+}
+
+/**
  * Converts the error of a failed "run maintenance" request into a message for the photographer.
  * @param error Error of the mutation.
  * @returns The message in Spanish.
