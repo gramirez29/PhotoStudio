@@ -3,8 +3,10 @@ import type {
   BookingSummaryResponse,
   CancelBookingRequest,
   CreateBookingRequest,
+  RecordInPersonPaymentRequest,
   RescheduleBookingRequest,
   RevertClientAbsentRequest,
+  SignContractInPersonRequest,
 } from './booking';
 
 /** Booking endpoints used by the photographer app. */
@@ -59,6 +61,24 @@ export interface BookingsApi {
    * @returns The updated booking.
    */
   revertClientAbsent(id: string, request: RevertClientAbsentRequest, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
+   * Records the signature of the contract, in person or on paper. With the deposit covered, the booking becomes confirmed.
+   * @param id Booking identifier.
+   * @param request Signer, template version and kind of signature.
+   * @param signal Optional signal to cancel the request.
+   * @returns The updated booking.
+   */
+  signContractInPerson(id: string, request: SignContractInPersonRequest, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
+   * Records a payment received in person; it is verified right away.
+   * @param id Booking identifier.
+   * @param request Amount, method and idempotency key.
+   * @param signal Optional signal to cancel the request.
+   * @returns The updated booking.
+   */
+  recordInPersonPayment(id: string, request: RecordInPersonPaymentRequest, signal?: AbortSignal): Promise<BookingResponse>;
 
   /**
    * Lists the bookings of the signed-in photographer, earliest session first.

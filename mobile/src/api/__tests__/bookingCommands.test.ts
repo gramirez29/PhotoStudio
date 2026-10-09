@@ -17,6 +17,8 @@ function stubApi(booking: BookingResponse): BookingsApi {
     completeBooking: jest.fn().mockResolvedValue(booking),
     markClientAbsent: jest.fn().mockResolvedValue(booking),
     revertClientAbsent: jest.fn().mockResolvedValue(booking),
+    signContractInPerson: jest.fn().mockResolvedValue(booking),
+    recordInPersonPayment: jest.fn().mockResolvedValue(booking),
     listBookings: jest.fn().mockResolvedValue([]),
     getBooking: jest.fn().mockResolvedValue(booking),
   };
@@ -34,6 +36,18 @@ describe('executeBookingCommand', () => {
 
     expect(api.cancelBooking).toHaveBeenNthCalledWith(1, id, { reason: 'Motivo' });
     expect(api.cancelBooking).toHaveBeenNthCalledWith(2, id, {});
+  });
+
+  it('routes the contract signature and the payment to their endpoints', async () => {
+    const api = stubApi(booking);
+    const contract = { signerName: 'María Pérez', templateVersion: 'v1', isPaperContract: false };
+    const payment = { amount: 50000, currency: 'CRC', method: 'Cash', idempotencyKey: 'pay-1' } as const;
+
+    await executeBookingCommand(api, id, { kind: 'signContract', request: contract });
+    await executeBookingCommand(api, id, { kind: 'recordPayment', request: payment });
+
+    expect(api.signContractInPerson).toHaveBeenCalledWith(id, contract);
+    expect(api.recordInPersonPayment).toHaveBeenCalledWith(id, payment);
   });
 
   it('routes complete, mark absent and revert to their endpoints and returns the booking', async () => {

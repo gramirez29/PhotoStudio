@@ -4,6 +4,10 @@ export interface BookingActionsState {
   readonly isPending: boolean;
   /** Message for the last failed action, or null. */
   readonly errorMessage: string | null;
+  /** Opens the form to record the signature of the contract. */
+  readonly signContract: () => void;
+  /** Opens the form to record a payment received in person. */
+  readonly recordPayment: () => void;
   /** Opens the reschedule form. */
   readonly reschedule: () => void;
   /** Opens the form to type the reason for cancelling. */

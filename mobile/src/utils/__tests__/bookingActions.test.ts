@@ -15,10 +15,17 @@ describe('splitActions', () => {
   });
 
   it('puts the allowed actions the app cannot perform yet apart', () => {
-    const result = splitActions(['RecordInPersonPayment', 'SignContract', 'Cancel']);
+    const result = splitActions(['VerifyPayment', 'SubmitPaymentProof', 'Cancel']);
 
     expect(result.supported).toEqual(['Cancel']);
-    expect(result.pending).toEqual(['RecordInPersonPayment', 'SignContract']);
+    expect(result.pending).toEqual(['VerifyPayment', 'SubmitPaymentProof']);
+  });
+
+  it('lists the contract and the in-person payment first, as the steps that confirm a booking', () => {
+    const result = splitActions(['Cancel', 'RecordInPersonPayment', 'SignContract']);
+
+    expect(result.supported).toEqual(['SignContract', 'RecordInPersonPayment', 'Cancel']);
+    expect(result.pending).toEqual([]);
   });
 
   it('returns nothing for a booking without allowed actions', () => {

@@ -55,6 +55,16 @@ export function bookingCommandErrorMessage(error: Error): string {
   switch (error.code) {
     case 'booking.reason_required':
       return 'Escribe el motivo.';
+    case 'booking.contract_already_signed':
+      return 'El contrato de esta reserva ya está firmado.';
+    case 'money.invalid_amount':
+    case 'money.invalid_currency':
+    case 'money.currency_mismatch':
+      return 'El monto no es válido para esta reserva. Revísalo e inténtalo de nuevo.';
+    case 'payment.invalid_method':
+      return 'Ese método de pago no se puede registrar en persona.';
+    case 'domain.required_value':
+      return 'Faltan datos obligatorios. Revísalos e inténtalo de nuevo.';
     case 'booking.guard_failed':
       return 'Todavía no se cumplen las condiciones: revisa la hora de la sesión o el plazo de la política.';
     case 'booking.invalid_transition':

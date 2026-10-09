@@ -181,5 +181,26 @@ describe('createBookingsApi', () => {
       expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({ reason: 'Marcado por error' });
       expect(booking.id).toBe(bookingPayload.id);
     });
+
+    it('posts the contract signature to the in-person contract endpoint', async () => {
+      const { api, requests } = recordingApi();
+      const request = { signerName: 'María Pérez', templateVersion: 'v1', isPaperContract: false };
+
+      await api.signContractInPerson(bookingPayload.id, request);
+
+      expect(requests[0]?.url).toBe(`${base}/contract/in-person`);
+      expect(requests[0]?.init?.method).toBe('POST');
+      expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    });
+
+    it('posts the payment with its idempotency key to the in-person payment endpoint', async () => {
+      const { api, requests } = recordingApi();
+      const request = { amount: 50000, currency: 'CRC', method: 'Cash', idempotencyKey: 'pay-1' } as const;
+
+      await api.recordInPersonPayment(bookingPayload.id, request);
+
+      expect(requests[0]?.url).toBe(`${base}/payments/in-person`);
+      expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    });
   });
 });
