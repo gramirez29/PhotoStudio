@@ -8,8 +8,9 @@ Bandeja de avisos ("Avisos") para el fotógrafo dentro de la app, con un botón 
 |---|---|---|
 | **Recordatorio de sesión** (`SessionReminder`) | 24 h antes del inicio de la sesión | La reserva sigue `Confirmed`, la sesión sigue siendo la misma (no se reprogramó) y aún no empieza |
 | **Saldo pendiente** (`BalanceDue`) | 24 h después de completar la sesión | La reserva está `Completed` y el saldo es mayor que cero |
+| **Comprobante por verificar** (`PaymentProofSubmitted`) | De inmediato: en la misma pasada de mantenimiento que despacha el evento `PaymentSubmitted` | El pago sigue `PendingVerification` y la reserva no está cancelada, vencida ni con cliente ausente |
 
-El fotógrafo ve los avisos en la pantalla **Avisos** (contador de no leídos en el inicio). Cada aviso ofrece **Enviar por WhatsApp** (abre WhatsApp con el mensaje; marca el aviso como leído), **Ver reserva** y **Marcar como leído**. Además, **Marcar todo como leído**.
+El fotógrafo ve los avisos en la pantalla **Avisos** (contador de no leídos en el inicio). El aviso de comprobante no ofrece WhatsApp: su acción principal es **Revisar comprobante**, que abre la reserva, donde ya están verificar y rechazar (`PendingPaymentsCard`). Los demás avisos ofrecen **Enviar por WhatsApp** (abre WhatsApp con el mensaje; marca el aviso como leído), **Ver reserva** y **Marcar como leído**. Además, **Marcar todo como leído**.
 
 Los avisos de hoy son para el **fotógrafo**: es él quien escribe al cliente. No se envía nada al cliente de forma automática (WhatsApp automatizado es fase 3).
 
@@ -21,6 +22,7 @@ Los avisos de hoy son para el **fotógrafo**: es él quien escribe al cliente. N
 - **El planificador reconcilia desde el estado actual** (`NotificationPlanner`), no desde el evento que lo disparó. Da el mismo resultado sin importar el orden ni cuántas veces llegue cada evento.
 - **La relevancia se vuelve a evaluar al entregar** (`DeliverDueNotificationsHandler`): si la reserva se canceló, se movió o ya se pagó, el aviso se cancela en vez de entregarse. Una captura (`NotificationDetails`) congela lo que decía en ese momento.
 - **Retención:** índice TTL `ix_notification_retention` sobre `retainUntil` (= `dueAt` + 90 días).
+- **Aviso de comprobante:** `PaymentNotificationsHandler` consume `PaymentSubmitted` y el planificador programa el aviso con vencimiento "ahora"; la clave es `PaymentProofSubmitted:{paymentId}` (una por pago, así dos comprobantes son dos avisos y el mismo evento entregado dos veces es uno). Al entregar se reevalúa: si el fotógrafo ya verificó o rechazó el comprobante, el aviso se descarta. El snapshot lleva `proofAmount` (lo que declaró el cliente). Como el outbox se despacha antes de entregar avisos en la misma pasada, no suma espera: llega con la frecuencia del worker (hasta 15 min con el cron de Railway) o al instante con el botón de mantenimiento.
 - **Puerto para push:** la entrega pasa por `DeliverDueNotificationsHandler`; agregar push más adelante es añadir un puerto `INotificationChannel` ahí, sin tocar el planificador.
 
 ## 3. Flujo
@@ -45,7 +47,7 @@ Booking cambia de estado ──► evento al outbox (misma transacción)
 | Capa | Archivos |
 |---|---|
 | Domain | `Domain/Notifications/Notification.cs`, `NotificationEnums.cs` |
-| Application | `Notifications/NotificationPlanner.cs`, `NotificationPolicy.cs`, `BookingNotificationsHandler.cs`, `SessionCompletedNotificationsHandler.cs`, `DeliverDue/`, `List/`, `MarkRead/`, `NotificationResponses.cs`; puerto `Abstractions/INotificationRepository.cs` |
+| Application | `Notifications/NotificationPlanner.cs`, `NotificationPolicy.cs`, `BookingNotificationsHandler.cs`, `SessionCompletedNotificationsHandler.cs`, `PaymentNotificationsHandler.cs`, `DeliverDue/`, `List/`, `MarkRead/`, `NotificationResponses.cs`; puerto `Abstractions/INotificationRepository.cs` |
 | Infrastructure | `Persistence/MongoNotificationRepository.cs`, `Persistence/Documents/NotificationDocument.cs`, índices en `MongoIndexInitializer.cs` |
 | Api | `Endpoints/NotificationEndpoints.cs` |
 | Worker | `MaintenanceService.cs` (modo siempre encendido, cada minuto), `RunOnceJob.cs` (modo una pasada) |
@@ -80,14 +82,15 @@ Cambio respecto a la configuración diaria: solo cambia el **Cron Schedule** del
 ## 8. Pruebas
 
 - Domain: `NotificationTests`.
-- Application: `NotificationPlannerTests`, `DeliverDueNotificationsHandlerTests` (reubicada, cancelada, pagada, conflicto), `NotificationInboxHandlerTests`, `RunMaintenanceHandlerTests`.
+- Application: `NotificationPlannerTests`, `PaymentNotificationsHandlerTests`, `DeliverDueNotificationsHandlerTests` (reubicada, cancelada, pagada, comprobante pendiente/resuelto, conflicto), `NotificationInboxHandlerTests`, `RunMaintenanceHandlerTests`.
 - Infrastructure (Mongo real): `MongoNotificationRepositoryTests` (deduplicación, cancelación con excepción, vencidos, bandeja por fotógrafo, concurrencia, TTL).
-- Api (punta a punta): `NotificationsApiTests` (sin token → 401, aislamiento por fotógrafo, reserva confirmada → recordatorio entregado y leído, reserva cancelada → sin aviso).
+- Api (punta a punta): `NotificationsApiTests` (sin token → 401, aislamiento por fotógrafo, reserva confirmada → recordatorio entregado y leído, reserva cancelada → sin aviso; comprobante subido por el portal → aviso con el monto, solo del dueño; comprobante resuelto antes de la entrega → sin aviso).
 - Mobile: `notifications.test.ts`, `notificationsApi.test.ts`, `useNotificationActions.test.tsx`, `NotificationListItem.test.tsx`.
 
 ## 9. Límites conocidos
 
 - Sin push todavía (puerto previsto). Los avisos aparecen al abrir la app o cada 60 s con ella abierta.
 - Los recordatorios usan 24 h fijas (`NotificationPolicy`); a futuro configurables por fotógrafo.
-- No hay aviso de "comprobante por verificar" ni de plazo de entrega de galería (dependen del portal y de Gallery).
+- El aviso de comprobante llega con el retraso del worker (hasta 15 min). Acortarlo exige despertar el procesador del outbox desde la API al guardar, o el push (que no sirve de mucho si el evento tarda en despacharse).
+- No hay aviso de plazo de entrega de galería (depende de Gallery).
 - La app no valida que WhatsApp esté instalado: `wa.me` cae al navegador si no lo está.

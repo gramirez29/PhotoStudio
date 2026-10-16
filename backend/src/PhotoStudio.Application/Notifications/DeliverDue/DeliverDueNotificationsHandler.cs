@@ -101,6 +101,16 @@ public sealed class DeliverDueNotificationsHandler(
                     ? Snapshot(booking, booking.Balance)
                     : null;
 
+            case NotificationType.PaymentProofSubmitted:
+                // The key holds the payment the notice is about: it is relevant only while that proof still waits for review.
+                var proof = Notification.TryGetPaymentId(notification.DedupKey, out var paymentId)
+                    ? booking.Payments.FirstOrDefault(payment => payment.Id == paymentId)
+                    : null;
+                return proof is { Status: PaymentStatus.PendingVerification } && booking.Status is
+                    BookingStatus.Tentative or BookingStatus.Confirmed or BookingStatus.Completed
+                    ? Snapshot(booking, balance: null, proofAmount: proof.Amount)
+                    : null;
+
             default:
                 return null;
         }
@@ -111,7 +121,8 @@ public sealed class DeliverDueNotificationsHandler(
     /// </summary>
     /// <param name="booking">Booking the notification is about.</param>
     /// <param name="balance">Amount owed, for balance notices.</param>
+    /// <param name="proofAmount">Amount declared in the proof of payment, for proof notices.</param>
     /// <returns>The snapshot.</returns>
-    private static NotificationDetails Snapshot(Booking booking, Domain.Common.Money? balance) =>
-        new(booking.Client.Name, booking.Client.Phone, booking.PackageName, booking.Slot.Start, balance);
+    private static NotificationDetails Snapshot(Booking booking, Domain.Common.Money? balance, Domain.Common.Money? proofAmount = null) =>
+        new(booking.Client.Name, booking.Client.Phone, booking.PackageName, booking.Slot.Start, balance, proofAmount);
 }

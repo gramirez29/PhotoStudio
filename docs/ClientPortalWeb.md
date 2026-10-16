@@ -55,7 +55,7 @@ Ver `docs/Deployment.md`: un solo sitio (página principal en `/` y portal en `/
 | 3 | Código por correo + formulario de comprobante + estados del pago | **Hecho** |
 | 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
 
-Después, fuera de este plan: firma del contrato por el cliente, aviso al fotógrafo cuando llega un comprobante, y un endpoint
+Después, fuera de este plan: firma del contrato por el cliente y un endpoint
 para agregar el correo a reservas existentes.
 
 ## 7. Marca aplicada (entrega 2)

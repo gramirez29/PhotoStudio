@@ -27,6 +27,7 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
     packageName: 'Retrato Familiar',
     sessionStart: '2026-10-17T21:00:00+00:00',
     balance: null,
+    proofAmount: null,
     deliveredAt: '2026-10-16T21:00:00+00:00',
     readAt: null,
     ...overrides,

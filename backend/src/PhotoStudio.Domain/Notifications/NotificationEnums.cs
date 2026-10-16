@@ -10,6 +10,9 @@ public enum NotificationType
 
     /// <summary>A session was completed and the client still owes money: time to collect.</summary>
     BalanceDue,
+
+    /// <summary>A client uploaded a proof of payment that waits for the photographer to verify it.</summary>
+    PaymentProofSubmitted,
 }
 
 /// <summary>

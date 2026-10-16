@@ -100,6 +100,15 @@ public sealed class NotificationDetailsDocument
     /// <summary>Gets or sets the currency of the amount owed.</summary>
     [BsonElement("balanceCurrency")]
     public string? BalanceCurrency { get; set; }
+
+    /// <summary>Gets or sets the amount declared in the proof of payment, for proof notices.</summary>
+    [BsonElement("proofAmount")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal? ProofAmount { get; set; }
+
+    /// <summary>Gets or sets the currency of the declared amount.</summary>
+    [BsonElement("proofCurrency")]
+    public string? ProofCurrency { get; set; }
 }
 
 /// <summary>
@@ -174,6 +183,8 @@ public static class NotificationDocumentMappings
         SessionStart = details.SessionStart.UtcDateTime,
         BalanceAmount = details.Balance?.Amount,
         BalanceCurrency = details.Balance?.Currency,
+        ProofAmount = details.ProofAmount?.Amount,
+        ProofCurrency = details.ProofAmount?.Currency,
     };
 
     /// <summary>
@@ -186,7 +197,8 @@ public static class NotificationDocumentMappings
         document.ClientPhone,
         document.PackageName,
         ToOffset(document.SessionStart),
-        document.BalanceAmount is { } amount && document.BalanceCurrency is { } currency ? Money.Restore(amount, currency) : null);
+        document.BalanceAmount is { } amount && document.BalanceCurrency is { } currency ? Money.Restore(amount, currency) : null,
+        document.ProofAmount is { } proof && document.ProofCurrency is { } proofCurrency ? Money.Restore(proof, proofCurrency) : null);
 
     /// <summary>
     /// Converts a stored date, which MongoDB returns as UTC, to a UTC offset instant.

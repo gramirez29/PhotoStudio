@@ -18,6 +18,13 @@ export function describeNotification(notification: NotificationResponse): Notifi
     };
   }
 
+  if (notification.type === 'PaymentProofSubmitted' && notification.proofAmount !== null) {
+    return {
+      title: 'Comprobante por verificar',
+      detail: `${notification.clientName} envió un comprobante de ${formatMoney(notification.proofAmount)} (${notification.packageName}).`,
+    };
+  }
+
   return {
     title: 'Sesión próxima',
     detail: `${notification.clientName} · ${notification.packageName} · ${formatDateTime(notification.sessionStart)}`,
@@ -45,6 +52,13 @@ export function buildWhatsAppMessage(notification: NotificationResponse): string
     return (
       `${greeting}, te escribo por el saldo pendiente de ${formatMoney(notification.balance)} ` +
       `de tu sesión de ${notification.packageName}. Quedo atento a tu pago para entregarte las fotos finales. ¡Gracias!`
+    );
+  }
+
+  if (notification.type === 'PaymentProofSubmitted' && notification.proofAmount !== null) {
+    return (
+      `${greeting}, recibí tu comprobante de ${formatMoney(notification.proofAmount)} ` +
+      `de tu sesión de ${notification.packageName}. Lo reviso y te confirmo apenas lo verifique. ¡Gracias!`
     );
   }
 

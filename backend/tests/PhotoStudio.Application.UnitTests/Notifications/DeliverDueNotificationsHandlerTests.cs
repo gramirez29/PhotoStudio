@@ -127,6 +127,77 @@ public sealed class DeliverDueNotificationsHandlerTests
     }
 
     /// <summary>
+    /// A proof notice for a payment that still waits for review is delivered with the declared amount.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_ForAPendingProof_DeliversTheNoticeWithTheDeclaredAmount()
+    {
+        var (booking, notice) = BookingWithProofNotice();
+        Due(booking, notice);
+
+        var result = await HandlerAt(BookingFactory.CreatedAt).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+
+        result.ShouldBe(new DeliverDueNotificationsResult(1, 0, 0));
+        notice.Details!.ProofAmount.ShouldBe(Money.Create(10_000m, "CRC"));
+        notice.Details.ClientName.ShouldBe(booking.Client.Name);
+    }
+
+    /// <summary>
+    /// A proof notice is dropped when the photographer already resolved the proof before the notice was delivered.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WhenTheProofWasAlreadyResolved_DropsTheNotice()
+    {
+        var (booking, notice) = BookingWithProofNotice();
+        booking.RejectPayment(booking.Payments[^1].Id, "Not received", BookingFactory.CreatedAt);
+        Due(booking, notice);
+
+        var result = await HandlerAt(BookingFactory.CreatedAt).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+
+        result.ShouldBe(new DeliverDueNotificationsResult(0, 1, 0));
+    }
+
+    /// <summary>
+    /// A proof notice whose payment is not in the booking is dropped.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WhenThePaymentIsNotInTheBooking_DropsTheNotice()
+    {
+        var (booking, _) = BookingWithProofNotice();
+        var stranger = Notification.Schedule(
+            booking.PhotographerId,
+            booking.Id,
+            NotificationType.PaymentProofSubmitted,
+            Notification.PaymentProofKey(Guid.CreateVersion7()),
+            BookingFactory.CreatedAt,
+            BookingFactory.CreatedAt);
+        Due(booking, stranger);
+
+        var result = await HandlerAt(BookingFactory.CreatedAt).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+
+        result.Cancelled.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A proof notice is dropped when its booking was cancelled in the meantime.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WhenTheBookingWithAProofWasCancelled_DropsTheNotice()
+    {
+        var (booking, notice) = BookingWithProofNotice();
+        booking.Cancel(Actor.Photographer, "Sick", BookingFactory.CreatedAt);
+        Due(booking, notice);
+
+        var result = await HandlerAt(BookingFactory.CreatedAt).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+
+        result.Cancelled.ShouldBe(1);
+    }
+
+    /// <summary>
     /// A concurrent change is counted as skipped and does not stop the batch.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
@@ -157,6 +228,25 @@ public sealed class DeliverDueNotificationsHandlerTests
         Notification.SessionReminderKey(booking.Id, plannedStart),
         booking.Slot.Start.AddDays(-1),
         BookingFactory.CreatedAt);
+
+    /// <summary>
+    /// Builds a confirmed booking with a proof of payment waiting for review and the notice about that proof.
+    /// </summary>
+    /// <returns>The booking and its proof notice.</returns>
+    private static (Booking Booking, Notification Notice) BookingWithProofNotice()
+    {
+        var booking = BookingFactory.Confirmed();
+        var payment = booking.SubmitPaymentProof(
+            Guid.CreateVersion7(), Money.Create(10_000m, "CRC"), PaymentMethod.SinpeMovil, "proof-1", BookingFactory.CreatedAt);
+        var notice = Notification.Schedule(
+            booking.PhotographerId,
+            booking.Id,
+            NotificationType.PaymentProofSubmitted,
+            Notification.PaymentProofKey(payment.Id),
+            BookingFactory.CreatedAt,
+            BookingFactory.CreatedAt);
+        return (booking, notice);
+    }
 
     /// <summary>
     /// Makes the repositories report one due notification and its booking.

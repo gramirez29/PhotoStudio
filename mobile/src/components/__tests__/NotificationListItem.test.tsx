@@ -17,6 +17,7 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
     packageName: 'Retrato Familiar',
     sessionStart: '2026-10-17T21:00:00+00:00',
     balance: null,
+    proofAmount: null,
     deliveredAt: '2026-10-16T21:00:00+00:00',
     readAt: null,
     ...overrides,
@@ -52,6 +53,25 @@ describe('NotificationListItem', () => {
 
     expect(screen.queryByLabelText('Sin leer')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Marcar como leído' })).toBeNull();
+  });
+
+  it('offers to review the proof instead of messaging the client in a proof notice', () => {
+    const handlers = { onSendWhatsApp: jest.fn(), onOpenBooking: jest.fn(), onMarkRead: jest.fn() };
+    render(
+      <NotificationListItem
+        notification={notification({ type: 'PaymentProofSubmitted', proofAmount: { amount: 25000, currency: 'CRC' } })}
+        {...handlers}
+      />,
+    );
+
+    expect(screen.getByText('Comprobante por verificar')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Enviar por WhatsApp' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ver reserva' })).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Revisar comprobante' }));
+
+    expect(handlers.onOpenBooking).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1' }));
+    expect(handlers.onSendWhatsApp).not.toHaveBeenCalled();
   });
 
   it('shows the amount owed in a balance notice', () => {
