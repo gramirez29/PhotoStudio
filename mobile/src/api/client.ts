@@ -6,6 +6,7 @@ import { createHealthApi } from './healthApi';
 import { createHttpClient } from './httpClient';
 import { createMaintenanceApi } from './maintenanceApi';
 import { createNotificationsApi } from './notificationsApi';
+import { createPushDevicesApi } from './pushDevicesApi';
 import { sessionTokenProvider } from '../session/sessionManager';
 
 /** Shared HTTP client configured with the API URL of the current environment. It sends the access token of the session. */
@@ -28,3 +29,6 @@ export const accountApi = createAccountApi(httpClient);
 
 /** Notification inbox endpoints. */
 export const notificationsApi = createNotificationsApi(httpClient);
+
+/** Push device endpoints (register or forget the phone that receives push notifications). */
+export const pushDevicesApi = createPushDevicesApi(httpClient);

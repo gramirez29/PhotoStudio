@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Notifications.DeliverDue;
+using PhotoStudio.Application.Notifications.Push;
 using PhotoStudio.Application.UnitTests.Support;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Common;
@@ -15,6 +17,8 @@ public sealed class DeliverDueNotificationsHandlerTests
 {
     private readonly IBookingRepository _bookings = Substitute.For<IBookingRepository>();
     private readonly INotificationRepository _notifications = Substitute.For<INotificationRepository>();
+    private readonly IPushDeviceRepository _devices = Substitute.For<IPushDeviceRepository>();
+    private readonly IPushSender _sender = Substitute.For<IPushSender>();
 
     /// <summary>
     /// A reminder for a booking that is still confirmed and unmoved is delivered with a snapshot.
@@ -198,6 +202,49 @@ public sealed class DeliverDueNotificationsHandlerTests
     }
 
     /// <summary>
+    /// A notification that reaches the inbox is also pushed to the phones of the photographer.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_PushesTheNotificationsItDelivers()
+    {
+        var (booking, notice) = BookingWithProofNotice();
+        Due(booking, notice);
+        _devices.ListByPhotographerAsync(booking.PhotographerId, Arg.Any<CancellationToken>())
+            .Returns([PushDevice.Register("ExponentPushToken[abc]", booking.PhotographerId, PushPlatform.Android, BookingFactory.CreatedAt)]);
+        _sender.SendAsync(Arg.Any<IReadOnlyList<PushMessage>>(), Arg.Any<CancellationToken>()).Returns(new PushSendResult([]));
+
+        await HandlerAt(BookingFactory.CreatedAt).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+
+        await _sender.Received(1).SendAsync(
+            Arg.Is<IReadOnlyList<PushMessage>>(messages => messages.Count == 1 && messages[0].Title == "Comprobante por verificar"),
+            Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A notification that is dropped, or that another run won, is not pushed.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_DoesNotPushWhatItDropsOrSkips()
+    {
+        var (booking, resolved) = BookingWithProofNotice();
+        booking.RejectPayment(booking.Payments[^1].Id, "Not received", BookingFactory.CreatedAt);
+        var reminder = Reminder(booking, booking.Slot.Start.AddDays(-3));
+        _bookings.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
+        _notifications.ListDueAsync(Arg.Any<DateTimeOffset>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([resolved]);
+        _notifications.UpdateAsync(resolved, Arg.Any<CancellationToken>()).Returns(Task.FromException(new ConflictException(ApplicationErrorCodes.ConcurrencyConflict, "changed")));
+        _devices.ListByPhotographerAsync(booking.PhotographerId, Arg.Any<CancellationToken>())
+            .Returns([PushDevice.Register("ExponentPushToken[abc]", booking.PhotographerId, PushPlatform.Android, BookingFactory.CreatedAt)]);
+
+        await HandlerAt(BookingFactory.CreatedAt).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+        _notifications.ListDueAsync(Arg.Any<DateTimeOffset>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([reminder]);
+        await HandlerAt(booking.Slot.Start.AddDays(-1)).HandleAsync(new DeliverDueNotificationsCommand(10), TestContext.Current.CancellationToken);
+
+        await _sender.DidNotReceiveWithAnyArgs().SendAsync(default!, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
     /// A concurrent change is counted as skipped and does not stop the batch.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
@@ -264,5 +311,5 @@ public sealed class DeliverDueNotificationsHandlerTests
     /// </summary>
     /// <param name="now">Instant the clock reports.</param>
     /// <returns>The handler.</returns>
-    private DeliverDueNotificationsHandler HandlerAt(DateTimeOffset now) => new(_bookings, _notifications, new FixedTimeProvider(now));
+    private DeliverDueNotificationsHandler HandlerAt(DateTimeOffset now) => new(_bookings, _notifications, new NotificationPusher(_devices, _sender, NullLogger<NotificationPusher>.Instance), new FixedTimeProvider(now));
 }

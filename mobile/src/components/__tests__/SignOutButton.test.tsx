@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
-import { signOut } from '../../session/sessionManager';
+import { signOutOfDevice } from '../../push/pushSignOut';
 import { SignOutButton } from '../SignOutButton';
 
-jest.mock('../../session/sessionManager', () => ({ signOut: jest.fn() }));
+jest.mock('../../push/pushSignOut', () => ({ signOutOfDevice: jest.fn() }));
 
 /**
  * Returns the buttons of the last confirmation dialog.
@@ -25,7 +25,7 @@ describe('SignOutButton', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Cerrar sesión' }));
 
     expect(Alert.alert).toHaveBeenCalledTimes(1);
-    expect(signOut).not.toHaveBeenCalled();
+    expect(signOutOfDevice).not.toHaveBeenCalled();
   });
 
   it('signs out when the photographer confirms', () => {
@@ -34,7 +34,7 @@ describe('SignOutButton', () => {
 
     dialogButtons().find((button) => button.style === 'destructive')?.onPress?.();
 
-    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(signOutOfDevice).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the session when the photographer cancels', () => {
@@ -43,6 +43,6 @@ describe('SignOutButton', () => {
 
     dialogButtons().find((button) => button.style === 'cancel')?.onPress?.();
 
-    expect(signOut).not.toHaveBeenCalled();
+    expect(signOutOfDevice).not.toHaveBeenCalled();
   });
 });

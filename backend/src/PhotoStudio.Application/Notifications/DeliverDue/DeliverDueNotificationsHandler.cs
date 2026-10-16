@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
+using PhotoStudio.Application.Notifications.Push;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Notifications;
 
@@ -13,10 +14,12 @@ namespace PhotoStudio.Application.Notifications.DeliverDue;
 /// </summary>
 /// <param name="bookings">Booking repository.</param>
 /// <param name="notifications">Notification repository.</param>
+/// <param name="pusher">Sends the push of the notifications that reached the inbox.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class DeliverDueNotificationsHandler(
     IBookingRepository bookings,
     INotificationRepository notifications,
+    NotificationPusher pusher,
     TimeProvider timeProvider) : ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult>
 {
     /// <summary>
@@ -35,6 +38,7 @@ public sealed class DeliverDueNotificationsHandler(
         var delivered = 0;
         var cancelled = 0;
         var skipped = 0;
+        var reachedInbox = new List<Notification>();
         foreach (var notification in due)
         {
             var booking = await bookings.GetByIdAsync(notification.BookingId, cancellationToken);
@@ -67,7 +71,14 @@ public sealed class DeliverDueNotificationsHandler(
             else
             {
                 delivered++;
+                reachedInbox.Add(notification);
             }
+        }
+
+        // Only the notifications this run delivered are pushed: a skipped one is delivered, and pushed, by the run that won it.
+        if (reachedInbox.Count > 0)
+        {
+            await pusher.PushAsync(reachedInbox, cancellationToken);
         }
 
         return new DeliverDueNotificationsResult(delivered, cancelled, skipped);
