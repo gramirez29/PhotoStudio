@@ -346,7 +346,7 @@ var booking = await repository.GetOwnedAsync(command.BookingId, command.Photogra
 
 `GetOwnedAsync` lanza `NotFoundException` si la reserva no existe **o si es de otro usuario**, así que ambos casos responden **404 idéntico**: la API no confirma que un identificador ajeno exista. Cubre los 8 handlers: obtener, cancelar, completar, marcar ausente, revertir ausencia, reprogramar, firmar contrato y registrar pago. Está probado a nivel unitario (`BookingTenantIsolationTests`) y de punta a punta (`TenantIsolationApiTests`, `RegistrationApiTests`).
 
-> **Importante con el registro abierto:** `POST /api/maintenance/run` exige sesión pero ejecuta trabajo **global** (expira las reservas vencidas de *todos* los usuarios). Como ahora cualquiera puede crear una cuenta, cualquiera puede dispararlo. Es idempotente, de duración acotada y limitado a 1 llamada por minuto, así que el daño posible es una carga leve, pero conviene restringirlo a un rol de sistema (ver §18).
+> **Trabajo global:** `POST /api/maintenance/run` ejecuta trabajo de *todos* los usuarios (expira las reservas vencidas de todos). Por eso exige el **rol de sistema** (ver §19), no solo una sesión: un usuario normal recibe **403**.
 
 ---
 
@@ -525,7 +525,9 @@ Si la API no arranca con `'JWT_SIGNING_KEY' is the development key`, copiaste la
 | POST | `/api/auth/login` | Pública (10/min/IP) | `{ username, password }` | 200 sesión · 401 `auth.invalid_credentials` · 429 `auth.account_locked` (+`Retry-After`) · 429 `rate_limit.exceeded` |
 | POST | `/api/auth/refresh` | Pública (10/min/IP) | `{ refreshToken }` | 200 sesión nueva · 401 `auth.invalid_refresh_token` · 429 `rate_limit.exceeded` |
 | POST | `/api/auth/logout` | Pública (10/min/IP) | `{ refreshToken }` | 204 siempre |
-| `*` | `/api/bookings/**`, `/api/maintenance/run` | **Bearer** | (sin `photographerId`) | 401 sin token o token inválido · 404 si la reserva es de otro usuario |
+| POST | `/api/account/password` | **Bearer** (10/min/IP) | `{ currentPassword, newPassword }` | 200 sesión nueva de este dispositivo · 422 `user.invalid_current_password` / `user.weak_password` · 429 `auth.account_locked` / `rate_limit.exceeded` · 401 sin token |
+| `*` | `/api/bookings/**` | **Bearer** | (sin `photographerId`) | 401 sin token o token inválido · 404 si la reserva es de otro usuario |
+| POST | `/api/maintenance/run` | **Bearer + rol de sistema** | — | 200 · 401 sin token · **403** sin el rol · 429 `rate_limit.exceeded` |
 
 ---
 
@@ -572,12 +574,39 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 ## 18. Límites conocidos y siguientes pasos
 
 1. **Sin recuperación de contraseña ni verificación del correo.** El correo y el teléfono se piden y se guardan, pero **no se verifican**: nada envía mensajes todavía (Resend no está configurado y no hay dominio). Así que alguien puede registrarse con el correo de otra persona y **ocupar esa dirección**. El correo está listo para ser la vía de recuperación de contraseña, pero solo será fiable cuando se verifique con un código enviado a esa dirección. Hasta entonces, cerrar el registro en producción (`AUTH_REGISTRATION_ENABLED=false`) una vez creada tu cuenta es la mitigación.
-2. **`/api/maintenance/run` es trabajo global** y ahora cualquier usuario registrado puede dispararlo. Restringirlo a un rol de sistema (o moverlo al worker) antes de abrir el producto a más gente.
+2. ~~**`/api/maintenance/run` es trabajo global**~~ **Resuelto:** exige el rol de sistema (§19). Queda que el rol es un booleano en el usuario, sin gestión de roles más fina.
 3. **Un atacante que conozca tu usuario puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por usuario). Mitigación futura: bloquear por (usuario, IP) o retardos progresivos.
 4. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión). Es el precio de no consultar la base en cada petición.
 5. **La IP real depende de `X-Forwarded-For`.** Se confía en el último salto del proxy; si el contenedor fuera alcanzable sin pasar por Railway, alguien podría falsear la IP y evitar los límites *por IP* (no el bloqueo de usuario).
-6. **Sin cambio de contraseña desde la app.**
+6. ~~**Sin cambio de contraseña desde la app.**~~ **Resuelto** (§19). Sigue sin haber *recuperación* de contraseña si se olvida (necesita correo verificado).
 7. **Un usuario = un fotógrafo = un tenant.** Para estudios con varios fotógrafos habría que separar "cuenta" de "tenant" y añadir roles.
 8. **Cerrar sesión sin conexión** deja vivo el refresh token en el servidor hasta que expire (30 días), aunque el teléfono ya lo olvidó.
 9. **Rotar `JWT_SIGNING_KEY`** invalida los access tokens vigentes (la app los renueva sola); no invalida los refresh tokens.
 10. **Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.
+
+---
+
+## 19. Rol de sistema y cambio de contraseña
+
+### 19.1 Rol de sistema (`isSystemOperator`)
+
+- El usuario tiene un booleano `isSystemOperator` (documento `users`, ausente = `false`). **El registro nunca lo pone**: se otorga a mano con `backend/scripts/grant-system-role.js` (mongosh; `revoke = true` lo quita).
+- Si es `true`, el access token lleva `role: "system"` (`JwtAccessTokenIssuer`). La política `system-operator` (`PhotographerAuthenticationExtensions.SystemOperatorPolicy`) exige ese claim y la usa `/api/maintenance/run`. Un usuario normal recibe **403**.
+- El cambio del rol llega con el siguiente access token (máx. 15 min o al volver a entrar).
+- La respuesta de sesión incluye `isSystemOperator` solo para que la app muestre u oculte el botón "Liberar reservas vencidas"; la API no confía en eso, valida el token.
+- **Orden del middleware:** `UseRateLimiter` va **después** de `UseAuthorization`. Antes, una petición rechazada por falta de rol consumía el único cupo por minuto del mantenimiento y cualquier usuario podía dejar al operador sin poder usarlo.
+- Para dar el rol en local: `docker exec -i photostudio-mongo mongosh photostudio_dev --eval "const username='tu.usuario'; $(cat backend/scripts/grant-system-role.js)"`.
+
+### 19.2 Cambio de contraseña
+
+`POST /api/account/password` con `{ currentPassword, newPassword }` (Bearer):
+
+1. Carga al usuario del token; si está bloqueado → 429 `auth.account_locked`.
+2. Verifica la contraseña actual. Si es incorrecta cuenta como **intento fallido de login** (mismo contador y bloqueo de 5 fallos / 15 min) y responde **422** `user.invalid_current_password` (no 401: la sesión es válida y un 401 haría que la app intentara renovarla).
+3. Valida la nueva (8–128 caracteres, distinta de la actual → `user.weak_password`).
+4. Reemplaza el hash **solo si el hash guardado sigue siendo el verificado** (`ChangePasswordAsync`, condicional): dos cambios simultáneos no pisan; el segundo recibe 409 `concurrency.conflict`. También limpia fallos y bloqueo.
+5. Revoca **todos** los refresh tokens del usuario (`RevokeAllForUserAsync`) y emite una sesión nueva (familia nueva) para este dispositivo, que la app adopta.
+
+Límites: los access tokens de otros dispositivos siguen siendo válidos hasta 15 min (§18.4). Si la respuesta se pierde después de que el servidor cambió la contraseña, el dispositivo queda con un refresh token revocado y tendrá que entrar con la contraseña nueva.
+
+Pruebas: `ChangePasswordHandlerTests` (unitarias), `AccountApiTests` y `AccessTokenValidationApiTests` (de punta a punta, contra Mongo real).

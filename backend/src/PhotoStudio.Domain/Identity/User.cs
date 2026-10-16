@@ -73,7 +73,8 @@ public sealed class User : AggregateRoot<Guid>
         string phone,
         DateTimeOffset createdAt,
         int failedLoginAttempts,
-        DateTimeOffset? lockedUntil)
+        DateTimeOffset? lockedUntil,
+        bool isSystemOperator)
         : base(id, version)
     {
         Username = username;
@@ -84,6 +85,7 @@ public sealed class User : AggregateRoot<Guid>
         CreatedAt = createdAt;
         FailedLoginAttempts = failedLoginAttempts;
         LockedUntil = lockedUntil;
+        IsSystemOperator = isSystemOperator;
     }
 
     /// <summary>
@@ -128,6 +130,12 @@ public sealed class User : AggregateRoot<Guid>
     public DateTimeOffset? LockedUntil { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the user may run work that affects every photographer (the maintenance pass). It is
+    /// never set by registration: an operator grants it directly in the database (see <c>scripts/grant-system-role.js</c>).
+    /// </summary>
+    public bool IsSystemOperator { get; }
+
+    /// <summary>
     /// Creates a new user, validating and normalizing the data.
     /// </summary>
     /// <param name="id">Photographer identifier; becomes the tenant of every booking of the user.</param>
@@ -151,7 +159,7 @@ public sealed class User : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.RequiredValue, "The password hash is required.");
         }
 
-        return new User(id, 0, NormalizeUsername(username), NormalizeEmail(email), passwordHash, NormalizeName(name), NormalizePhone(phone), now, 0, null);
+        return new User(id, 0, NormalizeUsername(username), NormalizeEmail(email), passwordHash, NormalizeName(name), NormalizePhone(phone), now, 0, null, false);
     }
 
     /// <summary>
@@ -167,6 +175,7 @@ public sealed class User : AggregateRoot<Guid>
     /// <param name="createdAt">Creation instant.</param>
     /// <param name="failedLoginAttempts">Consecutive failed logins.</param>
     /// <param name="lockedUntil">Lock end, if locked.</param>
+    /// <param name="isSystemOperator">Whether the user may run system-wide work.</param>
     /// <returns>The restored user.</returns>
     public static User Restore(
         Guid id,
@@ -178,8 +187,9 @@ public sealed class User : AggregateRoot<Guid>
         string phone,
         DateTimeOffset createdAt,
         int failedLoginAttempts,
-        DateTimeOffset? lockedUntil) =>
-        new(id, version, username, email, passwordHash, name, phone, createdAt, failedLoginAttempts, lockedUntil);
+        DateTimeOffset? lockedUntil,
+        bool isSystemOperator = false) =>
+        new(id, version, username, email, passwordHash, name, phone, createdAt, failedLoginAttempts, lockedUntil, isSystemOperator);
 
     /// <summary>
     /// Checks that a password meets the length rules. Only the length is checked: a longer passphrase is better than a

@@ -26,7 +26,7 @@ internal sealed class IdentityFixture
     /// </summary>
     public IdentityFixture()
     {
-        AccessTokens.Issue(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<DateTimeOffset>())
+        AccessTokens.Issue(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<DateTimeOffset>())
             .Returns(call => new AccessToken("access-jwt", call.Arg<DateTimeOffset>().AddMinutes(15)));
         TokenGenerator.Generate().Returns(new GeneratedRefreshToken("new-secret", "new-hash"));
         TokenGenerator.Hash(Arg.Any<string>()).Returns(call => "hash-of-" + call.Arg<string>());

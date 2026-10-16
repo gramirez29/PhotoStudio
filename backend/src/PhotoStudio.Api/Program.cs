@@ -44,9 +44,12 @@ var app = builder.Build();
 
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// After authorization on purpose: a request that is refused (no token, no system role) must not use up the shared permit of
+// an endpoint such as the maintenance pass, or any user could lock the operator out of it.
+app.UseRateLimiter();
 
 // Every endpoint requires a signed-in photographer by default (fallback policy); the ones below opt out explicitly.
 // The OpenAPI document is the source for the generated TypeScript types of the mobile app and the client portal.
@@ -60,6 +63,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 }).AllowAnonymous();
 
 app.MapAuthEndpoints();
+app.MapAccountEndpoints();
 app.MapBookingEndpoints();
 app.MapNotificationEndpoints();
 app.MapBillingEndpoints();

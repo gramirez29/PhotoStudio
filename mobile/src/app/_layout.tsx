@@ -56,6 +56,7 @@ export default function RootLayout(): ReactElement {
             options={{ title: 'PhotoStud.io', headerLeft: SignOutButton, headerRight: NewBookingButton }}
           />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
+          <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />
           <Stack.Screen name="bookings/new" options={{ title: 'Nueva reserva' }} />
           <Stack.Screen name="bookings/reschedule" options={{ title: 'Reprogramar' }} />
           <Stack.Screen name="refunds" options={{ title: 'Reembolsos' }} />

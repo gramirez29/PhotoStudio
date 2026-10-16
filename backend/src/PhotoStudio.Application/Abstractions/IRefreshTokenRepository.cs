@@ -42,4 +42,13 @@ public interface IRefreshTokenRepository
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The number of tokens revoked.</returns>
     Task<int> RevokeFamilyAsync(Guid familyId, DateTimeOffset now, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Revokes every active token of a user, closing all of its sessions on every device.
+    /// </summary>
+    /// <param name="photographerId">User whose sessions are closed.</param>
+    /// <param name="now">Current instant, stored as the revocation instant.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The number of tokens revoked.</returns>
+    Task<int> RevokeAllForUserAsync(Guid photographerId, DateTimeOffset now, CancellationToken cancellationToken);
 }

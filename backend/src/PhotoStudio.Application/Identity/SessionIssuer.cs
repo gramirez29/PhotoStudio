@@ -34,12 +34,12 @@ public sealed class SessionIssuer(
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var access = accessTokens.Issue(user.Id, user.Username, now);
+        var access = accessTokens.Issue(user.Id, user.Username, user.IsSystemOperator, now);
         var generated = refreshTokens.Generate();
         var refreshToken = RefreshToken.Issue(user.Id, familyId, generated.Hash, now, settings.RefreshTokenLifetime);
 
         return new IssuedSession(
             refreshToken,
-            new AuthSessionResponse(access.Value, access.ExpiresAt, generated.Secret, refreshToken.ExpiresAt, user.Id, user.Username, user.Email, user.Name));
+            new AuthSessionResponse(access.Value, access.ExpiresAt, generated.Secret, refreshToken.ExpiresAt, user.Id, user.Username, user.Email, user.Name, user.IsSystemOperator));
     }
 }

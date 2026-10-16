@@ -21,6 +21,8 @@ export interface ActiveSession {
   readonly email: string;
   /** Display name of the user. */
   readonly name: string;
+  /** Whether the user may run system-wide work (the maintenance pass). Decides only whether the app shows that action. */
+  readonly isSystemOperator: boolean;
 }
 
 /** State and setters of the session store. Side effects (network, storage) live in the session manager, not here. */

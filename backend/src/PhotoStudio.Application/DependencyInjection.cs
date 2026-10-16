@@ -12,6 +12,7 @@ using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Identity;
+using PhotoStudio.Application.Identity.ChangePassword;
 using PhotoStudio.Application.Identity.Login;
 using PhotoStudio.Application.Identity.Logout;
 using PhotoStudio.Application.Identity.RefreshSession;
@@ -89,7 +90,7 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Adds the authentication use cases (register, login, refresh and logout). Registered apart from
+    /// Adds the authentication use cases (register, login, refresh, logout and change password). Registered apart from
     /// <see cref="AddApplication"/> because they need the token ports, which only the API configures.
     /// </summary>
     /// <param name="services">Service collection to configure.</param>
@@ -103,6 +104,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RefreshSessionCommand, AuthSessionResponse>, RefreshSessionHandler>();
         services.AddScoped<ICommandHandler<LogoutCommand, LogoutResponse>, LogoutHandler>();
         services.AddScoped<ICommandHandler<RegisterUserCommand, AuthSessionResponse>, RegisterUserHandler>();
+        services.AddScoped<ICommandHandler<ChangePasswordCommand, AuthSessionResponse>, ChangePasswordHandler>();
 
         return services;
     }

@@ -104,6 +104,32 @@ export function loginErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed "change password" request into a message for the user.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function changePasswordErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'user.invalid_current_password':
+      return 'La contraseña actual no es correcta.';
+    case 'user.weak_password':
+      return 'La contraseña nueva debe tener entre 8 y 128 caracteres y ser distinta de la actual.';
+    case 'auth.account_locked':
+      return 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
+    case 'rate_limit.exceeded':
+      return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    case 'concurrency.conflict':
+      return 'La contraseña cambió mientras la editabas. Inténtalo de nuevo.';
+    default:
+      return 'No se pudo cambiar la contraseña. Inténtalo de nuevo.';
+  }
+}
+
+/**
  * Converts the error of a failed account creation into a message for the user.
  * @param error Error of the mutation.
  * @returns The message in Spanish.
