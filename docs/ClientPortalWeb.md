@@ -52,9 +52,30 @@ Build `npm run build` desde `portal/`, salida `dist/`; fallback de SPA con `_red
 | # | Contenido | Estado |
 |---|---|---|
 | 1 | CORS en el API para `/public/**` (`docs/ClientPortal.md` §5.1) | **Hecho** |
-| 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + despliegue en Pages | Pendiente |
+| 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + configuración de Pages | **Hecho** (falta crear el proyecto en Pages y los DNS: pasos en `portal/README.md`) |
 | 3 | Código por correo + formulario de comprobante + estados del pago | Pendiente |
 | 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
 
 Después, fuera de este plan: firma del contrato por el cliente, aviso al fotógrafo cuando llega un comprobante, y un endpoint
 para agregar el correo a reservas existentes.
+
+## 7. Marca aplicada (entrega 2)
+
+Paleta del cliente en dos variaciones (la página sigue `prefers-color-scheme`) y tipografías **Josefin Sans** (títulos) y
+**DM Sans** (texto), alojadas en el sitio con `@fontsource-variable` (sin pedidos a Google Fonts).
+
+| Rol | Claro | Oscuro |
+|---|---|---|
+| Fondo | `#FBF3EA` | `#020D2C` |
+| Superficie (tarjetas) | `#F6D5BE` | `#26324F` |
+| Texto | `#0B1A40` | `#F4F1EC` |
+| Texto secundario | `#3A4466` | `#C9CDD6` |
+| Acento (botón, bordes) | `#C4552E` | `#E3A97F` |
+| Texto sobre el acento | `#FBF3EA` | `#020D2C` |
+
+Fuera de la paleta, solo los puntos de estado (éxito, aviso, error), siempre junto a un texto.
+
+**Hallazgo de contraste:** el terracota claro sobre el crema da **4,08:1**, menos que el 4,5:1 de WCAG AA para texto normal. Se
+mantuvo el color de la marca y se limitó su uso: relleno de botón con texto de 19 px en negrita (texto grande, exige 3:1) y
+bordes; nunca como color de texto corrido. `src/theme/tokens.test.ts` lo hace cumplir. Si se quiere 4,5:1 también en el botón, hay
+que oscurecer ese acento (por ejemplo a `#B04A25`).
