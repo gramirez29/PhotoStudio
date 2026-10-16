@@ -59,9 +59,20 @@ Fotógrafo                         API                              Cliente
 |---|---|
 | `RESEND_API_KEY` | Clave de Resend (*Sending access*, restringida al dominio). Sin ella: en Development el correo se **escribe en el log**; en producción el envío falla con 503 y la API sigue arrancando |
 | `EMAIL_FROM` | Remitente, p. ej. `PhotoSense Studio <no-reply@mail.photosensestudio.com>`. Obligatoria si hay clave |
-| `PORTAL_BASE_URL` | Dirección pública del portal (default `https://book.photosensestudio.com`); con ella se arma `…/b/{token}` |
+| `PORTAL_BASE_URL` | Dirección pública del portal (default `https://book.photosensestudio.com`); con ella se arma `…/b/{token}` y es el origen que CORS permite |
+| `PORTAL_ORIGINS` | Opcional. Orígenes extra permitidos por CORS, separados por comas (p. ej. una vista previa de Pages: `https://preview.pages.dev`). Solo orígenes `http(s)` sin ruta; un valor inválido (`*`, con ruta) detiene la API al arrancar |
 
-En local no hace falta nada: el código de verificación aparece en el log de la API.
+En local no hace falta nada: el código de verificación aparece en el log de la API, y en Development CORS ya permite `http://localhost:5173` y `http://127.0.0.1:5173` (el servidor de Vite).
+
+## 5.1 CORS
+
+El portal es una página web en otro origen que el API, así que el navegador exige permiso. La política `portal` (`Cors/PortalCorsExtensions.cs`):
+
+- Se aplica **solo a `/public/bookings/{token}/**`**. La API del fotógrafo no se abre a navegadores: la usa la app, que no tiene origen.
+- Orígenes: el de `PORTAL_BASE_URL`, los de `PORTAL_ORIGINS` y, en Development, los de Vite. Sin comodín.
+- Métodos `GET` y `POST`; cabeceras `Authorization` y `Content-Type`; **sin credenciales** (el token va en cabecera, no en cookies); preflight en caché 1 hora.
+- Expone `Retry-After`, que el portal usa para la cuenta regresiva de reenvío del código.
+- `UseCors` va **antes** del manejador de excepciones: los errores del portal son excepciones convertidas en `ProblemDetails`, y sin la cabecera el navegador los escondería detrás de un fallo de red genérico (probado en `PortalCorsTests`).
 
 ## 6. Pendiente
 

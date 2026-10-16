@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using PhotoStudio.Api.Cors;
 using PhotoStudio.Api.Endpoints;
 using PhotoStudio.Api.Errors;
 using PhotoStudio.Api.RateLimiting;
@@ -38,6 +39,7 @@ builder.Services.AddApplicationPortal();
 builder.Services.AddInfrastructure();
 builder.Services.AddPhotographerAuthentication(builder.Environment.IsDevelopment());
 builder.Services.AddClientPortal(builder.Environment.IsDevelopment());
+builder.Services.AddPortalCors(builder.Environment.IsDevelopment());
 builder.Services.AddProblemDetails();
 builder.Services.AddApiRateLimiting();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -46,6 +48,10 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+// Before everything that can answer: a browser asks (preflight) before sending a request, and the answer must not need a
+// token. The policy itself is attached only to the portal endpoints.
+app.UseCors();
 app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();

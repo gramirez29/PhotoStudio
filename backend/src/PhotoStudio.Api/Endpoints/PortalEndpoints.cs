@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
+using PhotoStudio.Api.Cors;
 using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Portal;
@@ -41,7 +42,7 @@ public static class PortalEndpoints
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        var group = endpoints.MapGroup("/public/bookings/{token}").WithTags("Portal");
+        var group = endpoints.MapGroup("/public/bookings/{token}").WithTags("Portal").RequireCors(PortalCorsExtensions.PolicyName);
 
         group.MapGet("/", GetAsync).WithName("GetPortalBooking").AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.PortalReadPolicy);
         group.MapPost("/code", RequestCodeAsync).WithName("RequestPortalCode").AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.PortalCodePolicy);
