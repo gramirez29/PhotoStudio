@@ -53,7 +53,7 @@ export default function RootLayout(): ReactElement {
         <Stack.Protected guard={status === 'signedIn'}>
           <Stack.Screen
             name="index"
-            options={{ title: 'PhotoStud.io', headerLeft: SignOutButton, headerRight: NewBookingButton }}
+            options={{ title: 'PhotoSense Studio', headerLeft: SignOutButton, headerRight: NewBookingButton }}
           />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
           <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />

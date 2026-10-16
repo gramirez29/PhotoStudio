@@ -1,4 +1,4 @@
-# PhotoStudio (PhotoStud.io)
+# PhotoStudio (PhotoSense Studio)
 
 Plataforma para fotógrafos: reservas, contratos, cobros y entrega de galerías.
 El fotógrafo usa la app móvil; el cliente usa un enlace web por reserva.

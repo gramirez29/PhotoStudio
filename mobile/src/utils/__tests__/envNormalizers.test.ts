@@ -7,6 +7,6 @@ describe('normalizeApiUrl', () => {
   });
 
   it('removes trailing slashes', () => {
-    expect(normalizeApiUrl('https://api.photostud.app///')).toBe('https://api.photostud.app');
+    expect(normalizeApiUrl('https://api.photosensestudio.com///')).toBe('https://api.photosensestudio.com');
   });
 });

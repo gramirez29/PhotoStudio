@@ -17,7 +17,7 @@ export function AuthPanel(): ReactElement {
 
   return (
     <KeyboardAwareScreen>
-      <Text style={styles.title}>PhotoStud.io</Text>
+      <Text style={styles.title}>PhotoSense Studio</Text>
       <Text style={styles.subtitle}>
         {isLogin ? 'Inicia sesión para ver y administrar tus reservas.' : 'Crea tu cuenta para empezar a administrar tus reservas.'}
       </Text>
