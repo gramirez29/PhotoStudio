@@ -1,0 +1,59 @@
+# Portal del cliente (PhotoSense Studio)
+
+La página que el cliente abre desde el enlace de su reserva (`/b/{token}`). Plan y alcance en `docs/ClientPortalWeb.md`; el
+backend que consume, en `docs/ClientPortal.md`.
+
+React 19 + Vite + TypeScript estricto. Sin librería de UI. Tipografías **Josefin Sans** (títulos) y **DM Sans** (texto),
+alojadas en el propio sitio (`@fontsource-variable`), así que la página no hace pedidos a terceros.
+
+## Comandos
+
+```bash
+cd portal
+npm install
+cp .env.example .env     # VITE_API_URL (por defecto http://localhost:8080)
+npm run dev              # http://localhost:5173 (el API ya permite este origen en Development)
+npm run verify           # tsc + eslint + vitest
+npm run build            # dist/
+```
+
+Para probarlo con datos reales: levanta el backend, crea una reserva con correo desde la app, toca "Enviar enlace por WhatsApp" y
+cambia el origen de la URL por `http://localhost:5173` (la ruta `/b/{token}` es la misma).
+
+## Estructura
+
+```
+src/
+├── api/          httpClient, guards (validación de respuestas), portalApi, queryClient
+├── components/   Un componente por archivo (solo JSX)
+├── hooks/        usePortalBooking
+├── types/        TODAS las interfaces y tipos, en espejo de las capas
+├── utils/        Funciones puras: formato es-CR, textos de estado, ruta, errores
+├── theme/        tokens.css (paleta clara y oscura), global.css, booking.css, prueba de contraste
+├── constants/    Valores `as const` del backend
+└── config/       env.ts
+```
+
+Las mismas reglas que `mobile/`: sin `any`, nada de tipos dentro de componentes/hooks/utils/api, colores solo desde los tokens.
+
+## Tema
+
+La paleta de la marca tiene dos variaciones y la página sigue la configuración del dispositivo (`prefers-color-scheme`). Los
+colores viven solo en `src/theme/tokens.css`; `tokens.test.ts` comprueba el contraste de cada par de texto y fondo (WCAG AA).
+El terracota claro (`#C4552E`) da 4,08:1 sobre el fondo crema: se usa como relleno de botón con texto grande y en negrita y como
+borde, nunca como color de texto corrido.
+
+## Despliegue (Cloudflare Pages)
+
+| Ajuste | Valor |
+|---|---|
+| Directorio raíz | `portal` |
+| Comando de build | `npm run build` |
+| Directorio de salida | `dist` |
+| Versión de Node | 22 (variable `NODE_VERSION`) |
+| Variable | `VITE_API_URL=https://api.photosensestudio.com` |
+| Dominio | `book.photosensestudio.com` |
+
+`public/_redirects` hace que cualquier ruta sirva la app (SPA) y `public/_headers` pone las cabeceras de seguridad
+(`Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`, CSP). Si cambia el dominio del API, actualiza `connect-src` en
+`_headers`.
