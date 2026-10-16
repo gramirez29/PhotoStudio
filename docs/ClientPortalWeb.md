@@ -1,0 +1,60 @@
+# Portal web del cliente (plan)
+
+Página que el cliente abre desde el enlace de su reserva. El backend ya existe (`docs/ClientPortal.md`); este documento
+planifica la parte web. Se actualiza al terminar cada entrega.
+
+## 1. Alcance de la v1
+**Sí:** ver la reserva (fotógrafo, paquete, fecha, montos, estado de los pagos, vencimiento de la reserva tentativa), pedir y
+escribir el código de 6 dígitos que llega al correo, enviar el comprobante SINPE con monto y referencia, y ver su estado.
+
+**No (siguientes entregas):** firmar el contrato, autorización de imagen, galería, pago con tarjeta, reprogramar.
+
+## 2. Estructura y tecnología
+- Carpeta **`portal/`** en este monorepo, junto a `backend/` y `mobile/`.
+- Vite + React 19 + TypeScript estricto (sin `any`) + ESLint 9. Pruebas con Vitest + Testing Library.
+- Sin librería de UI: CSS plano con variables, mobile-first, inputs a 16 px (iOS no hace zoom).
+- Diseño: tokens neutrales temporales (los mismos de mobile) hasta que el usuario entregue **fuentes y paleta de colores**; la
+  marca se cambia en un solo archivo.
+- TanStack Query para lectura y mutaciones; los pasos son una máquina de estados pequeña (`useReducer`).
+- Cada respuesta del API se valida en tiempo de ejecución (misma idea que `mobile/src/api/guards.ts`); más adelante, tipos
+  generados desde `/openapi/v1.json`.
+- Textos en español; fechas en `es-CR` con zona `America/Costa_Rica`.
+
+## 3. Pantallas (una sola ruta, `/b/:token`)
+```
+cargando ─▶ vista de la reserva ─▶ [Subir comprobante]
+   │              │                      │
+   │              │                      ▼
+   │              │            pedir código ─▶ escribir código ─▶ formulario de comprobante ─▶ enviado
+   ▼              ▼
+enlace inválido   (sin correo: "Pídele a tu fotógrafo que agregue tu correo")
+(404)
+```
+- **Código:** muestra el correo enmascarado que devuelve el API; `inputmode="numeric"` y `autocomplete="one-time-code"`;
+  "Reenviar" con cuenta regresiva del `Retry-After` real.
+- **Comprobante:** monto prellenado con el anticipo que falta (o el saldo) y sin pasar de lo que se debe; referencia opcional;
+  `idempotencyKey` creada una vez al abrir el formulario.
+- **Sesión de portal:** el token vive solo en memoria y dura 30 min; al expirar vuelve al paso del código sin perder lo escrito.
+- **Errores con mensaje propio:** 404, 409 `portal.email_missing`, 429 (con la espera), 422 `portal.invalid_code`,
+  422 `money.invalid_amount`, 503 `email.delivery_failed`, sin conexión.
+
+## 4. Seguridad del lado del navegador
+- `Referrer-Policy: no-referrer` y `X-Robots-Tag: noindex` (`_headers` de Pages): el enlace es la credencial.
+- Open Graph genérico, sin datos de la reserva (vista previa de WhatsApp). Sin analíticas ni scripts de terceros.
+- El token no se guarda en `localStorage` ni en logs.
+
+## 5. Despliegue (Cloudflare Pages)
+Build `npm run build` desde `portal/`, salida `dist/`; fallback de SPA con `_redirects` (`/* /index.html 200`); variable
+`VITE_API_URL=https://api.photosensestudio.com`. DNS: `book.photosensestudio.com` → Pages y `api.photosensestudio.com` → Railway
+(los dos hacen falta antes de que un cliente real lo use).
+
+## 6. Entregas
+| # | Contenido | Estado |
+|---|---|---|
+| 1 | CORS en el API para `/public/**` (`docs/ClientPortal.md` §5.1) | **Hecho** |
+| 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + despliegue en Pages | Pendiente |
+| 3 | Código por correo + formulario de comprobante + estados del pago | Pendiente |
+| 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
+
+Después, fuera de este plan: firma del contrato por el cliente, aviso al fotógrafo cuando llega un comprobante, y un endpoint
+para agregar el correo a reservas existentes.
