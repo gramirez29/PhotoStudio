@@ -84,6 +84,7 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
    | `RESEND_API_KEY` | clave de Resend (*Sending access*, solo el dominio de correo) |
    | `EMAIL_FROM` | `PhotoSense Studio <no-reply@mail.photosensestudio.com>` |
    | `PORTAL_BASE_URL` | `https://develop.photosensestudio.com` |
+   | `EXPO_ACCESS_TOKEN` | **opcional**: solo si el proyecto de Expo activa la seguridad mejorada para push; sin ella el envío funciona |
    | `AUTH_REGISTRATION_ENABLED` | `true` hasta crear tu cuenta; luego `false` |
 
    No definas `ASPNETCORE_ENVIRONMENT`: por defecto es *Production*, que rechaza la clave de desarrollo y no abre CORS al servidor local de Vite. `PORT` lo pone Railway.
@@ -166,3 +167,13 @@ Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arra
 - **Contenido de la página principal** (hoy provisional) y si en producción se indexa o no.
 - **Reply-To** de los correos y un remitente que no sea `no-reply`.
 - **Respaldo semanal** con `mongodump` hacia R2 (CLAUDE.md §12).
+
+## 7. App móvil: build de desarrollo y push (EAS)
+
+El push no funciona en Expo Go: hace falta un *development build* con `expo-dev-client` y `expo-notifications`.
+
+- **Identificador:** `com.photosensestudio.app` (Android e iOS). No se puede cambiar después de publicar.
+- **Proyecto de EAS:** `@g.raba29-dev/photostudio` (`extra.eas.projectId` en `mobile/app.json`). `mobile/eas.json` tiene el perfil `development` (APK interno, `EXPO_PUBLIC_API_URL` apuntando a develop).
+- **Android (FCM):** (1) proyecto de Firebase con una app Android de ese paquete; su `google-services.json` **no se versiona** (el repositorio es público): se sube a EAS como variable de archivo `GOOGLE_SERVICES_JSON` (`eas env:create development --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --visibility sensitive`) y `mobile/app.config.ts` la lee; en local se lee de `mobile/google-services.json` (ignorado por git). (2) La clave de cuenta de servicio de Firebase (FCM V1) se sube a EAS desde expo.dev → Credentials → Android; **nunca** al repositorio ni a un chat.
+- **Build:** `cd mobile && npx eas-cli build --platform android --profile development`. Un build de desarrollo no trae el JavaScript: al abrirlo pide un servidor (`npx expo start --dev-client`, misma red Wi-Fi o `--tunnel`); `mobile/.env` define `EXPO_PUBLIC_API_URL`.
+- **iOS:** pendiente (exige Apple Developer y credenciales APNs).
