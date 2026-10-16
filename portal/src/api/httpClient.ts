@@ -1,4 +1,4 @@
-import type { HttpClient, HttpClientOptions, ResponseParser } from '../types/api/http';
+import type { HttpClient, HttpClientOptions, RequestOptions, ResponseParser } from '../types/api/http';
 import { expectRecord, readNullableString } from './guards';
 
 /** Error answered by the API: the HTTP status and the stable `code` of the problem details, which the page branches on. */
@@ -73,25 +73,57 @@ function readRetryAfter(response: Response): number | null {
 export function createHttpClient(baseUrl: string, options: HttpClientOptions = {}): HttpClient {
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
 
+  /**
+   * Sends a request and parses the answer.
+   * @param method HTTP method.
+   * @param path Path under the API address.
+   * @param body Body to serialize, or undefined.
+   * @param parse Parser of the response body.
+   * @param request Signal and session token.
+   * @returns The parsed response.
+   */
+  async function send<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body: unknown,
+    parse: ResponseParser<T>,
+    request: RequestOptions,
+  ): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    if (request.accessToken !== undefined) {
+      headers.Authorization = `Bearer ${request.accessToken}`;
+    }
+
+    let response: Response;
+    try {
+      response = await fetchFn(`${baseUrl}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: request.signal,
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw error;
+      }
+
+      throw new NetworkError();
+    }
+
+    if (!response.ok) {
+      const problem = await readProblem(response);
+      throw new ApiError(response.status, problem.message, problem.code, readRetryAfter(response));
+    }
+
+    return parse(await response.json());
+  }
+
   return {
-    get: async <T>(path: string, parse: ResponseParser<T>, signal?: AbortSignal): Promise<T> => {
-      let response: Response;
-      try {
-        response = await fetchFn(`${baseUrl}${path}`, { method: 'GET', headers: { Accept: 'application/json' }, signal });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          throw error;
-        }
-
-        throw new NetworkError();
-      }
-
-      if (!response.ok) {
-        const problem = await readProblem(response);
-        throw new ApiError(response.status, problem.message, problem.code, readRetryAfter(response));
-      }
-
-      return parse(await response.json());
-    },
+    get: (path, parse, request = {}) => send('GET', path, undefined, parse, request),
+    post: (path, body, parse, request = {}) => send('POST', path, body, parse, request),
   };
 }

@@ -53,7 +53,7 @@ Build `npm run build` desde `portal/`, salida `dist/`; fallback de SPA con `_red
 |---|---|---|
 | 1 | CORS en el API para `/public/**` (`docs/ClientPortal.md` §5.1) | **Hecho** |
 | 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + configuración de Pages | **Hecho** (falta crear el proyecto en Pages y los DNS: pasos en `portal/README.md`) |
-| 3 | Código por correo + formulario de comprobante + estados del pago | Pendiente |
+| 3 | Código por correo + formulario de comprobante + estados del pago | **Hecho** |
 | 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
 
 Después, fuera de este plan: firma del contrato por el cliente, aviso al fotógrafo cuando llega un comprobante, y un endpoint
@@ -79,3 +79,15 @@ Fuera de la paleta, solo los puntos de estado (éxito, aviso, error), siempre ju
 mantuvo el color de la marca y se limitó su uso: relleno de botón con texto de 19 px en negrita (texto grande, exige 3:1) y
 bordes; nunca como color de texto corrido. `src/theme/tokens.test.ts` lo hace cumplir. Si se quiere 4,5:1 también en el botón, hay
 que oscurecer ese acento (por ejemplo a `#B04A25`).
+
+## 8. Flujo del comprobante (entrega 3)
+
+Máquina de estados pura en `src/utils/proofFlow.ts`: `cerrado → pedir código → escribir código → formulario → enviado`.
+
+- **La verificación se reutiliza:** la sesión de portal (30 min) vive solo en memoria. Si el cliente reporta un segundo comprobante dentro de ese tiempo no se le pide otro código. Una sesión a menos de 1 minuto de vencer se trata como vencida para no hacerle llenar un formulario que será rechazado.
+- **Si la verificación vence a mitad del formulario** (401), vuelve al paso del código con un aviso y **conserva lo que escribió**.
+- **Monto:** se sugiere el anticipo que falta (o el saldo) y no puede superar `saldo − comprobantes en revisión`; así no se reporta dos veces el mismo dinero. Se aceptan separadores (`50 000`, `50.000`, `₡50,000`).
+- **Idempotencia:** la clave se crea una vez por comprobante; un reintento tras un fallo o un doble toque envía la misma y se registra una sola vez. Se renueva al terminar.
+- **Código:** solo dígitos, `autocomplete="one-time-code"`, reenvío con cuenta regresiva (60 s, o el `Retry-After` real si el servidor responde 429).
+- **Qué se ofrece:** el botón solo aparece si la API permite el comprobante (`canSubmitProof`), la reserva tiene correo (`canReceiveCode`) y queda algo por reportar. Sin correo, un aviso pide al cliente que se lo dé a su fotógrafo.
+- **Accesibilidad:** cada paso mueve el foco a su título, los errores se anuncian (`role="alert"`), los campos enlazan etiqueta, ayuda y error, y el mensaje de error va en el color del texto (el rojo solo lo marca).

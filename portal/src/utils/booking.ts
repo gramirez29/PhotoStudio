@@ -13,6 +13,29 @@ export function depositDue(booking: PortalBooking): Money {
 }
 
 /**
+ * Computes how much the client can still report: the balance minus the proofs already waiting for verification. Those proofs
+ * will count once the photographer verifies them, so reporting the same money twice would only create a rejection.
+ * @param booking Booking to look at.
+ * @returns The amount that can still be reported, never below zero.
+ */
+export function reportableAmount(booking: PortalBooking): number {
+  const inReview = booking.payments
+    .filter((payment) => payment.status === 'PendingVerification')
+    .reduce((total, payment) => total + payment.amount.amount, 0);
+  return Math.max(0, booking.balance.amount - inReview);
+}
+
+/**
+ * Tells whether the client can start a payment proof: the API allows it, there is an email to send the code to, and there is
+ * still something left to report.
+ * @param booking Booking to look at.
+ * @returns True when the proof flow should be offered.
+ */
+export function canStartProof(booking: PortalBooking): boolean {
+  return booking.canSubmitProof && booking.canReceiveCode && reportableAmount(booking) > 0;
+}
+
+/**
  * Tells whether any payment of the booking is waiting for the photographer to verify it.
  * @param booking Booking to look at.
  * @returns True when at least one proof is in review.

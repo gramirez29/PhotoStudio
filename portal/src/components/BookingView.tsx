@@ -13,7 +13,7 @@ import { StatusBadge } from './StatusBadge';
  * @param props Component props.
  * @returns The booking.
  */
-export function BookingView({ booking }: BookingViewProps): ReactElement {
+export function BookingView({ booking, action }: BookingViewProps): ReactElement {
   const steps = nextSteps(booking);
 
   return (
@@ -41,6 +41,8 @@ export function BookingView({ booking }: BookingViewProps): ReactElement {
           ))}
         </section>
       )}
+
+      {action}
 
       <section className="card" aria-labelledby="amounts-title">
         <h2 id="amounts-title">Montos</h2>

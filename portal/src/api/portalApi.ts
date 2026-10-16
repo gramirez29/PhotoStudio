@@ -1,6 +1,6 @@
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '../constants/booking';
 import type { HttpClient } from '../types/api/http';
-import type { Money, PortalBooking, PortalPayment } from '../types/api/portal';
+import type { Money, PortalBooking, PortalCodeSent, PortalPayment, PortalSession } from '../types/api/portal';
 import type { PortalApi } from '../types/api/portalApi';
 import { expectRecord, readArray, readBoolean, readLiteral, readNullableString, readNumber, readString } from './guards';
 
@@ -58,12 +58,46 @@ export function parsePortalBooking(value: unknown): PortalBooking {
 }
 
 /**
+ * Parses the confirmation that a verification code was sent.
+ * @param value Unknown response body.
+ * @returns The typed confirmation.
+ */
+export function parseCodeSent(value: unknown): PortalCodeSent {
+  const path = 'codeSent';
+  const record = expectRecord(value, path);
+  return { maskedEmail: readString(record, 'maskedEmail', path), expiresAt: readString(record, 'expiresAt', path) };
+}
+
+/**
+ * Parses the portal session issued after a code was verified.
+ * @param value Unknown response body.
+ * @returns The typed session.
+ */
+export function parsePortalSession(value: unknown): PortalSession {
+  const path = 'session';
+  const record = expectRecord(value, path);
+  return { accessToken: readString(record, 'accessToken', path), expiresAt: readString(record, 'expiresAt', path) };
+}
+
+/**
  * Creates the portal API on top of an HTTP client.
  * @param client HTTP client.
  * @returns The portal API.
  */
 export function createPortalApi(client: HttpClient): PortalApi {
+  /**
+   * Builds the path of an endpoint of a booking link; the token is encoded so it can never change the path.
+   * @param token Secret token taken from the URL.
+   * @param suffix Rest of the path, starting with a slash, or empty.
+   * @returns The path.
+   */
+  const pathOf = (token: string, suffix = ''): string => `/public/bookings/${encodeURIComponent(token)}${suffix}`;
+
   return {
-    getBooking: (token, signal) => client.get(`/public/bookings/${encodeURIComponent(token)}`, parsePortalBooking, signal),
+    getBooking: (token, signal) => client.get(pathOf(token), parsePortalBooking, { signal }),
+    requestCode: (token, signal) => client.post(pathOf(token, '/code'), undefined, parseCodeSent, { signal }),
+    verifyCode: (token, code, signal) => client.post(pathOf(token, '/code/verify'), { code }, parsePortalSession, { signal }),
+    submitProof: (token, accessToken, request, signal) =>
+      client.post(pathOf(token, '/payments'), request, parsePortalBooking, { accessToken, signal }),
   };
 }

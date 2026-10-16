@@ -28,6 +28,32 @@ export interface PortalPayment {
   readonly recordedAt: string;
 }
 
+/** Confirmation that a verification code was sent (backend `PortalCodeSentResponse`). */
+export interface PortalCodeSent {
+  /** Address the code went to, partly hidden, for example `m***@gmail.com`. */
+  readonly maskedEmail: string;
+  /** Instant the code stops being accepted (ISO 8601). */
+  readonly expiresAt: string;
+}
+
+/** Session of a client who verified a code (backend `PortalSessionResponse`). It opens one booking only. */
+export interface PortalSession {
+  /** Short-lived token sent as `Authorization: Bearer`. */
+  readonly accessToken: string;
+  /** Instant the token stops being accepted (ISO 8601). */
+  readonly expiresAt: string;
+}
+
+/** Body to report a SINPE Móvil transfer (backend `SubmitProofRequest`). */
+export interface SubmitProofRequest {
+  /** Amount transferred, in whole units of the currency of the booking. */
+  readonly amount: number;
+  /** Reference (confirmation number) of the transfer; omitted when the client gave none. */
+  readonly reference?: string;
+  /** Key that makes repeating the request safe: the same key registers the proof once. */
+  readonly idempotencyKey: string;
+}
+
 /** Booking as the client sees it through the link (backend `PortalBookingResponse`). */
 export interface PortalBooking {
   /** Name of the photographer. */

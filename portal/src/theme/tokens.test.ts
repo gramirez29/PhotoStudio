@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /** The stylesheet that defines the tokens, read as text: it is the single source of the palette. */
-const css = readFileSync(resolve(__dirname, 'tokens.css'), 'utf8');
+const css = readFileSync(resolve(__dirname, 'tokens.css'), 'utf8').replace(/\r\n/g, '\n');
 
 /**
  * Reads the variables declared inside the first block that follows a marker.
