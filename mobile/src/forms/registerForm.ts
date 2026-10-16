@@ -1,4 +1,5 @@
 import type { RegisterFormResult, RegisterFormValues } from '../types/forms/registerForm.types';
+import { normalizeEmail } from '../utils/email';
 import { normalizePhone } from '../utils/phone';
 
 /** Values of an empty registration form. */
@@ -10,12 +11,6 @@ export const EMPTY_REGISTER_VALUES: RegisterFormValues = {
   password: '',
   confirmPassword: '',
 };
-
-/** Most characters of an email address (the limit of an address in the SMTP standard). */
-export const MAX_EMAIL_LENGTH = 254;
-
-/** One at sign with something before it, and a domain with a dot after it; no spaces. Only the shape is checked. */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 /** Fewest characters of a username (the backend enforces the same limits). */
 export const MIN_USERNAME_LENGTH = 3;
@@ -56,10 +51,10 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterFormRe
     errors.phone = 'Escribe un teléfono válido (8 dígitos o con código de país).';
   }
 
-  const email = values.email.trim().toLowerCase();
-  if (email.length === 0) {
+  const email = normalizeEmail(values.email);
+  if (values.email.trim().length === 0) {
     errors.email = 'Escribe tu correo.';
-  } else if (email.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(email)) {
+  } else if (email === null) {
     errors.email = 'Escribe un correo válido, por ejemplo nombre@correo.com.';
   }
 
@@ -78,7 +73,7 @@ export function validateRegisterForm(values: RegisterFormValues): RegisterFormRe
     errors.confirmPassword = 'Las contraseñas no coinciden.';
   }
 
-  if (phone === null || Object.keys(errors).length > 0) {
+  if (phone === null || email === null || Object.keys(errors).length > 0) {
     return { ok: false, errors };
   }
 

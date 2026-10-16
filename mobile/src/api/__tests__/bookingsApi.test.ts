@@ -14,6 +14,20 @@ describe('parseBooking', () => {
     expect(booking.allowedActions).toEqual(['RecordInPersonPayment', 'Reschedule', 'Cancel']);
   });
 
+  it('reads the client email and the reference of a proof, and treats them as null when the backend sends none', () => {
+    const withBoth = parseBooking({
+      ...bookingPayload,
+      clientEmail: 'maria@example.com',
+      payments: [{ ...bookingPayload.payments[0], status: 'PendingVerification', reference: 'SINPE-123' }],
+    });
+    const withNeither = parseBooking(bookingPayload);
+
+    expect(withBoth.clientEmail).toBe('maria@example.com');
+    expect(withBoth.payments[0]?.reference).toBe('SINPE-123');
+    expect(withNeither.clientEmail).toBeNull();
+    expect(withNeither.payments[0]?.reference).toBeNull();
+  });
+
   it('accepts a booking without contract', () => {
     const booking = parseBooking({ ...bookingPayload, contract: null });
 
@@ -191,6 +205,39 @@ describe('createBookingsApi', () => {
       expect(requests[0]?.url).toBe(`${base}/contract/in-person`);
       expect(requests[0]?.init?.method).toBe('POST');
       expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    });
+
+    it('posts to the link endpoint with no body and parses the link', async () => {
+      const requests: { readonly url: string; readonly init: RequestInit | undefined }[] = [];
+      const link = { token: 'secret', url: 'https://book.example.test/b/secret', expiresAt: '2027-01-01T00:00:00+00:00' };
+      const client = createHttpClient('https://api.example.test', {
+        fetchFn: (url, init) => {
+          requests.push({ url, init });
+          return Promise.resolve(jsonResponse(201, link));
+        },
+      });
+
+      const created = await createBookingsApi(client).createBookingLink(bookingPayload.id);
+
+      expect(requests[0]?.url).toBe(`${base}/link`);
+      expect(requests[0]?.init?.method).toBe('POST');
+      expect(requests[0]?.init?.body).toBeUndefined();
+      expect(created).toEqual(link);
+    });
+
+    it('verifies a payment with a POST that has no body, and rejects it with the reason as JSON', async () => {
+      const { api, requests } = recordingApi();
+      const paymentId = '0199a1b2-0000-7000-8000-000000000003';
+
+      await api.verifyPayment(bookingPayload.id, paymentId);
+      await api.rejectPayment(bookingPayload.id, paymentId, { reason: 'No aparece en el banco' });
+
+      expect(requests.map((request) => request.url)).toEqual([
+        `${base}/payments/${paymentId}/verify`,
+        `${base}/payments/${paymentId}/reject`,
+      ]);
+      expect(requests[0]?.init?.body).toBeUndefined();
+      expect(JSON.parse(String(requests[1]?.init?.body))).toEqual({ reason: 'No aparece en el banco' });
     });
 
     it('posts the payment with its idempotency key to the in-person payment endpoint', async () => {

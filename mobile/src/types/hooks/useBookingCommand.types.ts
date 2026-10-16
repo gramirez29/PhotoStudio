@@ -7,4 +7,6 @@ export type BookingCommand =
   | { readonly kind: 'cancel'; readonly reason: string | null }
   | { readonly kind: 'complete' }
   | { readonly kind: 'markClientAbsent' }
-  | { readonly kind: 'revertClientAbsent'; readonly reason: string };
+  | { readonly kind: 'revertClientAbsent'; readonly reason: string }
+  | { readonly kind: 'verifyPayment'; readonly paymentId: string }
+  | { readonly kind: 'rejectPayment'; readonly paymentId: string; readonly reason: string };

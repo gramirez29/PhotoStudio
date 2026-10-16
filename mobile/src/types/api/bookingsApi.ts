@@ -1,9 +1,11 @@
 import type {
+  BookingLinkResponse,
   BookingResponse,
   BookingSummaryResponse,
   CancelBookingRequest,
   CreateBookingRequest,
   RecordInPersonPaymentRequest,
+  RejectPaymentRequest,
   RescheduleBookingRequest,
   RevertClientAbsentRequest,
   SignContractInPersonRequest,
@@ -79,6 +81,33 @@ export interface BookingsApi {
    * @returns The updated booking.
    */
   recordInPersonPayment(id: string, request: RecordInPersonPaymentRequest, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
+   * Creates the link the client opens to see the booking and send payment proofs. A link created before stops working.
+   * @param id Booking identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The link, with the URL to send to the client.
+   */
+  createBookingLink(id: string, signal?: AbortSignal): Promise<BookingLinkResponse>;
+
+  /**
+   * Accepts a payment proof the client sent. It counts toward the deposit and the balance, and can confirm the booking.
+   * @param id Booking identifier.
+   * @param paymentId Payment waiting for verification.
+   * @param signal Optional signal to cancel the request.
+   * @returns The updated booking.
+   */
+  verifyPayment(id: string, paymentId: string, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
+   * Rejects a payment proof the photographer could not match with a transfer. The proof is kept as evidence.
+   * @param id Booking identifier.
+   * @param paymentId Payment waiting for verification.
+   * @param request Reason of the rejection.
+   * @param signal Optional signal to cancel the request.
+   * @returns The updated booking.
+   */
+  rejectPayment(id: string, paymentId: string, request: RejectPaymentRequest, signal?: AbortSignal): Promise<BookingResponse>;
 
   /**
    * Lists the bookings of the signed-in photographer, earliest session first.

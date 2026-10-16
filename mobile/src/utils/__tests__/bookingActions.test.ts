@@ -2,6 +2,7 @@ import {
   ACTION_VARIANTS,
   confirmationFor,
   parseReasonAction,
+  paymentVerificationConfirmation,
   reasonFormCopy,
   splitActions,
 } from '../bookingActions';
@@ -15,10 +16,17 @@ describe('splitActions', () => {
   });
 
   it('puts the allowed actions the app cannot perform yet apart', () => {
-    const result = splitActions(['VerifyPayment', 'SubmitPaymentProof', 'Cancel']);
+    const result = splitActions(['SubmitPaymentProof', 'Cancel']);
 
     expect(result.supported).toEqual(['Cancel']);
-    expect(result.pending).toEqual(['VerifyPayment', 'SubmitPaymentProof']);
+    expect(result.pending).toEqual(['SubmitPaymentProof']);
+  });
+
+  it('does not list verifying a payment as a button or as coming soon: its card handles it', () => {
+    const result = splitActions(['VerifyPayment', 'Cancel']);
+
+    expect(result.supported).toEqual(['Cancel']);
+    expect(result.pending).toEqual([]);
   });
 
   it('lists the contract and the in-person payment first, as the steps that confirm a booking', () => {
@@ -81,5 +89,17 @@ describe('reasonFormCopy', () => {
   it('has its own texts for each action', () => {
     expect(reasonFormCopy('Cancel').submitLabel).toBe('Cancelar reserva');
     expect(reasonFormCopy('RevertClientAbsent').submitLabel).toBe('Revertir ausencia');
+  });
+});
+
+describe('paymentVerificationConfirmation', () => {
+  it('names the client and the amount, and reminds the photographer to check the bank', () => {
+    const texts = paymentVerificationConfirmation('María Pérez', '₡50 000,00');
+
+    expect(texts.title).toBe('Verificar pago');
+    expect(texts.message).toContain('María Pérez');
+    expect(texts.message).toContain('₡50 000,00');
+    expect(texts.message).toContain('banco');
+    expect(texts.confirmLabel).toBe('Verificar');
   });
 });

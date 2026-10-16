@@ -27,5 +27,9 @@ export function executeBookingCommand(
       return api.markClientAbsent(bookingId);
     case 'revertClientAbsent':
       return api.revertClientAbsent(bookingId, { reason: command.reason });
+    case 'verifyPayment':
+      return api.verifyPayment(bookingId, command.paymentId);
+    case 'rejectPayment':
+      return api.rejectPayment(bookingId, command.paymentId, { reason: command.reason });
   }
 }

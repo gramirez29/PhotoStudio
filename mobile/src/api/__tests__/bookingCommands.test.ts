@@ -19,6 +19,9 @@ function stubApi(booking: BookingResponse): BookingsApi {
     revertClientAbsent: jest.fn().mockResolvedValue(booking),
     signContractInPerson: jest.fn().mockResolvedValue(booking),
     recordInPersonPayment: jest.fn().mockResolvedValue(booking),
+    createBookingLink: jest.fn(),
+    verifyPayment: jest.fn().mockResolvedValue(booking),
+    rejectPayment: jest.fn().mockResolvedValue(booking),
     listBookings: jest.fn().mockResolvedValue([]),
     getBooking: jest.fn().mockResolvedValue(booking),
   };
@@ -62,5 +65,15 @@ describe('executeBookingCommand', () => {
     expect(api.markClientAbsent).toHaveBeenCalledWith(id);
     expect(api.revertClientAbsent).toHaveBeenCalledWith(id, { reason: 'Por error' });
     expect(api.cancelBooking).not.toHaveBeenCalled();
+  });
+
+  it('routes the verification and the rejection of a payment proof with the payment identifier', async () => {
+    const api = stubApi(booking);
+
+    await executeBookingCommand(api, id, { kind: 'verifyPayment', paymentId: 'pay-1' });
+    await executeBookingCommand(api, id, { kind: 'rejectPayment', paymentId: 'pay-2', reason: 'No aparece en el banco' });
+
+    expect(api.verifyPayment).toHaveBeenCalledWith(id, 'pay-1');
+    expect(api.rejectPayment).toHaveBeenCalledWith(id, 'pay-2', { reason: 'No aparece en el banco' });
   });
 });

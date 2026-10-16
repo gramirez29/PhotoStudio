@@ -6,6 +6,8 @@ export interface CreateBookingFormValues {
   readonly clientName: string;
   /** Client phone as typed. */
   readonly clientPhone: string;
+  /** Client email as typed; optional. */
+  readonly clientEmail: string;
   /** Package name as typed. */
   readonly packageName: string;
   /** Price as typed, in colones. */
@@ -17,7 +19,7 @@ export interface CreateBookingFormValues {
 }
 
 /** Form fields that can show a validation error. */
-export type CreateBookingField = 'clientName' | 'clientPhone' | 'packageName' | 'price' | 'start';
+export type CreateBookingField = 'clientName' | 'clientPhone' | 'clientEmail' | 'packageName' | 'price' | 'start';
 
 /** Validation messages by field; a missing key means the field is valid. */
 export type CreateBookingFormErrors = Partial<Record<CreateBookingField, string>>;
@@ -28,4 +30,4 @@ export type CreateBookingFormResult =
   | { readonly ok: false; readonly errors: CreateBookingFormErrors };
 
 /** Form fields edited by typing text. */
-export type CreateBookingTextField = 'clientName' | 'price';
+export type CreateBookingTextField = 'clientName' | 'clientEmail' | 'price';

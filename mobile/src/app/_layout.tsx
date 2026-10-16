@@ -64,6 +64,7 @@ export default function RootLayout(): ReactElement {
           <Stack.Screen name="bookings/contract" options={{ title: 'Firmar contrato' }} />
           <Stack.Screen name="bookings/payment" options={{ title: 'Registrar pago' }} />
           <Stack.Screen name="bookings/reason" options={{ title: 'Motivo' }} />
+          <Stack.Screen name="bookings/reject-payment" options={{ title: 'Rechazar comprobante' }} />
           <Stack.Screen name="bookings/[id]" options={{ title: 'Reserva' }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signedOut'}>

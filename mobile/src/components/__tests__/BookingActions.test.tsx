@@ -67,9 +67,18 @@ describe('BookingActions', () => {
   it('lists the allowed actions the app cannot perform yet instead of showing dead buttons', () => {
     mockedUseBookingActions.mockReturnValue(actionsState());
 
+    render(<BookingActions booking={bookingWith(['SubmitPaymentProof', 'Cancel'])} />);
+
+    expect(screen.getByText(/Próximamente en la app: Subir comprobante\./)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Subir comprobante/ })).toBeNull();
+  });
+
+  it('leaves verifying a payment to its own card: neither a button nor a coming-soon note', () => {
+    mockedUseBookingActions.mockReturnValue(actionsState());
+
     render(<BookingActions booking={bookingWith(['VerifyPayment', 'Cancel'])} />);
 
-    expect(screen.getByText(/Próximamente en la app: Verificar pago\./)).toBeTruthy();
+    expect(screen.queryByText(/Próximamente/)).toBeNull();
     expect(screen.queryByRole('button', { name: /Verificar pago/ })).toBeNull();
   });
 

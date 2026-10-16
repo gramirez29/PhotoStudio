@@ -50,6 +50,8 @@ export interface PaymentResponse {
   readonly status: PaymentStatus;
   /** Instant the payment was recorded (ISO 8601). */
   readonly recordedAt: string;
+  /** Reference (confirmation number) the client gave with a SINPE Móvil proof, or null. */
+  readonly reference: string | null;
 }
 
 /** Contract signature (backend `ContractResponse`). */
@@ -98,6 +100,24 @@ export interface BookingResponse {
   readonly payments: readonly PaymentResponse[];
   /** Actions the caller can perform right now. */
   readonly allowedActions: readonly BookingAction[];
+  /** Client email, or null when the booking has none. The client portal sends its verification codes there. */
+  readonly clientEmail: string | null;
+}
+
+/** Link the client opens to see the booking (backend `BookingLinkResponse`). */
+export interface BookingLinkResponse {
+  /** Secret token of the link; shown only when the link is created. */
+  readonly token: string;
+  /** Full URL to send to the client. */
+  readonly url: string;
+  /** Instant the link stops working (ISO 8601). */
+  readonly expiresAt: string;
+}
+
+/** Body to reject a payment proof (backend `RejectPaymentRequest`). */
+export interface RejectPaymentRequest {
+  /** Why the proof is rejected; required. */
+  readonly reason: string;
 }
 
 /** Compact booking used in lists (backend `BookingSummaryResponse`). */
@@ -126,6 +146,8 @@ export interface CreateBookingRequest {
   readonly clientName: string;
   /** Client phone, with country code. */
   readonly clientPhone: string;
+  /** Client email, optional. Without it the client can see the booking through the link but cannot act on it. */
+  readonly clientEmail?: string;
   /** Package name. */
   readonly packageName: string;
   /** Package price. */

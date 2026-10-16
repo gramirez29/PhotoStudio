@@ -14,6 +14,7 @@ function validValues(overrides: Partial<CreateBookingFormValues> = {}): CreateBo
   return {
     clientName: '  María Pérez ',
     clientPhone: '8888-1111',
+    clientEmail: '',
     packageName: ' Retrato familiar ',
     price: '80 000',
     start: new Date(2026, 9, 17, 15, 30, 0, 0),
@@ -47,6 +48,23 @@ describe('validateCreateBookingForm', () => {
         sessionStart: new Date(2026, 9, 17, 15, 30).toISOString(),
         sessionEnd: new Date(2026, 9, 17, 17, 30).toISOString(),
       });
+    }
+  });
+
+  it('sends the normalized email when one is typed and leaves it out when it is blank', () => {
+    const withEmail = validateCreateBookingForm(validValues({ clientEmail: '  Maria@Example.COM ' }), NOW);
+    const withoutEmail = validateCreateBookingForm(validValues({ clientEmail: '   ' }), NOW);
+
+    expect(withEmail.ok && withEmail.request.clientEmail).toBe('maria@example.com');
+    expect(withoutEmail.ok && 'clientEmail' in withoutEmail.request).toBe(false);
+  });
+
+  it('rejects an email that is typed but has no valid shape', () => {
+    const result = validateCreateBookingForm(validValues({ clientEmail: 'maria@' }), NOW);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(Object.keys(result.errors)).toEqual(['clientEmail']);
     }
   });
 
