@@ -65,7 +65,7 @@ En local no hace falta nada: el código de verificación aparece en el log de la
 
 ## 6. Pendiente
 
-- **App del fotógrafo:** campo de correo del cliente al crear la reserva, botón "Compartir enlace" (WhatsApp) y las acciones verificar/rechazar comprobante (hoy la app solo muestra "Próximamente").
+- ~~**App del fotógrafo**~~ Hecho: campo de correo (opcional) al crear la reserva, tarjeta "Enlace del cliente" (crea el enlace y abre WhatsApp con el mensaje) y tarjeta "Comprobantes por verificar" (verificar con confirmación, rechazar con motivo). Queda sin pantalla para **agregar el correo a una reserva que ya existe** (no hay endpoint para editarlo).
 - **Portal web** (React 19 + Vite, `book.photosensestudio.com`).
 - **Aviso al fotógrafo** cuando llega un comprobante (`PaymentSubmitted`; hoy lo ve al abrir la reserva).
 - **Firma del contrato por el cliente** (B2, canal Portal) y la autorización de imagen.

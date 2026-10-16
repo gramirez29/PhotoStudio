@@ -48,6 +48,15 @@ export function openReason(bookingId: string, action: ReasonAction): void {
 }
 
 /**
+ * Opens the form to type the reason for rejecting a payment proof.
+ * @param bookingId Booking identifier.
+ * @param paymentId Payment proof being rejected.
+ */
+export function openRejectPayment(bookingId: string, paymentId: string): void {
+  router.push({ pathname: '/bookings/reject-payment', params: { id: bookingId, paymentId } });
+}
+
+/**
  * Replaces the current screen with the detail of a booking, so going back skips the screen that was replaced.
  * @param bookingId Booking identifier.
  */

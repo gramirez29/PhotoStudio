@@ -1,4 +1,4 @@
-import { APP_SUPPORTED_ACTIONS, REASON_ACTIONS } from '../constants/bookingActions';
+import { APP_SUPPORTED_ACTIONS, CARD_HANDLED_ACTIONS, REASON_ACTIONS } from '../constants/bookingActions';
 import type { BookingAction } from '../types/api/booking';
 import type {
   ActionConfirmation,
@@ -21,14 +21,33 @@ export const ACTION_VARIANTS: Readonly<Record<SupportedAction, ActionVariant>> =
 };
 
 /**
- * Splits the allowed actions of a booking into those the app can perform and those it cannot yet.
+ * Splits the allowed actions of a booking into those the app can perform and those it cannot yet. The actions a card of
+ * the detail handles by itself (verifying a payment proof) are neither: they are not listed as buttons nor as coming soon.
  * @param allowed Actions the API allows right now.
  * @returns The supported actions, in the order the app lists them, and the pending ones.
  */
 export function splitActions(allowed: readonly BookingAction[]): SplitActions {
+  const handledByCards: readonly BookingAction[] = CARD_HANDLED_ACTIONS;
   return {
     supported: APP_SUPPORTED_ACTIONS.filter((action) => allowed.includes(action)),
-    pending: allowed.filter((action) => !APP_SUPPORTED_ACTIONS.some((supported) => supported === action)),
+    pending: allowed.filter(
+      (action) => !APP_SUPPORTED_ACTIONS.some((supported) => supported === action) && !handledByCards.includes(action),
+    ),
+  };
+}
+
+/**
+ * Builds the texts of the dialog that asks the photographer to confirm a payment proof. Verifying counts the money as
+ * received and cannot be undone, so the dialog reminds them to check their bank first.
+ * @param clientName Name of the client who sent the proof.
+ * @param amountText Amount of the proof, already formatted.
+ * @returns The dialog texts.
+ */
+export function paymentVerificationConfirmation(clientName: string, amountText: string): ActionConfirmation {
+  return {
+    title: 'Verificar pago',
+    message: `¿Ya viste en tu banco la transferencia de ${amountText} de ${clientName}? Al verificarla cuenta como recibida.`,
+    confirmLabel: 'Verificar',
   };
 }
 

@@ -55,6 +55,10 @@ export function bookingCommandErrorMessage(error: Error): string {
   switch (error.code) {
     case 'booking.reason_required':
       return 'Escribe el motivo.';
+    case 'payment.invalid_status':
+      return 'Ese comprobante ya fue verificado o rechazado. Vuelve a abrir la reserva para ver su estado.';
+    case 'payment.not_found':
+      return 'Ese comprobante ya no existe. Vuelve a abrir la reserva.';
     case 'booking.contract_already_signed':
       return 'El contrato de esta reserva ya está firmado.';
     case 'money.invalid_amount':

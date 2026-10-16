@@ -37,6 +37,20 @@ export function NewBookingForm(): ReactElement {
           textContentType="telephoneNumber"
           placeholder="8888-8888"
         />
+        <FormInput
+          label="Correo (opcional)"
+          value={form.values.clientEmail}
+          onChangeText={(text) => form.setText('clientEmail', text)}
+          error={form.errors.clientEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="emailAddress"
+          placeholder="cliente@correo.com"
+        />
+        <Text style={styles.hint}>
+          Con el correo, el cliente podrá confirmar y subir su comprobante desde el enlace. Sin él solo podrá ver la reserva.
+        </Text>
         <SelectField
           label="Paquete"
           options={SERVICES}
@@ -88,6 +102,11 @@ export function NewBookingForm(): ReactElement {
 
 /** Styles of the form. */
 const styles = StyleSheet.create({
+  hint: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: -spacing.sm,
+  },
   submitError: {
     color: colors.danger,
     fontSize: 14,

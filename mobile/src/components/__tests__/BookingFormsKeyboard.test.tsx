@@ -19,7 +19,7 @@ jest.mock('../../hooks/useReasonForm');
 function newBookingState(): NewBookingFormState {
   return {
     today: new Date(2026, 9, 10),
-    values: { clientName: '', clientPhone: '', packageName: '', price: '', start: new Date(2026, 9, 11, 10), durationHours: 2 },
+    values: { clientName: '', clientPhone: '', clientEmail: '', packageName: '', price: '', start: new Date(2026, 9, 11, 10), durationHours: 2 },
     errors: {},
     isPending: false,
     submitError: null,

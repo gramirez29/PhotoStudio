@@ -1,6 +1,7 @@
 import { BOOKING_ACTIONS, BOOKING_STATUSES, CHANNELS, PAYMENT_METHODS, PAYMENT_STATUSES } from '../constants/booking';
 import type {
   BookingAction,
+  BookingLinkResponse,
   BookingResponse,
   BookingSummaryResponse,
   ContractResponse,
@@ -48,6 +49,22 @@ export function parsePayment(value: unknown, path: string): PaymentResponse {
     channel: readLiteral(record, 'channel', CHANNELS, path),
     status: readLiteral(record, 'status', PAYMENT_STATUSES, path),
     recordedAt: readString(record, 'recordedAt', path),
+    reference: readNullableString(record, 'reference', path),
+  };
+}
+
+/**
+ * Parses the link created for a booking.
+ * @param value Unknown response body.
+ * @returns The typed link.
+ */
+export function parseBookingLink(value: unknown): BookingLinkResponse {
+  const path = 'bookingLink';
+  const record = expectRecord(value, path);
+  return {
+    token: readString(record, 'token', path),
+    url: readString(record, 'url', path),
+    expiresAt: readString(record, 'expiresAt', path),
   };
 }
 
@@ -103,6 +120,7 @@ export function parseBooking(value: unknown): BookingResponse {
       parsePayment(payment, `${path}.payments[${index}]`),
     ),
     allowedActions,
+    clientEmail: readNullableString(record, 'clientEmail', path),
   };
 }
 
@@ -157,6 +175,22 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
       client.post(`/api/bookings/${encodeURIComponent(id)}/contract/in-person`, request, parseBooking, signal),
     recordInPersonPayment: (id, request, signal) =>
       client.post(`/api/bookings/${encodeURIComponent(id)}/payments/in-person`, request, parseBooking, signal),
+    createBookingLink: (id, signal) =>
+      client.post(`/api/bookings/${encodeURIComponent(id)}/link`, undefined, parseBookingLink, signal),
+    verifyPayment: (id, paymentId, signal) =>
+      client.post(
+        `/api/bookings/${encodeURIComponent(id)}/payments/${encodeURIComponent(paymentId)}/verify`,
+        undefined,
+        parseBooking,
+        signal,
+      ),
+    rejectPayment: (id, paymentId, request, signal) =>
+      client.post(
+        `/api/bookings/${encodeURIComponent(id)}/payments/${encodeURIComponent(paymentId)}/reject`,
+        request,
+        parseBooking,
+        signal,
+      ),
     listBookings: (signal) => client.get('/api/bookings', parseBookingSummaries, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
   };

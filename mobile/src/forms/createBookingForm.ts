@@ -4,6 +4,7 @@ import type {
   CreateBookingFormValues,
 } from '../types/forms/createBookingForm.types';
 import { addHours, nextDayAt } from '../utils/date';
+import { normalizeEmail } from '../utils/email';
 import { normalizePhone } from '../utils/phone';
 import { parsePrice } from '../utils/price';
 
@@ -28,6 +29,7 @@ export function initialFormValues(now: Date): CreateBookingFormValues {
   return {
     clientName: '',
     clientPhone: '',
+    clientEmail: '',
     packageName: '',
     price: '',
     start: nextDayAt(now, DEFAULT_START_HOUR),
@@ -57,6 +59,13 @@ export function validateCreateBookingForm(
     errors.clientPhone = 'Escribe un teléfono válido (8 dígitos o con código de país).';
   }
 
+  // The email is optional, but when it is typed it must be valid: it is where the client receives the verification codes.
+  const typedEmail = values.clientEmail.trim();
+  const clientEmail = typedEmail.length === 0 ? null : normalizeEmail(typedEmail);
+  if (typedEmail.length > 0 && clientEmail === null) {
+    errors.clientEmail = 'Escribe un correo válido, por ejemplo nombre@correo.com, o déjalo vacío.';
+  }
+
   const packageName = values.packageName.trim();
   if (packageName.length === 0) {
     errors.packageName = 'Elige un paquete.';
@@ -80,6 +89,7 @@ export function validateCreateBookingForm(
     request: {
       clientName,
       clientPhone,
+      ...(clientEmail === null ? {} : { clientEmail }),
       packageName,
       packagePrice,
       currency: DEFAULT_CURRENCY,

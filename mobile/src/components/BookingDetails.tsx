@@ -5,7 +5,9 @@ import type { BookingDetailsProps } from '../types/components/BookingDetails.typ
 import { formatDateTime } from '../utils/format';
 import { AmountRow } from './AmountRow';
 import { BookingActions } from './BookingActions';
+import { PendingPaymentsCard } from './PendingPaymentsCard';
 import { SettlementCard } from './SettlementCard';
+import { ShareLinkCard } from './ShareLinkCard';
 import { StatusBadge } from './StatusBadge';
 
 /**
@@ -20,6 +22,7 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
       <Text style={styles.title}>{booking.clientName}</Text>
       <Text style={styles.subtitle}>{booking.packageName}</Text>
       <Text style={styles.subtitle}>{formatDateTime(booking.sessionStart)}</Text>
+      {booking.clientEmail !== null && <Text style={styles.subtitle}>{booking.clientEmail}</Text>}
       {booking.expiresAt !== null && (
         <Text style={styles.warning}>Se libera el espacio el {formatDateTime(booking.expiresAt)}</Text>
       )}
@@ -40,9 +43,13 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
         </Text>
       </View>
 
+      <PendingPaymentsCard booking={booking} />
+
       <SettlementCard booking={booking} />
 
       <BookingActions booking={booking} />
+
+      <ShareLinkCard booking={booking} />
     </ScrollView>
   );
 }
