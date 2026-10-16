@@ -132,3 +132,87 @@ describe('shouldRetry', () => {
     expect(shouldRetry(MAX_RETRIES, new NetworkError())).toBe(false);
   });
 });
+
+describe('POST requests', () => {
+  it('sends the JSON body and the session token as a bearer', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { ok: true }));
+    const client = createHttpClient('https://api.example.test', { fetchFn });
+
+    await client.post('/thing', { amount: 5 }, (body) => body, { accessToken: 'jwt' });
+
+    const init = fetchFn.mock.calls[0]?.[1];
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBe('{"amount":5}');
+    expect(init?.headers).toMatchObject({ 'Content-Type': 'application/json', Authorization: 'Bearer jwt' });
+  });
+
+  it('sends no body, no content type and no token when there is none', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(202, { ok: true }));
+    const client = createHttpClient('https://api.example.test', { fetchFn });
+
+    await client.post('/thing', undefined, (body) => body);
+
+    const init = fetchFn.mock.calls[0]?.[1];
+    expect(init?.body).toBeUndefined();
+    expect(init?.headers).toEqual({ Accept: 'application/json' });
+  });
+
+  it('turns an error answer into an ApiError', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(422, { detail: 'Wrong', code: 'portal.invalid_code' }));
+    const client = createHttpClient('https://api.example.test', { fetchFn });
+
+    await expect(client.post('/thing', { code: '1' }, (body) => body)).rejects.toMatchObject({ status: 422, code: 'portal.invalid_code' });
+  });
+});
+
+describe('portal API, code and proof', () => {
+  const sent = { maskedEmail: 'm***@example.com', expiresAt: '2026-10-16T12:10:00+00:00' };
+  const session = { accessToken: 'jwt', expiresAt: '2026-10-16T12:30:00+00:00' };
+
+  /**
+   * Builds an API whose HTTP client records the requests and answers with the given body.
+   * @param status HTTP status of the answer.
+   * @param body Body of the answer.
+   * @returns The API and the fetch mock.
+   */
+  function apiAnswering(status: number, body: unknown): { readonly api: ReturnType<typeof createPortalApi>; readonly fetchFn: ReturnType<typeof vi.fn<typeof fetch>> } {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(status, body));
+    return { api: createPortalApi(createHttpClient('https://api.example.test', { fetchFn })), fetchFn };
+  }
+
+  it('asks for a code with a POST that has no body', async () => {
+    const { api, fetchFn } = apiAnswering(202, sent);
+
+    const result = await api.requestCode(SAMPLE_TOKEN);
+
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(`https://api.example.test/public/bookings/${SAMPLE_TOKEN}/code`);
+    expect(fetchFn.mock.calls[0]?.[1]?.body).toBeUndefined();
+    expect(result).toEqual(sent);
+  });
+
+  it('verifies the code as JSON and parses the session', async () => {
+    const { api, fetchFn } = apiAnswering(200, session);
+
+    const result = await api.verifyCode(SAMPLE_TOKEN, '123456');
+
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(`https://api.example.test/public/bookings/${SAMPLE_TOKEN}/code/verify`);
+    expect(JSON.parse(String(fetchFn.mock.calls[0]?.[1]?.body))).toEqual({ code: '123456' });
+    expect(result).toEqual(session);
+  });
+
+  it('submits the proof with the session token and parses the booking', async () => {
+    const { api, fetchFn } = apiAnswering(200, portalBookingPayload);
+
+    const booking = await api.submitProof(SAMPLE_TOKEN, 'jwt', { amount: 50000, reference: 'R1', idempotencyKey: 'k' });
+
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(`https://api.example.test/public/bookings/${SAMPLE_TOKEN}/payments`);
+    expect(fetchFn.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer jwt' });
+    expect(JSON.parse(String(fetchFn.mock.calls[0]?.[1]?.body))).toEqual({ amount: 50000, reference: 'R1', idempotencyKey: 'k' });
+    expect(booking.packageName).toBe('Retrato Familiar');
+  });
+
+  it('rejects an answer that does not match the contract', async () => {
+    await expect(apiAnswering(202, { maskedEmail: 5 }).api.requestCode(SAMPLE_TOKEN)).rejects.toBeInstanceOf(ResponseShapeError);
+    await expect(apiAnswering(200, { accessToken: 'x' }).api.verifyCode(SAMPLE_TOKEN, '123456')).rejects.toBeInstanceOf(ResponseShapeError);
+  });
+});

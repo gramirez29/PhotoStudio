@@ -7,14 +7,32 @@ export interface HttpClientOptions {
   readonly fetchFn?: typeof fetch;
 }
 
+/** Options of one request. */
+export interface RequestOptions {
+  /** Signal to cancel the request. */
+  readonly signal?: AbortSignal;
+  /** Portal session token, sent as `Authorization: Bearer`. */
+  readonly accessToken?: string;
+}
+
 /** Minimal HTTP client of the portal: it parses every response against the contract before handing it over. */
 export interface HttpClient {
   /**
    * Sends a GET request.
    * @param path Path under the API address, starting with a slash.
    * @param parse Parser of the response body.
-   * @param signal Optional signal to cancel the request.
+   * @param options Signal and session token of the request.
    * @returns The parsed response.
    */
-  get<T>(path: string, parse: ResponseParser<T>, signal?: AbortSignal): Promise<T>;
+  get<T>(path: string, parse: ResponseParser<T>, options?: RequestOptions): Promise<T>;
+
+  /**
+   * Sends a POST request with an optional JSON body.
+   * @param path Path under the API address, starting with a slash.
+   * @param body Body to serialize as JSON, or undefined to send none.
+   * @param parse Parser of the response body.
+   * @param options Signal and session token of the request.
+   * @returns The parsed response.
+   */
+  post<T>(path: string, body: unknown, parse: ResponseParser<T>, options?: RequestOptions): Promise<T>;
 }
