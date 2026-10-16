@@ -174,10 +174,18 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<PortalOtpDocument>.IndexKeys.Ascending(otp => otp.ExpiresAt),
             new CreateIndexOptions { Name = "ix_otp_retention", ExpireAfter = TimeSpan.FromHours(1) });
 
+        var pushDevices = database.GetCollection<PushDeviceDocument>(MongoPushDeviceRepository.CollectionName);
+
+        // Serves the push: the phones of a photographer. The token is the document id, so it is unique without an index.
+        var pushPhotographerIndex = new CreateIndexModel<PushDeviceDocument>(
+            Builders<PushDeviceDocument>.IndexKeys.Ascending(device => device.PhotographerId),
+            new CreateIndexOptions { Name = "ix_push_photographer" });
+
         try
         {
             await links.Indexes.CreateManyAsync([linkHashIndex, linkBookingIndex, linkRetentionIndex], cancellationToken: cancellationToken);
             await portalOtps.Indexes.CreateManyAsync([otpRetentionIndex], cancellationToken: cancellationToken);
+            await pushDevices.Indexes.CreateManyAsync([pushPhotographerIndex], cancellationToken: cancellationToken);
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
             await users.Indexes.CreateManyAsync([usernameIndex, emailIndex], cancellationToken: cancellationToken);

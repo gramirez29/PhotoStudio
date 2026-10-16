@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
-import { signOut } from '../session/sessionManager';
+import { signOutOfDevice } from '../push/pushSignOut';
 import { colors, spacing } from '../theme/tokens';
 
 /**
@@ -12,7 +12,7 @@ export function SignOutButton(): ReactElement {
   function confirmSignOut(): void {
     Alert.alert('Cerrar sesión', '¿Quieres cerrar la sesión en este dispositivo?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar sesión', style: 'destructive', onPress: () => void signOut() },
+      { text: 'Cerrar sesión', style: 'destructive', onPress: () => void signOutOfDevice() },
     ]);
   }
 

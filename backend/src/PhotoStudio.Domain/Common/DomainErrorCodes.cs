@@ -64,4 +64,7 @@ public static class DomainErrorCodes
 
     /// <summary>The password is shorter than the minimum length or longer than the maximum.</summary>
     public const string WeakPassword = "user.weak_password";
+
+    /// <summary>The push token is not an Expo push token.</summary>
+    public const string InvalidPushToken = "push.invalid_token";
 }

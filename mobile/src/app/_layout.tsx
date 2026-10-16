@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { createQueryClient } from '../api/queryClient';
 import { NewBookingButton } from '../components/NewBookingButton';
 import { Placeholder } from '../components/Placeholder';
+import { PushRegistration } from '../components/PushRegistration';
 import { ScreenLoader } from '../components/ScreenLoader';
 import { SignOutButton } from '../components/SignOutButton';
 import { restoreSession } from '../session/sessionManager';
@@ -77,6 +78,7 @@ export default function RootLayout(): ReactElement {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
+      <PushRegistration />
       {content}
     </QueryClientProvider>
   );

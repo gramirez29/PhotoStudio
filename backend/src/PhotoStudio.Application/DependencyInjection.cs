@@ -22,6 +22,7 @@ using PhotoStudio.Application.Notifications;
 using PhotoStudio.Application.Notifications.DeliverDue;
 using PhotoStudio.Application.Notifications.List;
 using PhotoStudio.Application.Notifications.MarkRead;
+using PhotoStudio.Application.Notifications.Push;
 using PhotoStudio.Domain.Bookings.Events;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
@@ -84,6 +85,11 @@ public static class DependencyInjection
         services.AddScoped<IDomainEventHandler<BookingExpired>, BookingSettlementHandler>();
         services.AddScoped<IDomainEventHandler<ClientMarkedAbsent>, BookingSettlementHandler>();
         services.AddScoped<IDomainEventHandler<ClientAbsenceReverted>, BookingSettlementHandler>();
+
+        services.TryAddSingleton<IOutboxWakeUp, NullOutboxWakeUp>();
+        services.AddScoped<NotificationPusher>();
+        services.AddScoped<ICommandHandler<RegisterPushDeviceCommand, bool>, RegisterPushDeviceHandler>();
+        services.AddScoped<ICommandHandler<UnregisterPushDeviceCommand, bool>, UnregisterPushDeviceHandler>();
 
         services.AddScoped<NotificationPlanner>();
         services.AddScoped<IDomainEventHandler<BookingConfirmed>, BookingNotificationsHandler>();

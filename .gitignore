@@ -30,3 +30,6 @@ Thumbs.db
 
 # Private project context for Claude Code (business decisions and known gaps); never published
 CLAUDE.md
+
+# Firebase config of the Android app (EAS receives it as the GOOGLE_SERVICES_JSON file variable)
+mobile/google-services.json

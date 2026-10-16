@@ -4,8 +4,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using PhotoStudio.Api.Cors;
 using PhotoStudio.Api.Endpoints;
 using PhotoStudio.Api.Errors;
+using PhotoStudio.Api.Maintenance;
 using PhotoStudio.Api.RateLimiting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using PhotoStudio.Application;
+using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Infrastructure;
 using PhotoStudio.Infrastructure.Identity;
 using PhotoStudio.Infrastructure.Portal;
@@ -37,6 +40,10 @@ builder.Services.AddApplication();
 builder.Services.AddApplicationAuthentication();
 builder.Services.AddApplicationPortal();
 builder.Services.AddInfrastructure();
+// This process delivers the outbox soon after a booking changes (see OutboxWakeUpService); the worker keeps doing it on a schedule.
+builder.Services.AddSingleton<OutboxWakeUpService>();
+builder.Services.Replace(ServiceDescriptor.Singleton<IOutboxWakeUp>(provider => provider.GetRequiredService<OutboxWakeUpService>()));
+builder.Services.AddHostedService(provider => provider.GetRequiredService<OutboxWakeUpService>());
 builder.Services.AddPhotographerAuthentication(builder.Environment.IsDevelopment());
 builder.Services.AddClientPortal(builder.Environment.IsDevelopment());
 builder.Services.AddPortalCors(builder.Environment.IsDevelopment());
@@ -48,6 +55,19 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 app.UseForwardedHeaders();
+
+// A booking that changed may have raised events: ask for a delivery pass once the response is final (so a failed request, whose
+// change was not saved, asks for nothing). Only the booking endpoints change bookings; sign-in and the like are left out.
+app.Use(async (context, next) =>
+{
+    await next(context);
+
+    var changesBookings = context.Request.Path.StartsWithSegments("/api/bookings") || context.Request.Path.StartsWithSegments("/public/bookings");
+    if (changesBookings && !HttpMethods.IsGet(context.Request.Method) && context.Response.StatusCode < StatusCodes.Status400BadRequest)
+    {
+        context.RequestServices.GetRequiredService<IOutboxWakeUp>().Signal();
+    }
+});
 
 // Before everything that can answer: a browser asks (preflight) before sending a request, and the answer must not need a
 // token. The policy itself is attached only to the portal endpoints.
@@ -77,6 +97,7 @@ app.MapBookingEndpoints();
 app.MapBookingPortalEndpoints();
 app.MapPortalEndpoints();
 app.MapNotificationEndpoints();
+app.MapPushDeviceEndpoints();
 app.MapBillingEndpoints();
 app.MapMaintenanceEndpoints();
 

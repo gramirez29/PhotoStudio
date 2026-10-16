@@ -60,6 +60,11 @@ public sealed class ApiFixture : IAsyncLifetime
     public CapturingEmailSender Emails { get; } = new();
 
     /// <summary>
+    /// Gets the push notifications the API tried to send, instead of Expo.
+    /// </summary>
+    public CapturingPushSender Pushes { get; } = new();
+
+    /// <summary>
     /// Gets a value indicating whether a MongoDB server answered the initial ping.
     /// </summary>
     public bool IsAvailable { get; private set; }
@@ -102,7 +107,13 @@ public sealed class ApiFixture : IAsyncLifetime
             builder.UseEnvironment("Development");
 
             // Emails are captured instead of sent, so the tests can read the verification codes.
-            builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IEmailSender>(Emails);
+
+                // Pushes are captured instead of sent to Expo.
+                services.AddSingleton<IPushSender>(Pushes);
+            });
         });
         _ = _factory.Server;
     }

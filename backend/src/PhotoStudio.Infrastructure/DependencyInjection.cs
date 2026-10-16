@@ -5,6 +5,7 @@ using PhotoStudio.Infrastructure.Identity;
 using PhotoStudio.Infrastructure.Persistence;
 using PhotoStudio.Infrastructure.Persistence.Outbox;
 using PhotoStudio.Infrastructure.Policies;
+using PhotoStudio.Infrastructure.Push;
 
 namespace PhotoStudio.Infrastructure;
 
@@ -38,12 +39,19 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<INotificationRepository, MongoNotificationRepository>();
         services.AddScoped<ISettlementRepository, MongoSettlementRepository>();
+        services.AddScoped<IPushDeviceRepository, MongoPushDeviceRepository>();
         services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
         services.AddScoped<IBookingLinkRepository, MongoBookingLinkRepository>();
         services.AddScoped<IPortalOtpRepository, MongoPortalOtpRepository>();
         services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<IBookingPolicyProvider, EnvironmentBookingPolicyProvider>();
+        services.AddSingleton(ExpoPushOptions.FromEnvironment());
+        services.AddHttpClient<IPushSender, ExpoPushSender>(client =>
+        {
+            client.BaseAddress = new Uri(ExpoPushSender.BaseAddress);
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
         services.AddSingleton<OutboxProcessor>();
         services.AddSingleton<IOutboxDispatcher>(provider => provider.GetRequiredService<OutboxProcessor>());
 
