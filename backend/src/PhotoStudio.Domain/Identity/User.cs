@@ -254,24 +254,7 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     /// <param name="email">Email typed by the user.</param>
     /// <returns>The normalized email, or <see langword="null"/> when it has no valid shape.</returns>
-    public static string? TryNormalizeEmail(string? email)
-    {
-        var normalized = email?.Trim().ToLowerInvariant();
-        if (string.IsNullOrEmpty(normalized) || normalized.Length > MaxEmailLength)
-        {
-            return null;
-        }
-
-        var at = normalized.IndexOf('@', StringComparison.Ordinal);
-        var validShape = at > 0
-            && at == normalized.LastIndexOf('@')
-            && at < normalized.Length - 1
-            && normalized.IndexOf('.', at + 1) > at + 1
-            && normalized[^1] != '.'
-            && !normalized.Any(char.IsWhiteSpace);
-
-        return validShape ? normalized : null;
-    }
+    public static string? TryNormalizeEmail(string? email) => EmailAddress.TryNormalize(email);
 
     /// <summary>
     /// Normalizes a display name: trimmed, and required.

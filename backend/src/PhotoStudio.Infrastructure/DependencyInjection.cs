@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, MongoNotificationRepository>();
         services.AddScoped<ISettlementRepository, MongoSettlementRepository>();
         services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
+        services.AddScoped<IBookingLinkRepository, MongoBookingLinkRepository>();
+        services.AddScoped<IPortalOtpRepository, MongoPortalOtpRepository>();
         services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<IBookingPolicyProvider, EnvironmentBookingPolicyProvider>();

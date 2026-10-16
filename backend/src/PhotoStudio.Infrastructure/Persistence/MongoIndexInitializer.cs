@@ -150,8 +150,34 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 .Ascending(settlement => settlement.CreatedAt),
             new CreateIndexOptions { Name = "ix_settlement_refund" });
 
+        var links = database.GetCollection<BookingLinkDocument>(MongoBookingLinkRepository.CollectionName);
+
+        // A link is found by the hash of the token in the URL; uniqueness guarantees two links never share a token.
+        var linkHashIndex = new CreateIndexModel<BookingLinkDocument>(
+            Builders<BookingLinkDocument>.IndexKeys.Ascending(link => link.TokenHash),
+            new CreateIndexOptions { Name = "ix_link_hash", Unique = true });
+
+        // Serves revoking the active links of a booking when a new one is created.
+        var linkBookingIndex = new CreateIndexModel<BookingLinkDocument>(
+            Builders<BookingLinkDocument>.IndexKeys.Ascending(link => link.BookingId),
+            new CreateIndexOptions { Name = "ix_link_booking" });
+
+        // Removes links a month after they expire.
+        var linkRetentionIndex = new CreateIndexModel<BookingLinkDocument>(
+            Builders<BookingLinkDocument>.IndexKeys.Ascending(link => link.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_link_retention", ExpireAfter = TimeSpan.FromDays(30) });
+
+        var portalOtps = database.GetCollection<PortalOtpDocument>(MongoPortalOtpRepository.CollectionName);
+
+        // Removes a code record an hour after it expires. The hour keeps the sending window of the cooldown and the hourly cap alive.
+        var otpRetentionIndex = new CreateIndexModel<PortalOtpDocument>(
+            Builders<PortalOtpDocument>.IndexKeys.Ascending(otp => otp.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_otp_retention", ExpireAfter = TimeSpan.FromHours(1) });
+
         try
         {
+            await links.Indexes.CreateManyAsync([linkHashIndex, linkBookingIndex, linkRetentionIndex], cancellationToken: cancellationToken);
+            await portalOtps.Indexes.CreateManyAsync([otpRetentionIndex], cancellationToken: cancellationToken);
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
             await users.Indexes.CreateManyAsync([usernameIndex, emailIndex], cancellationToken: cancellationToken);

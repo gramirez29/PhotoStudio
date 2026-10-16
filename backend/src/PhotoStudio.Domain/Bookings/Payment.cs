@@ -20,8 +20,10 @@ public sealed class Payment
         string idempotencyKey,
         DateTimeOffset recordedAt,
         DateTimeOffset? resolvedAt,
-        string? rejectionReason)
+        string? rejectionReason,
+        string? reference)
     {
+        Reference = reference;
         Id = id;
         Amount = amount;
         Method = method;
@@ -65,6 +67,17 @@ public sealed class Payment
     public string? RejectionReason { get; private set; }
 
     /// <summary>
+    /// Gets the reference the client gave for a SINPE Móvil proof (the confirmation number of the transfer), which the
+    /// photographer compares with their bank before verifying. <see langword="null"/> when none was given.
+    /// </summary>
+    public string? Reference { get; }
+
+    /// <summary>
+    /// Longest accepted proof reference.
+    /// </summary>
+    public const int MaxReferenceLength = 100;
+
+    /// <summary>
     /// Rebuilds a payment from persisted data.
     /// </summary>
     /// <param name="id">Payment identifier.</param>
@@ -77,6 +90,7 @@ public sealed class Payment
     /// <param name="recordedAt">Instant the payment was recorded.</param>
     /// <param name="resolvedAt">Instant the payment was verified or rejected.</param>
     /// <param name="rejectionReason">Rejection reason, if any.</param>
+    /// <param name="reference">Proof reference given by the client, if any.</param>
     /// <returns>The restored payment.</returns>
     public static Payment Restore(
         Guid id,
@@ -88,8 +102,9 @@ public sealed class Payment
         string idempotencyKey,
         DateTimeOffset recordedAt,
         DateTimeOffset? resolvedAt,
-        string? rejectionReason) =>
-        new(id, amount, method, channel, recordedBy, status, idempotencyKey, recordedAt, resolvedAt, rejectionReason);
+        string? rejectionReason,
+        string? reference = null) =>
+        new(id, amount, method, channel, recordedBy, status, idempotencyKey, recordedAt, resolvedAt, rejectionReason, reference);
 
     /// <summary>
     /// Creates a payment proof submitted by the client that still needs the photographer's verification.
@@ -99,9 +114,10 @@ public sealed class Payment
     /// <param name="method">Payment method.</param>
     /// <param name="idempotencyKey">Idempotency key.</param>
     /// <param name="now">Current instant.</param>
+    /// <param name="reference">Reference of the transfer given by the client.</param>
     /// <returns>A payment pending verification.</returns>
-    internal static Payment CreatePending(Guid id, Money amount, PaymentMethod method, string idempotencyKey, DateTimeOffset now) =>
-        new(id, amount, method, Channel.Portal, Actor.Client, PaymentStatus.PendingVerification, idempotencyKey, now, null, null);
+    internal static Payment CreatePending(Guid id, Money amount, PaymentMethod method, string idempotencyKey, DateTimeOffset now, string? reference) =>
+        new(id, amount, method, Channel.Portal, Actor.Client, PaymentStatus.PendingVerification, idempotencyKey, now, null, null, reference);
 
     /// <summary>
     /// Creates a payment received face to face by the photographer. It is verified on creation.
@@ -113,7 +129,7 @@ public sealed class Payment
     /// <param name="now">Current instant.</param>
     /// <returns>A verified payment.</returns>
     internal static Payment CreateVerifiedInPerson(Guid id, Money amount, PaymentMethod method, string idempotencyKey, DateTimeOffset now) =>
-        new(id, amount, method, Channel.InPerson, Actor.Photographer, PaymentStatus.Verified, idempotencyKey, now, now, null);
+        new(id, amount, method, Channel.InPerson, Actor.Photographer, PaymentStatus.Verified, idempotencyKey, now, now, null, null);
 
     /// <summary>
     /// Marks a pending proof as verified.

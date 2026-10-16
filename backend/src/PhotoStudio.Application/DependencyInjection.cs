@@ -29,6 +29,14 @@ using PhotoStudio.Application.Bookings.RescheduleBooking;
 using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.RevertClientAbsent;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
+using PhotoStudio.Application.Bookings.RejectPayment;
+using PhotoStudio.Application.Bookings.VerifyPayment;
+using PhotoStudio.Application.Portal;
+using PhotoStudio.Application.Portal.CreateLink;
+using PhotoStudio.Application.Portal.GetBooking;
+using PhotoStudio.Application.Portal.RequestCode;
+using PhotoStudio.Application.Portal.SubmitProof;
+using PhotoStudio.Application.Portal.VerifyCode;
 
 namespace PhotoStudio.Application;
 
@@ -51,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<CreateBookingCommand, BookingResponse>, CreateBookingHandler>();
         services.AddScoped<ICommandHandler<SignContractInPersonCommand, BookingResponse>, SignContractInPersonHandler>();
         services.AddScoped<ICommandHandler<RecordInPersonPaymentCommand, BookingResponse>, RecordInPersonPaymentHandler>();
+        services.AddScoped<ICommandHandler<VerifyPaymentCommand, BookingResponse>, VerifyPaymentHandler>();
+        services.AddScoped<ICommandHandler<RejectPaymentCommand, BookingResponse>, RejectPaymentHandler>();
         services.AddScoped<ICommandHandler<RescheduleBookingCommand, BookingResponse>, RescheduleBookingHandler>();
         services.AddScoped<ICommandHandler<CancelBookingCommand, BookingResponse>, CancelBookingHandler>();
         services.AddScoped<ICommandHandler<CompleteBookingCommand, BookingResponse>, CompleteBookingHandler>();
@@ -85,6 +95,26 @@ public static class DependencyInjection
 
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the use cases of the client portal: creating the booking link (photographer) and everything the client does through
+    /// it. Registered apart from <see cref="AddApplication"/> because they need the email, token and portal settings that only
+    /// the API configures.
+    /// </summary>
+    /// <param name="services">Service collection to configure.</param>
+    /// <returns>The same service collection, for chaining.</returns>
+    public static IServiceCollection AddApplicationPortal(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<ICommandHandler<CreateBookingLinkCommand, BookingLinkResponse>, CreateBookingLinkHandler>();
+        services.AddScoped<IQueryHandler<GetPortalBookingQuery, PortalBookingResponse>, GetPortalBookingHandler>();
+        services.AddScoped<ICommandHandler<RequestPortalCodeCommand, PortalCodeSentResponse>, RequestPortalCodeHandler>();
+        services.AddScoped<ICommandHandler<VerifyPortalCodeCommand, PortalSessionResponse>, VerifyPortalCodeHandler>();
+        services.AddScoped<ICommandHandler<SubmitPortalPaymentProofCommand, PortalBookingResponse>, SubmitPortalPaymentProofHandler>();
 
         return services;
     }

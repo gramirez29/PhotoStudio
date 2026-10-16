@@ -11,6 +11,7 @@ namespace PhotoStudio.Application.Bookings.CreateBooking;
 /// <param name="Currency">ISO 4217 currency code.</param>
 /// <param name="SessionStart">Session start.</param>
 /// <param name="SessionEnd">Session end.</param>
+/// <param name="ClientEmail">Client email, optional. The client portal sends its verification codes there.</param>
 public sealed record CreateBookingCommand(
     Guid PhotographerId,
     string ClientName,
@@ -19,4 +20,5 @@ public sealed record CreateBookingCommand(
     decimal PackagePrice,
     string Currency,
     DateTimeOffset SessionStart,
-    DateTimeOffset SessionEnd);
+    DateTimeOffset SessionEnd,
+    string? ClientEmail = null);

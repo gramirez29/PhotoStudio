@@ -41,6 +41,10 @@ public sealed partial class GlobalExceptionHandler(
                 (StatusCodes.Status403Forbidden, "Creating accounts is turned off.", disabled.Code),
             AccountLockedException locked =>
                 (StatusCodes.Status429TooManyRequests, "Too many failed attempts.", locked.Code),
+            OtpRateLimitedException limited =>
+                (StatusCodes.Status429TooManyRequests, "Too many verification codes requested.", limited.Code),
+            EmailDeliveryException delivery =>
+                (StatusCodes.Status503ServiceUnavailable, "The email could not be sent.", delivery.Code),
             NotFoundException =>
                 (StatusCodes.Status404NotFound, "The resource was not found.", ApplicationErrorCodes.NotFound),
             BadHttpRequestException badRequest =>
@@ -67,11 +71,19 @@ public sealed partial class GlobalExceptionHandler(
             httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(accountLocked.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
         }
 
+        if (exception is OtpRateLimitedException codeLimited)
+        {
+            httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(codeLimited.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+        }
+
+        // The provider's failure can name the account or the address; the client only needs to know it failed.
         var problem = new ProblemDetails
         {
             Status = status,
             Title = title,
-            Detail = status == StatusCodes.Status500InternalServerError ? null : exception.Message,
+            Detail = status == StatusCodes.Status500InternalServerError ? null
+                : exception is EmailDeliveryException ? "The verification code could not be sent. Try again in a moment."
+                : exception.Message,
             Instance = httpContext.Request.Path,
         };
         problem.Extensions["code"] = code;

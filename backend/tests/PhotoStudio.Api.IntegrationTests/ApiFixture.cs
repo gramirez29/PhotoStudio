@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -49,6 +50,11 @@ public sealed class ApiFixture : IAsyncLifetime
     private IMongoClient? _mongo;
 
     /// <summary>
+    /// Gets the emails the API tried to send, instead of a real provider.
+    /// </summary>
+    public CapturingEmailSender Emails { get; } = new();
+
+    /// <summary>
     /// Gets a value indicating whether a MongoDB server answered the initial ping.
     /// </summary>
     public bool IsAvailable { get; private set; }
@@ -85,7 +91,13 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("JWT_SIGNING_KEY", SigningKey);
         Environment.SetEnvironmentVariable("AUTH_REGISTRATION_ENABLED", null);
 
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+
+            // Emails are captured instead of sent, so the tests can read the verification codes.
+            builder.ConfigureTestServices(services => services.AddSingleton<IEmailSender>(Emails));
+        });
         _ = _factory.Server;
     }
 
