@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { ApiStatus } from '../components/ApiStatus';
 import { BookingListItem } from '../components/BookingListItem';
+import { ChangePasswordButton } from '../components/ChangePasswordButton';
 import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
 import { NotificationsButton } from '../components/NotificationsButton';
@@ -9,6 +10,7 @@ import { Placeholder } from '../components/Placeholder';
 import { RefundsButton } from '../components/RefundsButton';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
+import { useSessionStore } from '../session/sessionStore';
 import { colors, spacing } from '../theme/tokens';
 import type { BookingSummaryResponse } from '../types/api/booking';
 
@@ -18,6 +20,8 @@ import type { BookingSummaryResponse } from '../types/api/booking';
  */
 export default function HomeScreen(): ReactElement {
   const query = useBookings();
+  // The maintenance pass works on every photographer's data: the backend only accepts it from system operators.
+  const isSystemOperator = useSessionStore((state) => state.session?.isSystemOperator === true);
   const bookings: readonly BookingSummaryResponse[] = query.data ?? [];
 
   let empty: ReactElement;
@@ -45,7 +49,8 @@ export default function HomeScreen(): ReactElement {
           <ApiStatus />
           <NotificationsButton />
           <RefundsButton />
-          <MaintenanceButton />
+          {isSystemOperator && <MaintenanceButton />}
+          <ChangePasswordButton />
           <Text style={styles.sectionTitle}>Mis reservas</Text>
         </View>
       }

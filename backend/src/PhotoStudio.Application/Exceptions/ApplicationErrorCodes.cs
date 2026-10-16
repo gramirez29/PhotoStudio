@@ -29,6 +29,9 @@ public static class ApplicationErrorCodes
     /// <summary>Too many consecutive failed logins; the account is temporarily locked.</summary>
     public const string AccountLocked = "auth.account_locked";
 
+    /// <summary>The current password sent to change the password is not correct. It is not a 401: the user's session is valid.</summary>
+    public const string InvalidCurrentPassword = "user.invalid_current_password";
+
     /// <summary>The refresh token is unknown, expired or was already used; the user must sign in again.</summary>
     public const string InvalidRefreshToken = "auth.invalid_refresh_token";
 }

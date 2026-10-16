@@ -91,6 +91,20 @@ public sealed class MongoUserRepository(IMongoDatabase database) : IUserReposito
             cancellationToken: cancellationToken);
 
     /// <inheritdoc />
+    public async Task<bool> ChangePasswordAsync(Guid id, string expectedPasswordHash, string newPasswordHash, CancellationToken cancellationToken)
+    {
+        var result = await _collection.UpdateOneAsync(
+            user => user.Id == id && user.PasswordHash == expectedPasswordHash,
+            Builders<UserDocument>.Update
+                .Set(user => user.PasswordHash, newPasswordHash)
+                .Set(user => user.FailedLoginAttempts, 0)
+                .Unset(user => user.LockedUntil),
+            cancellationToken: cancellationToken);
+
+        return result.ModifiedCount == 1;
+    }
+
+    /// <inheritdoc />
     public Task ResetFailedLoginsAsync(Guid id, CancellationToken cancellationToken) =>
         _collection.UpdateOneAsync(
             user => user.Id == id,

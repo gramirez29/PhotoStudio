@@ -73,6 +73,11 @@ export function openRefund(bookingId: string): void {
   router.push({ pathname: '/bookings/refund', params: { id: bookingId } });
 }
 
+/** Opens the form to change the password. */
+export function openChangePassword(): void {
+  router.push('/change-password');
+}
+
 /** Opens the inbox of notices. */
 export function openNotifications(): void {
   router.push('/notifications');

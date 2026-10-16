@@ -62,4 +62,16 @@ public interface IUserRepository
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A task that completes when the counter is cleared.</returns>
     Task ResetFailedLoginsAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Replaces the password hash, only while the stored hash is still the one the caller verified, and clears the
+    /// failed-login counter and the lock. The condition makes two simultaneous changes safe: the second one finds the hash
+    /// already changed and does nothing.
+    /// </summary>
+    /// <param name="id">Photographer identifier.</param>
+    /// <param name="expectedPasswordHash">Hash the caller verified the current password against.</param>
+    /// <param name="newPasswordHash">Hash of the new password.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns><see langword="true"/> when the hash was replaced; <see langword="false"/> when the stored hash had changed meanwhile.</returns>
+    Task<bool> ChangePasswordAsync(Guid id, string expectedPasswordHash, string newPasswordHash, CancellationToken cancellationToken);
 }

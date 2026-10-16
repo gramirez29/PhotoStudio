@@ -1,7 +1,7 @@
 import type { AuthSessionResponse } from '../types/api/auth';
 import type { AuthApi } from '../types/api/authApi';
 import type { HttpClient } from '../types/api/http';
-import { expectRecord, readString } from './guards';
+import { expectRecord, readBoolean, readString } from './guards';
 
 /**
  * Parses a session response, validating every field against the backend contract.
@@ -20,6 +20,7 @@ export function parseAuthSession(value: unknown): AuthSessionResponse {
     username: readString(record, 'username', path),
     email: readString(record, 'email', path),
     name: readString(record, 'name', path),
+    isSystemOperator: readBoolean(record, 'isSystemOperator', path),
   };
 }
 

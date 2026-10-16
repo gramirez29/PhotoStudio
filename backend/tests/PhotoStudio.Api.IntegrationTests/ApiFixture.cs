@@ -135,8 +135,9 @@ public sealed class ApiFixture : IAsyncLifetime
     /// <summary>
     /// Creates a user directly in the database, without going through the registration endpoint.
     /// </summary>
+    /// <param name="isSystemOperator">Whether the user gets the system operator role.</param>
     /// <returns>The user and its clear-text password.</returns>
-    public async Task<TestUser> CreateUserAsync()
+    public async Task<TestUser> CreateUserAsync(bool isSystemOperator = false)
     {
         var factory = _factory ?? throw new InvalidOperationException("MongoDB is not available.");
         await using var scope = factory.Services.CreateAsyncScope();
@@ -145,7 +146,18 @@ public sealed class ApiFixture : IAsyncLifetime
 
         var user = new TestUser(Guid.CreateVersion7(), $"u{Guid.NewGuid():N}"[..13], "correct horse battery");
         await repository.AddAsync(
-            User.Create(user.Id, user.Username, $"{user.Username}@example.com", hasher.Hash(user.Password), "Ana Pérez", "+50670189220", DateTimeOffset.UtcNow),
+            User.Restore(
+                user.Id,
+                0,
+                user.Username,
+                $"{user.Username}@example.com",
+                hasher.Hash(user.Password),
+                "Ana Pérez",
+                "+50670189220",
+                DateTimeOffset.UtcNow,
+                0,
+                null,
+                isSystemOperator),
             CancellationToken.None);
         return user;
     }

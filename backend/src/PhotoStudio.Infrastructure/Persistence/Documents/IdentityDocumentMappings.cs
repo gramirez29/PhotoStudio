@@ -28,6 +28,7 @@ public static class IdentityDocumentMappings
             CreatedAt = user.CreatedAt.UtcDateTime,
             FailedLoginAttempts = user.FailedLoginAttempts,
             LockedUntil = user.LockedUntil?.UtcDateTime,
+            IsSystemOperator = user.IsSystemOperator,
         };
     }
 
@@ -49,7 +50,8 @@ public static class IdentityDocumentMappings
             document.Phone,
             ToOffset(document.CreatedAt),
             document.FailedLoginAttempts,
-            document.LockedUntil is null ? null : ToOffset(document.LockedUntil.Value));
+            document.LockedUntil is null ? null : ToOffset(document.LockedUntil.Value),
+            document.IsSystemOperator);
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ namespace PhotoStudio.Application.Identity;
 /// <param name="Username">Login name of the user.</param>
 /// <param name="Email">Email of the user; empty for users created before the email existed.</param>
 /// <param name="Name">Display name of the user.</param>
+/// <param name="IsSystemOperator">Whether the user may run system-wide work; the app uses it only to show or hide that action, the API enforces it with the token.</param>
 public sealed record AuthSessionResponse(
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAt,
@@ -19,4 +20,5 @@ public sealed record AuthSessionResponse(
     Guid PhotographerId,
     string Username,
     string Email,
-    string Name);
+    string Name,
+    bool IsSystemOperator);

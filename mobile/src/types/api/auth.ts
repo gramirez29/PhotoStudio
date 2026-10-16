@@ -16,6 +16,16 @@ export interface AuthSessionResponse {
   readonly email: string;
   /** Display name of the user. */
   readonly name: string;
+  /** Whether the user may run system-wide work. Only decides what the app shows; the backend enforces it with the token. */
+  readonly isSystemOperator: boolean;
+}
+
+/** Body to change the password (backend `ChangePasswordRequest`). */
+export interface ChangePasswordRequest {
+  /** Password the user has now. */
+  readonly currentPassword: string;
+  /** Password the user wants: 8 to 128 characters. */
+  readonly newPassword: string;
 }
 
 /** Body to create an account (backend `RegisterRequest`). */

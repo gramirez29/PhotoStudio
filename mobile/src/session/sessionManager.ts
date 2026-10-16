@@ -21,7 +21,7 @@ let renewalInFlight: Promise<string | null> | null = null;
  * @param session Session returned by sign-in or by a renewal.
  * @returns A promise that resolves when the session is in place.
  */
-async function adoptSession(session: AuthSessionResponse): Promise<void> {
+export async function adoptSession(session: AuthSessionResponse): Promise<void> {
   currentRefreshToken = session.refreshToken;
   await saveRefreshToken(session.refreshToken);
   useSessionStore.getState().setSignedIn({
@@ -31,6 +31,7 @@ async function adoptSession(session: AuthSessionResponse): Promise<void> {
     username: session.username,
     email: session.email,
     name: session.name,
+    isSystemOperator: session.isSystemOperator,
   });
 }
 

@@ -49,6 +49,10 @@ public sealed class UserDocument
     /// <summary>Gets or sets the instant the lock ends (UTC), when the account is locked.</summary>
     [BsonElement("lockedUntil")]
     public DateTime? LockedUntil { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the user may run system-wide work. Absent in older documents, which read as false.</summary>
+    [BsonElement("isSystemOperator")]
+    public bool IsSystemOperator { get; set; }
 }
 
 /// <summary>

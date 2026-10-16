@@ -1,4 +1,5 @@
 import { env } from '../config/env';
+import { createAccountApi } from './accountApi';
 import { createBillingApi } from './billingApi';
 import { createBookingsApi } from './bookingsApi';
 import { createHealthApi } from './healthApi';
@@ -21,6 +22,9 @@ export const maintenanceApi = createMaintenanceApi(httpClient);
 
 /** Billing endpoints (settlements and refunds). */
 export const billingApi = createBillingApi(httpClient);
+
+/** Account endpoints of the signed-in user (change password). */
+export const accountApi = createAccountApi(httpClient);
 
 /** Notification inbox endpoints. */
 export const notificationsApi = createNotificationsApi(httpClient);

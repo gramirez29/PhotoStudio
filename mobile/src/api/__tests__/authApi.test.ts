@@ -12,6 +12,7 @@ const sessionPayload = {
   username: 'ana',
   email: 'ana@example.com',
   name: 'Ana Pérez',
+  isSystemOperator: false,
 } as const;
 
 describe('parseAuthSession', () => {

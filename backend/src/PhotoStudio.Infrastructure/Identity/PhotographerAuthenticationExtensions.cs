@@ -20,6 +20,12 @@ public static class PhotographerAuthenticationExtensions
     public const string RegistrationEnabledVariable = "AUTH_REGISTRATION_ENABLED";
 
     /// <summary>
+    /// Name of the authorization policy of the endpoints that run work for every photographer. Only users with the system
+    /// operator role in their token pass it.
+    /// </summary>
+    public const string SystemOperatorPolicy = "system-operator";
+
+    /// <summary>
     /// Maximum difference tolerated between the clock of the API and the expiry of a token.
     /// </summary>
     public static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
@@ -69,7 +75,10 @@ public static class PhotographerAuthenticationExtensions
 
         // Secure by default: an endpoint is public only when it says so with AllowAnonymous.
         services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            .AddPolicy(SystemOperatorPolicy, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireClaim(JwtAccessTokenIssuer.SystemRoleClaimType, JwtAccessTokenIssuer.SystemRoleValue));
 
         return services;
     }

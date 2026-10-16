@@ -56,11 +56,12 @@ public sealed class AccessTokenValidationApiTests(ApiFixture fixture)
     }
 
     /// <summary>
-    /// A valid token reaches the maintenance endpoint.
+    /// A signed-in user without the system operator role cannot run the maintenance pass, which works on every
+    /// photographer's data.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task MaintenanceEndpoint_WithAValidToken_Answers200()
+    public async Task MaintenanceEndpoint_WithAnOrdinaryUser_Answers403()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var client = fixture.CreateClient();
@@ -68,8 +69,45 @@ public sealed class AccessTokenValidationApiTests(ApiFixture fixture)
 
         var response = await client.SendAsync(HttpMethod.Post, "/api/maintenance/run", session.AccessToken);
 
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>
+    /// A system operator reaches the maintenance endpoint.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task MaintenanceEndpoint_WithASystemOperator_Answers200()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var client = fixture.CreateClient();
+        var session = await client.LoginAsync(await fixture.CreateUserAsync(isSystemOperator: true));
+
+        var response = await client.SendAsync(HttpMethod.Post, "/api/maintenance/run", session.AccessToken);
+
         // The shared maintenance limiter allows one call per minute for the whole API; another test may have used it.
         response.StatusCode.ShouldBeOneOf(HttpStatusCode.OK, HttpStatusCode.TooManyRequests);
+    }
+
+    /// <summary>
+    /// The session response tells the app whether the user is a system operator, and registration never makes one.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task SessionResponse_ReportsTheSystemOperatorRole()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var client = fixture.CreateClient();
+        var operatorAccount = await fixture.CreateUserAsync(isSystemOperator: true);
+        var ordinaryAccount = await fixture.CreateUserAsync();
+
+        var operatorSession = await (await client.LoginRawAsync(operatorAccount.Username, operatorAccount.Password)).ReadJsonAsync();
+        var ordinarySession = await (await client.LoginRawAsync(ordinaryAccount.Username, ordinaryAccount.Password)).ReadJsonAsync();
+        var registered = await (await client.RegisterRawAsync($"r{Guid.NewGuid():N}"[..13])).ReadJsonAsync();
+
+        operatorSession.GetProperty("isSystemOperator").GetBoolean().ShouldBeTrue();
+        ordinarySession.GetProperty("isSystemOperator").GetBoolean().ShouldBeFalse();
+        registered.GetProperty("isSystemOperator").GetBoolean().ShouldBeFalse();
     }
 
     /// <summary>

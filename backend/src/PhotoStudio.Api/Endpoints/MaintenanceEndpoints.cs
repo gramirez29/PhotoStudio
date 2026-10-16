@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Maintenance.RunMaintenance;
+using PhotoStudio.Infrastructure.Identity;
 
 namespace PhotoStudio.Api.Endpoints;
 
@@ -19,7 +20,9 @@ public static class MaintenanceEndpoints
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        var group = endpoints.MapGroup("/api/maintenance").WithTags("Maintenance").RequireAuthorization();
+        // The pass works on every photographer's data, so it is limited to system operators, not to any signed-in user.
+        var group = endpoints.MapGroup("/api/maintenance").WithTags("Maintenance")
+            .RequireAuthorization(PhotographerAuthenticationExtensions.SystemOperatorPolicy);
 
         group.MapPost("/run", RunAsync)
             .WithName("RunMaintenance")
@@ -34,7 +37,7 @@ public static class MaintenanceEndpoints
     /// </summary>
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
-    /// <returns>200 with what the pass did.</returns>
+    /// <returns>200 with what the pass did; 403 when the user is not a system operator.</returns>
     private static async Task<Ok<MaintenanceResponse>> RunAsync(
         ICommandHandler<RunMaintenanceCommand, MaintenanceResponse> handler,
         CancellationToken cancellationToken) =>

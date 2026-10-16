@@ -51,6 +51,7 @@ function backendSession(overrides: Partial<AuthSessionResponse> = {}): AuthSessi
     username: 'ana',
     email: 'ana@example.com',
     name: 'Ana Pérez',
+    isSystemOperator: false,
     ...overrides,
   };
 }
