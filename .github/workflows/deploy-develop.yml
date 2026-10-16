@@ -1,0 +1,127 @@
+name: Deploy develop
+
+# Every push to develop runs the whole CI and, only if it passes, publishes the three pieces of the develop environment:
+# the site (Cloudflare Pages), the API and the worker (Railway, with the Railway CLI). Nothing is deployed from a pull request.
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and a deploy that is already running is finished, not cancelled halfway.
+concurrency:
+  group: deploy-develop
+  cancel-in-progress: false
+
+env:
+  # Version of the Railway CLI, pinned: it runs with a token that can deploy.
+  RAILWAY_CLI_VERSION: 5.69.0
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  site:
+    name: Site to Cloudflare Pages
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The secrets and variables live in the "develop" environment of the repository, so a pull request from a fork never sees them.
+    environment:
+      name: develop
+      url: ${{ vars.SITE_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: portal/package-lock.json
+
+      - name: Build the site
+        working-directory: portal
+        env:
+          # Public values: they end up in the bundle. The secrets never reach the build.
+          VITE_API_URL: ${{ vars.API_URL }}
+          VITE_ENVIRONMENT: develop
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: portal
+          # develop is the production branch of this Pages project, so the deploy is served by its custom domain.
+          command: pages deploy dist --project-name=${{ vars.PAGES_PROJECT }} --branch=develop --commit-dirty=true
+
+  api:
+    name: API to Railway
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: develop
+      url: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Install the Railway CLI
+        run: npm install --global "@railway/cli@${RAILWAY_CLI_VERSION}"
+
+      # The folder is uploaded as the root of the service, so backend/railway.json (Dockerfile, health check) is the one used.
+      # --ci streams the build and fails this job if the build fails.
+      - name: Deploy the API
+        env:
+          # Project token of the develop environment (Railway: Project settings > Tokens). It cannot touch any other environment.
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up ./backend --path-as-root --service photostudio-api --environment develop --ci
+
+      # Railway only switches traffic to the new version after its own health check passes, so this confirms the API answers
+      # after the deploy; it cannot tell the old version from the new one.
+      - name: Wait for the API to answer
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          curl --fail --silent --show-error --location \
+            --retry 30 --retry-delay 10 --retry-all-errors --retry-connrefused \
+            --output /dev/null "${API_URL}/health/ready"
+          echo "The API answers at ${API_URL}"
+
+  worker:
+    name: Worker to Railway
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: develop
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Install the Railway CLI
+        run: npm install --global "@railway/cli@${RAILWAY_CLI_VERSION}"
+
+      # The worker is the same code and image as the API with its own configuration (start command and cron). Railway reads
+      # railway.json from the root of what is uploaded, so the worker file is put under that name in a copy of the folder.
+      - name: Prepare the worker upload
+        run: |
+          cp -r backend "${RUNNER_TEMP}/worker"
+          cp backend/railway.worker.json "${RUNNER_TEMP}/worker/railway.json"
+
+      - name: Deploy the worker
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up "${RUNNER_TEMP}/worker" --path-as-root --service photostudio-worker --environment develop --ci

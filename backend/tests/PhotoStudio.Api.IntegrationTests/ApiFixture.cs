@@ -41,6 +41,11 @@ public sealed class ApiFixture : IAsyncLifetime
     /// </summary>
     public const string Audience = "photostudio-app";
 
+    /// <summary>
+    /// Public address of the portal in the tests; it is the origin CORS allows besides the local development server.
+    /// </summary>
+    public const string PortalBaseUrl = "https://portal.example.test";
+
     private const string ConnectionStringVariable = "MONGODB_TEST_CONNECTION_STRING";
     private const string DefaultConnectionString = "mongodb://localhost:27019/?directConnection=true";
 
@@ -90,6 +95,7 @@ public sealed class ApiFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("MONGODB_DATABASE_NAME", DatabaseName);
         Environment.SetEnvironmentVariable("JWT_SIGNING_KEY", SigningKey);
         Environment.SetEnvironmentVariable("AUTH_REGISTRATION_ENABLED", null);
+        Environment.SetEnvironmentVariable("PORTAL_BASE_URL", PortalBaseUrl);
 
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {

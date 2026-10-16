@@ -59,7 +59,7 @@ Fotógrafo                         API                              Cliente
 |---|---|
 | `RESEND_API_KEY` | Clave de Resend (*Sending access*, restringida al dominio). Sin ella: en Development el correo se **escribe en el log**; en producción el envío falla con 503 y la API sigue arrancando |
 | `EMAIL_FROM` | Remitente, p. ej. `PhotoSense Studio <no-reply@mail.photosensestudio.com>`. Obligatoria si hay clave |
-| `PORTAL_BASE_URL` | Dirección pública del portal (default `https://book.photosensestudio.com`); con ella se arma `…/b/{token}` y es el origen que CORS permite |
+| `PORTAL_BASE_URL` | Dirección pública del **sitio** (p. ej. `https://develop.photosensestudio.com`); con ella se arma `…/b/{token}` y es el origen que CORS permite. **Obligatoria fuera de Development** (la API no arranca sin ella); en Development vale `http://localhost:5173` |
 | `PORTAL_ORIGINS` | Opcional. Orígenes extra permitidos por CORS, separados por comas (p. ej. una vista previa de Pages: `https://preview.pages.dev`). Solo orígenes `http(s)` sin ruta; un valor inválido (`*`, con ruta) detiene la API al arrancar |
 
 En local no hace falta nada: el código de verificación aparece en el log de la API, y en Development CORS ya permite `http://localhost:5173` y `http://127.0.0.1:5173` (el servidor de Vite).
@@ -77,7 +77,7 @@ El portal es una página web en otro origen que el API, así que el navegador ex
 ## 6. Pendiente
 
 - ~~**App del fotógrafo**~~ Hecho: campo de correo (opcional) al crear la reserva, tarjeta "Enlace del cliente" (crea el enlace y abre WhatsApp con el mensaje) y tarjeta "Comprobantes por verificar" (verificar con confirmación, rechazar con motivo). Queda sin pantalla para **agregar el correo a una reserva que ya existe** (no hay endpoint para editarlo).
-- **Portal web** (React 19 + Vite, `book.photosensestudio.com`).
+- **Portal web** (React 19 + Vite, en el mismo sitio que la página principal; ver `docs/Deployment.md`).
 - **Aviso al fotógrafo** cuando llega un comprobante (`PaymentSubmitted`; hoy lo ve al abrir la reserva).
 - **Firma del contrato por el cliente** (B2, canal Portal) y la autorización de imagen.
 - **Comprobante como imagen** (necesita R2 y URLs prefirmadas).

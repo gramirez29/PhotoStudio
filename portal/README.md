@@ -43,17 +43,10 @@ colores viven solo en `src/theme/tokens.css`; `tokens.test.ts` comprueba el cont
 El terracota claro (`#C4552E`) da 4,08:1 sobre el fondo crema: se usa como relleno de botón con texto grande y en negrita y como
 borde, nunca como color de texto corrido.
 
-## Despliegue (Cloudflare Pages)
+## Despliegue
 
-| Ajuste | Valor |
-|---|---|
-| Directorio raíz | `portal` |
-| Comando de build | `npm run build` |
-| Directorio de salida | `dist` |
-| Versión de Node | 22 (variable `NODE_VERSION`) |
-| Variable | `VITE_API_URL=https://api.photosensestudio.com` |
-| Dominio | `book.photosensestudio.com` |
+El sitio (página principal en `/` y portal en `/b/{token}`) se publica en Cloudflare Pages desde GitHub Actions al hacer push a `develop`, solo si el CI pasa. Los pasos para ponerlo en marcha, los dominios y las variables están en `docs/Deployment.md`.
 
-`public/_redirects` hace que cualquier ruta sirva la app (SPA) y `public/_headers` pone las cabeceras de seguridad
-(`Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`, CSP). Si cambia el dominio del API, actualiza `connect-src` en
-`_headers`.
+Variables de compilación (públicas, terminan en el paquete): `VITE_API_URL` (dirección del API) y `VITE_ENVIRONMENT` (`develop` muestra la franja "Ambiente de pruebas"; vacío en producción).
+
+`public/_redirects` hace que cualquier ruta sirva la app (SPA), `public/_headers` pone las cabeceras de seguridad (`Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex`, CSP) y `public/robots.txt` pide no indexar. El sitio no se indexa mientras la página principal no tenga su contenido definitivo.

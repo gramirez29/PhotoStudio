@@ -4,6 +4,8 @@
 interface ImportMetaEnv {
   /** Address of the PhotoStudio API. */
   readonly VITE_API_URL?: string;
+  /** Name of the test environment this build is for (`develop`); missing in production. */
+  readonly VITE_ENVIRONMENT?: string;
 }
 
 /** Shape of `import.meta` with the variables above. */

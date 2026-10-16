@@ -3,7 +3,7 @@ namespace PhotoStudio.Application.Portal;
 /// <summary>
 /// Settings of the client portal.
 /// </summary>
-/// <param name="BaseUrl">Public address of the portal, without a trailing slash, for example <c>https://book.photosensestudio.com</c>.</param>
+/// <param name="BaseUrl">Public address of the portal, without a trailing slash, for example <c>https://develop.photosensestudio.com</c>.</param>
 public sealed record PortalSettings(string BaseUrl)
 {
     /// <summary>

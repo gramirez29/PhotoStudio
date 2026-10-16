@@ -13,7 +13,7 @@ namespace PhotoStudio.Api.IntegrationTests;
 public sealed class PortalCorsTests(ApiFixture fixture)
 {
     private const string SkipReason = "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.";
-    private const string PortalOrigin = "https://book.photosensestudio.com";
+    private const string PortalOrigin = "https://portal.example.test";
 
     /// <summary>
     /// The preflight of the portal origin is answered without a token and lists what the portal needs.

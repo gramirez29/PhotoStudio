@@ -38,4 +38,7 @@ COPY --from=build /app/publish .
 COPY --from=build /app/publish-worker ./worker
 
 USER $APP_UID
-ENTRYPOINT ["dotnet", "PhotoStudio.Api.dll"]
+
+# CMD and not ENTRYPOINT: the worker service runs the same image with a start command of its own
+# (dotnet worker/PhotoStudio.Worker.dll), which replaces CMD cleanly. With an ENTRYPOINT it could be appended to it as arguments.
+CMD ["dotnet", "PhotoStudio.Api.dll"]

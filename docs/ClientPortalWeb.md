@@ -43,10 +43,9 @@ enlace inválido   (sin correo: "Pídele a tu fotógrafo que agregue tu correo")
 - Open Graph genérico, sin datos de la reserva (vista previa de WhatsApp). Sin analíticas ni scripts de terceros.
 - El token no se guarda en `localStorage` ni en logs.
 
-## 5. Despliegue (Cloudflare Pages)
-Build `npm run build` desde `portal/`, salida `dist/`; fallback de SPA con `_redirects` (`/* /index.html 200`); variable
-`VITE_API_URL=https://api.photosensestudio.com`. DNS: `book.photosensestudio.com` → Pages y `api.photosensestudio.com` → Railway
-(los dos hacen falta antes de que un cliente real lo use).
+## 5. Despliegue
+
+Ver `docs/Deployment.md`: un solo sitio (página principal en `/` y portal en `/b/{token}`) en Cloudflare Pages, publicado desde GitHub Actions; ambiente `develop` en `develop.photosensestudio.com` con la API en `develop-api.photosensestudio.com`.
 
 ## 6. Entregas
 | # | Contenido | Estado |
