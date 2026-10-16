@@ -42,8 +42,7 @@ El sitio de develop se marca con una franja **"Ambiente de pruebas"** (`VITE_ENV
 |---|---|
 | `.github/workflows/ci.yml` | Compila y prueba backend (con MongoDB en réplica), construye la imagen de producción, y verifica mobile y portal. Corre en cada pull request y lo reutiliza el despliegue |
 | `.github/workflows/deploy-develop.yml` | En cada push a `develop`: CI y, solo si pasa, publica sitio, API y worker |
-| `backend/railway.json` | Servicio API: construye el `Dockerfile`, health check `/health/ready`, reinicia ante fallos |
-| `backend/railway.worker.json` | Servicio worker: comando `dotnet worker/PhotoStudio.Worker.dll`, cron `*/15 * * * *`, sin reinicio. El workflow lo sube como `railway.json` (Railway lee ese nombre en la raíz de lo que se sube) |
+| `backend/scripts/configure-railway.mjs` | Fija los ajustes de construcción y arranque de los dos servicios de Railway (Dockerfile; API con health check `/health/ready`; worker con su comando y su cron `*/15 * * * *`). Es repetible: compara y solo escribe si algo difiere |
 | `backend/Dockerfile` | Usa `CMD` (no `ENTRYPOINT`): el worker usa la misma imagen con otro comando |
 | `portal/public/_headers`, `_redirects`, `robots.txt` | Cabeceras de seguridad, rutas de la SPA y no indexar |
 
@@ -74,7 +73,7 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
 
 ### 3.3 Railway
 1. **Proyecto** `photosense`. Crea el ambiente `develop` (Project → Environments → *New Environment*). Todo lo siguiente va en ese ambiente.
-2. **Servicio API:** *New → Empty Service* → nómbralo exactamente `photostudio-api`. **No lo conectes a GitHub**: el código lo sube el workflow. La configuración (Dockerfile, health check, reinicio) viene de `railway.json` en lo que se sube.
+2. **Servicio API:** *New → Empty Service* → nómbralo exactamente `photostudio-api`. **No lo conectes a GitHub**: el código lo sube el workflow.
 3. **Variables de la API:**
 
    | Variable | Valor |
@@ -88,6 +87,8 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
    | `AUTH_REGISTRATION_ENABLED` | `true` hasta crear tu cuenta; luego `false` |
 
    No definas `ASPNETCORE_ENVIRONMENT`: por defecto es *Production*, que rechaza la clave de desarrollo y no abre CORS al servidor local de Vite. `PORT` lo pone Railway.
+
+   > **Los símbolos `<` y `>` de los ejemplos son marcadores, no parte del valor.** Si los dejas pegados, la API no arranca (`The connection string '<mongodb+srv://…>' is not valid`) y la clave de Resend o la de JWT quedan mal. El primer despliegue falló por esto.
 4. **Dominio de la API:** Settings → Networking → *Custom Domain* → `develop-api.photosensestudio.com`, puerto **8080**. Railway muestra un destino (`xxxx.up.railway.app`): crea en Cloudflare un registro **CNAME** `develop-api` → ese destino, con el proxy **desactivado (nube gris, "DNS only")** para que Railway valide y emita su certificado.
 5. **Servicio worker:** *New → Empty Service* → `photostudio-worker`. Sin dominio público y sin health check.
 6. **Variables del worker:**
@@ -99,6 +100,11 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
    | `WORKER_RUN_ONCE` | `true` |
 
 7. **Token del ambiente:** Project settings → **Tokens** → ambiente `develop` → crear → copiarlo. Es un **token de proyecto**: solo sirve para ese ambiente. Cuando exista producción tendrá el suyo, guardado en su propio *environment* de GitHub.
+8. **Ajustes de los servicios** (una vez, y de nuevo si cambian). Railway **no aplica** la sección `deploy` de un `railway.json` subido con `railway up` (el servicio del worker arrancó la API), así que esos ajustes se fijan en el servicio con un script. Necesita haber iniciado sesión (`npx @railway/cli@5.69.0 login`) y el ID del proyecto (Project settings → General):
+   ```powershell
+   node backend/scripts/configure-railway.mjs --project <id-del-proyecto> --environment develop
+   ```
+   Con `--dry-run` muestra lo que aplicaría sin escribir. Si ya está aplicado responde `Already up to date`.
 
 ### 3.4 GitHub
 1. **Environment:** Settings → Environments → *New environment* → `develop`.
@@ -136,15 +142,22 @@ Haz un push (o *Run workflow* en Actions → *Deploy develop*) y comprueba:
 - **Costo:** Atlas M0, Pages y Actions (repositorio público) son gratis. Railway Hobby son 5 USD con 5 USD de consumo incluidos; la API y el worker de develop cuentan contra eso.
 - **Si la construcción de Railway falla,** el job falla (`--ci`) y la versión anterior sigue sirviendo. Si construye pero la nueva versión no pasa el health check, Railway tampoco cambia el tráfico; y como la espera de `/health/ready` responde con la versión anterior, **el job puede salir verde aunque el despliegue haya fallado**. Tras cada despliegue conviene mirar Railway → Deployments hasta tener un mecanismo que distinga versiones.
 
-## 5. Lo que no pude verificar desde aquí
-No tengo acceso a Railway ni a Cloudflare, así que esto está escrito del CLI y de la documentación, y conviene confirmarlo al hacerlo:
+## 5. Lo que se comprobó y lo que no
 
-- Que `railway up ./backend --path-as-root --service … --environment develop --ci` con un **token de proyecto** (`RAILWAY_TOKEN`) despliegue en un servicio vacío sin pedir un proyecto enlazado. Las opciones existen (las comprobé en `railway up --help` de la versión 5.69.0), pero el comportamiento con el token no.
-- Que Railway use el `railway.json` de lo que se sube (el worker depende de ello para su cron y su comando). Si no lo hiciera, el comando y el cron se ponen a mano en Settings → Deploy según `docs/Outbox-Worker Functionality.md` §17.7.
-- Que `--ci` haga fallar el job cuando la construcción falla.
+**Comprobado en el primer despliegue real:**
+
+- `railway up ./backend --path-as-root --service … --environment develop --ci` con un **token de proyecto** (`RAILWAY_TOKEN`) despliega en un servicio vacío: sube, construye con el Dockerfile y termina.
+- **Railway no aplica la sección `deploy` de un `railway.json` subido con el CLI.** El worker arrancó el programa de la API (por eso falló con `JWT_SIGNING_KEY is not set`) porque su comando de inicio y su cron no se aplicaron; el health check de la API tampoco. La parte de construcción del archivo sí se aplicó. Por eso los ajustes viven en el servicio (`configure-railway.mjs`) y no hay `railway.json` en el repositorio.
+- `railway environment edit --service-config <servicio> <ruta> <valor>` respondió `No changes to apply` y no aplicó nada con la versión 5.69.0; el parche JSON por la entrada estándar sí funciona, y es lo que usa el script.
+- Con los ajustes y las variables correctos, la API respondió `200` en `/health/ready` por el dominio de Railway y por `develop-api.photosensestudio.com`.
+
+**Sin comprobar todavía:**
+
+- Que `--ci` haga fallar el job cuando la construcción falla (solo lo vimos con construcciones que terminaron bien).
 - Que Pages ofrezca el dominio personalizado sin pasos extra cuando el proyecto se crea con `wrangler`.
+- La primera pasada del cron del worker en Railway.
 
-Lo que sí verifiqué: la imagen de Docker compila y arranca la API por defecto; los workflows pasan `actionlint`; el sitio compila con `npm run build`.
+Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arranca la API por defecto; los workflows pasan `actionlint`; el sitio compila con `npm run build`.
 
 ## 6. Pendiente
 

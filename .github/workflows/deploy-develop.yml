@@ -110,7 +110,8 @@ jobs:
       - name: Install the Railway CLI
         run: npm install --global "@railway/cli@${RAILWAY_CLI_VERSION}"
 
-      # The folder is uploaded as the root of the service, so backend/railway.json (Dockerfile, health check) is the one used.
+      # The folder is uploaded as the root of the service (Dockerfile included). The build, the health check and the restart
+      # policy are settings of the service in Railway (backend/scripts/configure-railway.mjs).
       # --ci streams the build and fails this job if the build fails.
       - name: Deploy the API
         env:
@@ -155,14 +156,9 @@ jobs:
       - name: Install the Railway CLI
         run: npm install --global "@railway/cli@${RAILWAY_CLI_VERSION}"
 
-      # The worker is the same code and image as the API with its own configuration (start command and cron). Railway reads
-      # railway.json from the root of what is uploaded, so the worker file is put under that name in a copy of the folder.
-      - name: Prepare the worker upload
-        run: |
-          cp -r backend "${RUNNER_TEMP}/worker"
-          cp backend/railway.worker.json "${RUNNER_TEMP}/worker/railway.json"
-
+      # The worker is the same code and image as the API. What makes it a worker (its start command and its cron) is a setting
+      # of the service in Railway, applied with backend/scripts/configure-railway.mjs: a railway.json uploaded here is not honored.
       - name: Deploy the worker
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up "${RUNNER_TEMP}/worker" --path-as-root --service photostudio-worker --environment develop --ci
+        run: railway up ./backend --path-as-root --service photostudio-worker --environment develop --ci
