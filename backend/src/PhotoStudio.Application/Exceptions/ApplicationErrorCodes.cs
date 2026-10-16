@@ -34,4 +34,16 @@ public static class ApplicationErrorCodes
 
     /// <summary>The refresh token is unknown, expired or was already used; the user must sign in again.</summary>
     public const string InvalidRefreshToken = "auth.invalid_refresh_token";
+
+    /// <summary>The email could not be sent (provider not configured or it refused the message).</summary>
+    public const string EmailDeliveryFailed = "email.delivery_failed";
+
+    /// <summary>A verification code was requested too soon or too many times.</summary>
+    public const string OtpRateLimited = "portal.otp_rate_limited";
+
+    /// <summary>The booking has no client email, so no verification code can be sent.</summary>
+    public const string EmailMissing = "portal.email_missing";
+
+    /// <summary>The verification code is wrong, expired or spent (the response never says which).</summary>
+    public const string InvalidCode = "portal.invalid_code";
 }

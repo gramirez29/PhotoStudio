@@ -18,6 +18,7 @@ namespace PhotoStudio.Api.Endpoints;
 /// <param name="Currency">ISO 4217 currency code, for example "CRC".</param>
 /// <param name="SessionStart">Session start, with offset.</param>
 /// <param name="SessionEnd">Session end, with offset.</param>
+/// <param name="ClientEmail">Client email, optional. The client portal sends its verification codes there.</param>
 public sealed record CreateBookingRequest(
     string ClientName,
     string ClientPhone,
@@ -25,7 +26,8 @@ public sealed record CreateBookingRequest(
     decimal PackagePrice,
     string Currency,
     DateTimeOffset SessionStart,
-    DateTimeOffset SessionEnd);
+    DateTimeOffset SessionEnd,
+    string? ClientEmail = null);
 
 /// <summary>
 /// HTTP body to register a contract signed in person or on paper.
@@ -85,7 +87,8 @@ public static class BookingRequestMappings
             request.PackagePrice,
             request.Currency,
             request.SessionStart,
-            request.SessionEnd);
+            request.SessionEnd,
+            request.ClientEmail);
     }
 
     /// <summary>

@@ -1,0 +1,73 @@
+# Portal del cliente (API)
+
+Lo que el cliente hace a través del enlace de su reserva. Este documento cubre el **backend**; el portal web (React) y las
+pantallas del fotógrafo para compartir el enlace y verificar comprobantes son la siguiente entrega.
+
+## 1. Flujo
+
+```
+Fotógrafo                         API                              Cliente
+   │ POST /api/bookings/{id}/link ─▶ crea token (256 bits), guarda su hash
+   │◀── { token, url, expiresAt }     (el token solo se ve aquí)
+   │ comparte la url por WhatsApp ─────────────────────────────────▶ abre /b/{token}
+   │                                  GET /public/bookings/{token} ◀── ver cotización y estado (sin OTP)
+   │                                  POST …/code ◀──────────────────── pide código
+   │                                  envía el código al CORREO de la reserva (Resend)
+   │                                  POST …/code/verify {code} ◀────── código recibido
+   │                                  ──▶ { accessToken } (sesión de portal, 30 min)
+   │                                  POST …/payments (Bearer) ◀─────── monto + referencia SINPE
+   │ ve el pago PendingVerification
+   │ POST …/payments/{id}/verify ───▶ cuenta para anticipo/saldo; confirma si hay contrato
+   │ POST …/payments/{id}/reject  ──▶ (motivo obligatorio) queda como evidencia
+```
+
+## 2. Endpoints
+
+| Método | Ruta | Auth | Respuestas |
+|---|---|---|---|
+| POST | `/api/bookings/{id}/link` | Fotógrafo | **201** `{ token, url, expiresAt }` · 404 si la reserva no es suya. Crear uno nuevo **revoca** el anterior |
+| POST | `/api/bookings/{id}/payments/{paymentId}/verify` | Fotógrafo | 200 reserva · 409 `payment.invalid_status` si no está pendiente · 422 `payment.not_found` |
+| POST | `/api/bookings/{id}/payments/{paymentId}/reject` | Fotógrafo | `{ reason }` obligatorio · 422 `booking.reason_required` |
+| GET | `/public/bookings/{token}` | Token del enlace (60/min/IP) | 200 vista del cliente · 404 |
+| POST | `/public/bookings/{token}/code` | Token (10/min/IP) | **202** `{ maskedEmail, expiresAt }` · 404 · 409 `portal.email_missing` · 429 `portal.otp_rate_limited` (+`Retry-After`) · 503 `email.delivery_failed` |
+| POST | `/public/bookings/{token}/code/verify` | Token (10/min/IP) | `{ code }` → 200 `{ accessToken, expiresAt }` · 422 `portal.invalid_code` · 404 |
+| POST | `/public/bookings/{token}/payments` | **Sesión de portal** (10/min/IP) | `{ amount, reference?, idempotencyKey }` → 200 vista · 401 sin sesión · 404 si la sesión es de otra reserva · 422 `money.invalid_amount` |
+
+## 3. Seguridad
+
+- **Token del enlace:** 256 bits aleatorios (`IRefreshTokenGenerator`, mismo generador que los refresh tokens), en Mongo solo el **hash** SHA-256 (`booking_links`, índice único). Un token desconocido, vencido o revocado responde **el mismo 404**. Vence 90 días después del fin de la sesión.
+- **El código solo va al correo que registró el fotógrafo.** El cliente nunca escribe una dirección, así que tener el enlace no basta para recibir el código en otro lado. Sin correo en la reserva: 409 `portal.email_missing`.
+- **Código (OTP):** 6 dígitos, 10 min, **un solo uso**, hash HMAC-SHA256 con la clave de firma y la reserva (un código tiene solo un millón de valores; un hash simple se invertiría al instante). Máximo 5 intentos: cada intento se cuenta con un `$inc` atómico **antes** de comparar, así que intentos en paralelo no evaden el límite (probado con 40 en paralelo). Un código mal formado no gasta intentos.
+- **Envío:** 60 s entre códigos de la misma reserva y 5 por hora, además del límite por IP.
+- **Sesión de portal:** JWT de 30 min, sin renovación, con audiencia `photosense-portal` y claim `bkg` (la reserva). Esquema de autenticación aparte (`PortalBearer`) y política `client-portal`: un token de portal **no abre** la API del fotógrafo (401) y uno del fotógrafo **no abre** las acciones del portal (401). La acción compara `bkg` con la reserva del enlace (404 si no coincide).
+- **La vista del cliente** (`PortalBookingResponse`) no incluye teléfono, correo, ids, política ni historial; solo nombre del fotógrafo y cliente, paquete, fechas, montos, estado de pagos, `canSubmitProof` y `canReceiveCode`.
+- **Comprobante:** el monto no puede superar el saldo menos lo que ya espera verificación; `idempotencyKey` obligatoria (doble toque = un solo pago); referencia opcional de hasta 100 caracteres que ve el fotógrafo.
+- El limitador va **después** de la autorización (ver `docs/Authentication.md` §19.1).
+
+## 4. Datos nuevos
+
+| Dónde | Qué |
+|---|---|
+| `bookings.clientEmail` | Opcional. Se envía en `POST /api/bookings` (`clientEmail`); se devuelve al fotógrafo. Reservas anteriores no lo tienen: el cliente no puede recibir códigos hasta que se agregue |
+| `bookings.payments[].reference` | Referencia SINPE del cliente |
+| `booking_links` | `tokenHash` (único), `bookingId`, `photographerId`, `expiresAt` (TTL +30 días), `revokedAt` |
+| `portal_otps` | Un documento por reserva (`_id` = reserva): `codeHash`, `expiresAt` (TTL +1 h), `failedAttempts`, `sendCount`, `windowStartedAt` |
+
+## 5. Configuración (solo la API)
+
+| Variable | Para qué |
+|---|---|
+| `RESEND_API_KEY` | Clave de Resend (*Sending access*, restringida al dominio). Sin ella: en Development el correo se **escribe en el log**; en producción el envío falla con 503 y la API sigue arrancando |
+| `EMAIL_FROM` | Remitente, p. ej. `PhotoSense Studio <no-reply@mail.photosensestudio.com>`. Obligatoria si hay clave |
+| `PORTAL_BASE_URL` | Dirección pública del portal (default `https://book.photosensestudio.com`); con ella se arma `…/b/{token}` |
+
+En local no hace falta nada: el código de verificación aparece en el log de la API.
+
+## 6. Pendiente
+
+- **App del fotógrafo:** campo de correo del cliente al crear la reserva, botón "Compartir enlace" (WhatsApp) y las acciones verificar/rechazar comprobante (hoy la app solo muestra "Próximamente").
+- **Portal web** (React 19 + Vite, `book.photosensestudio.com`).
+- **Aviso al fotógrafo** cuando llega un comprobante (`PaymentSubmitted`; hoy lo ve al abrir la reserva).
+- **Firma del contrato por el cliente** (B2, canal Portal) y la autorización de imagen.
+- **Comprobante como imagen** (necesita R2 y URLs prefirmadas).
+- Recibo por correo al verificar el pago.

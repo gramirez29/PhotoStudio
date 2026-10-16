@@ -27,6 +27,22 @@ public static class RateLimitingExtensions
     public const string RegisterPolicy = "register";
 
     /// <summary>
+    /// Name of the policy of the portal endpoint that reads a booking: 60 calls per minute per client address.
+    /// </summary>
+    public const string PortalReadPolicy = "portal-read";
+
+    /// <summary>
+    /// Name of the policy of the portal endpoints that send and check verification codes: 10 calls per minute per client
+    /// address. Every booking is also limited on its own, because the address is the only thing an attacker can change.
+    /// </summary>
+    public const string PortalCodePolicy = "portal-code";
+
+    /// <summary>
+    /// Name of the policy of the portal endpoints that change a booking: 10 calls per minute per client address.
+    /// </summary>
+    public const string PortalActionPolicy = "portal-action";
+
+    /// <summary>
     /// Stable error code returned when a request is rejected by the rate limiter.
     /// </summary>
     public const string RateLimitExceededCode = "rate_limit.exceeded";
@@ -65,9 +81,28 @@ public static class RateLimitingExtensions
                     Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
                 }));
+            AddPerAddressPolicy(options, PortalReadPolicy, 60);
+            AddPerAddressPolicy(options, PortalCodePolicy, 10);
+            AddPerAddressPolicy(options, PortalActionPolicy, 10);
             options.OnRejected = WriteRejectionAsync;
         });
     }
+
+    /// <summary>
+    /// Adds a policy that allows a number of calls per minute to each client address.
+    /// </summary>
+    /// <param name="options">Rate limiter options.</param>
+    /// <param name="name">Policy name.</param>
+    /// <param name="permitsPerMinute">Calls allowed per minute for one address.</param>
+    private static void AddPerAddressPolicy(RateLimiterOptions options, string name, int permitsPerMinute) =>
+        options.AddPolicy(name, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = permitsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
 
     /// <summary>
     /// Writes the 429 response as problem details, with the <c>Retry-After</c> header when the limiter knows it.

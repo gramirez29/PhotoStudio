@@ -31,6 +31,11 @@ public sealed class BookingDocument
     [BsonElement("clientPhone")]
     public string ClientPhone { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the client email. Absent in bookings created before it existed.</summary>
+    [BsonElement("clientEmail")]
+    [BsonIgnoreIfNull]
+    public string? ClientEmail { get; set; }
+
     /// <summary>Gets or sets the package name.</summary>
     [BsonElement("packageName")]
     public string PackageName { get; set; } = string.Empty;
@@ -199,6 +204,11 @@ public sealed class PaymentDocument
     /// <summary>Gets or sets the rejection reason.</summary>
     [BsonElement("rejectionReason")]
     public string? RejectionReason { get; set; }
+
+    /// <summary>Gets or sets the reference of the transfer given by the client with a SINPE Móvil proof.</summary>
+    [BsonElement("reference")]
+    [BsonIgnoreIfNull]
+    public string? Reference { get; set; }
 }
 
 /// <summary>

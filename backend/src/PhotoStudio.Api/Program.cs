@@ -7,6 +7,7 @@ using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application;
 using PhotoStudio.Infrastructure;
 using PhotoStudio.Infrastructure.Identity;
+using PhotoStudio.Infrastructure.Portal;
 
 // Composition root of the PhotoStudio API. Configuration comes from environment variables (Railway service variables).
 var builder = WebApplication.CreateBuilder(args);
@@ -33,8 +34,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddApplication();
 builder.Services.AddApplicationAuthentication();
+builder.Services.AddApplicationPortal();
 builder.Services.AddInfrastructure();
 builder.Services.AddPhotographerAuthentication(builder.Environment.IsDevelopment());
+builder.Services.AddClientPortal(builder.Environment.IsDevelopment());
 builder.Services.AddProblemDetails();
 builder.Services.AddApiRateLimiting();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -65,6 +68,8 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapAuthEndpoints();
 app.MapAccountEndpoints();
 app.MapBookingEndpoints();
+app.MapBookingPortalEndpoints();
+app.MapPortalEndpoints();
 app.MapNotificationEndpoints();
 app.MapBillingEndpoints();
 app.MapMaintenanceEndpoints();

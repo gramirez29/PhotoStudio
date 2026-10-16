@@ -25,6 +25,7 @@ public static class BookingDocumentMappings
             PhotographerId = booking.PhotographerId,
             ClientName = booking.Client.Name,
             ClientPhone = booking.Client.Phone,
+            ClientEmail = booking.Client.Email,
             PackageName = booking.PackageName,
             PackagePrice = booking.PackagePrice.Amount,
             Currency = booking.PackagePrice.Currency,
@@ -55,7 +56,7 @@ public static class BookingDocumentMappings
             document.Id,
             document.Version,
             document.PhotographerId,
-            ClientContact.Create(document.ClientName, document.ClientPhone),
+            ClientContact.Create(document.ClientName, document.ClientPhone, document.ClientEmail),
             document.PackageName,
             Money.Restore(document.PackagePrice, document.Currency),
             TimeSlot.Create(ToOffset(document.SlotStart), ToOffset(document.SlotEnd)),
@@ -144,6 +145,7 @@ public static class BookingDocumentMappings
         RecordedAt = payment.RecordedAt.UtcDateTime,
         ResolvedAt = payment.ResolvedAt?.UtcDateTime,
         RejectionReason = payment.RejectionReason,
+        Reference = payment.Reference,
     };
 
     /// <summary>
@@ -161,7 +163,8 @@ public static class BookingDocumentMappings
         document.IdempotencyKey,
         ToOffset(document.RecordedAt),
         ToNullableOffset(document.ResolvedAt),
-        document.RejectionReason);
+        document.RejectionReason,
+        document.Reference);
 
     /// <summary>
     /// Maps a transition to its document.

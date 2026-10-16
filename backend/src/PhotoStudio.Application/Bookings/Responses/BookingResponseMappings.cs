@@ -35,7 +35,8 @@ public static class BookingResponseMappings
             booking.Balance.ToResponse(),
             booking.Contract?.ToResponse(),
             [.. booking.Payments.Select(payment => payment.ToResponse())],
-            booking.GetAllowedActions(actor, now));
+            booking.GetAllowedActions(actor, now),
+            booking.Client.Email);
     }
 
     /// <summary>
@@ -77,7 +78,7 @@ public static class BookingResponseMappings
     public static PaymentResponse ToResponse(this Payment payment)
     {
         ArgumentNullException.ThrowIfNull(payment);
-        return new PaymentResponse(payment.Id, payment.Amount.ToResponse(), payment.Method, payment.Channel, payment.Status, payment.RecordedAt);
+        return new PaymentResponse(payment.Id, payment.Amount.ToResponse(), payment.Method, payment.Channel, payment.Status, payment.RecordedAt, payment.Reference);
     }
 
     /// <summary>

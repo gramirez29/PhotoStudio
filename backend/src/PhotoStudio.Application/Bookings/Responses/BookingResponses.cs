@@ -18,13 +18,15 @@ public sealed record MoneyResponse(decimal Amount, string Currency);
 /// <param name="Channel">Channel of the payment.</param>
 /// <param name="Status">Verification status.</param>
 /// <param name="RecordedAt">Instant the payment was recorded (UTC).</param>
+/// <param name="Reference">Reference of the transfer given by the client with a SINPE Móvil proof, if any.</param>
 public sealed record PaymentResponse(
     Guid Id,
     MoneyResponse Amount,
     PaymentMethod Method,
     Channel Channel,
     PaymentStatus Status,
-    DateTimeOffset RecordedAt);
+    DateTimeOffset RecordedAt,
+    string? Reference = null);
 
 /// <summary>
 /// Contract signature as exposed by the API.
@@ -54,6 +56,7 @@ public sealed record ContractResponse(string SignerName, string TemplateVersion,
 /// <param name="Contract">Contract signature, if signed.</param>
 /// <param name="Payments">Recorded payments.</param>
 /// <param name="AllowedActions">Actions the caller can perform right now.</param>
+/// <param name="ClientEmail">Client email, or <see langword="null"/> when the booking has none.</param>
 public sealed record BookingResponse(
     Guid Id,
     Guid PhotographerId,
@@ -70,7 +73,8 @@ public sealed record BookingResponse(
     MoneyResponse Balance,
     ContractResponse? Contract,
     IReadOnlyList<PaymentResponse> Payments,
-    IReadOnlyList<BookingAction> AllowedActions);
+    IReadOnlyList<BookingAction> AllowedActions,
+    string? ClientEmail = null);
 
 /// <summary>
 /// Compact booking for lists. The mobile app mirrors this shape in TypeScript; the full detail comes from <see cref="BookingResponse"/>.

@@ -293,9 +293,10 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="method">Payment method; only <see cref="PaymentMethod.SinpeMovil"/> proofs are accepted.</param>
     /// <param name="idempotencyKey">Idempotency key of the request.</param>
     /// <param name="now">Current instant.</param>
+    /// <param name="reference">Reference (confirmation number) of the transfer, so the photographer can find it in their bank; optional.</param>
     /// <returns>The pending payment, or the existing one for a repeated idempotency key.</returns>
-    /// <exception cref="DomainException">When the status, method or amount is not valid.</exception>
-    public Payment SubmitPaymentProof(Guid paymentId, Money amount, PaymentMethod method, string idempotencyKey, DateTimeOffset now)
+    /// <exception cref="DomainException">When the status, method, amount or reference is not valid.</exception>
+    public Payment SubmitPaymentProof(Guid paymentId, Money amount, PaymentMethod method, string idempotencyKey, DateTimeOffset now, string? reference = null)
     {
         EnsureStatus(nameof(SubmitPaymentProof), BookingStatus.Tentative, BookingStatus.Confirmed, BookingStatus.Completed);
 
@@ -312,7 +313,13 @@ public sealed class Booking : AggregateRoot<Guid>
 
         EnsurePositiveAmountInBookingCurrency(amount);
 
-        var payment = Payment.CreatePending(paymentId, amount, method, idempotencyKey.Trim(), now);
+        var trimmedReference = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim();
+        if (trimmedReference is not null && trimmedReference.Length > Payment.MaxReferenceLength)
+        {
+            throw new DomainException(DomainErrorCodes.RequiredValue, $"The proof reference cannot have more than {Payment.MaxReferenceLength} characters.");
+        }
+
+        var payment = Payment.CreatePending(paymentId, amount, method, idempotencyKey.Trim(), now, trimmedReference);
         _payments.Add(payment);
         Raise(new PaymentSubmitted(Id, payment.Id, amount.Amount, amount.Currency, now));
         return payment;

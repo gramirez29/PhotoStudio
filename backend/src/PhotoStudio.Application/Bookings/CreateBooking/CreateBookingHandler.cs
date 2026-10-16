@@ -43,7 +43,7 @@ public sealed class CreateBookingHandler(
         var booking = Booking.Create(
             Guid.CreateVersion7(now),
             command.PhotographerId,
-            ClientContact.Create(command.ClientName, command.ClientPhone),
+            ClientContact.Create(command.ClientName, command.ClientPhone, command.ClientEmail),
             command.PackageName,
             Money.Create(command.PackagePrice, command.Currency),
             slot,
