@@ -21,9 +21,10 @@ public static class ClientPortalExtensions
     public const string PortalBaseUrlVariable = "PORTAL_BASE_URL";
 
     /// <summary>
-    /// Address used when the variable is not set: the production portal.
+    /// Address used in Development when the variable is not set: the local server of the portal (Vite). Any other environment
+    /// must set the variable, because a default would silently put a wrong address in every link sent to a client.
     /// </summary>
-    public const string DefaultPortalBaseUrl = "https://book.photosensestudio.com";
+    public const string DevelopmentPortalBaseUrl = "http://localhost:5173";
 
     /// <summary>
     /// Name of the authentication scheme of portal sessions.
@@ -47,7 +48,7 @@ public static class ClientPortalExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         var options = JwtOptions.FromEnvironment(isDevelopment);
-        services.AddSingleton(new PortalSettings(ReadPortalBaseUrl()));
+        services.AddSingleton(new PortalSettings(ReadPortalBaseUrl(isDevelopment)));
         services.AddSingleton<IOtpCodeService, OtpCodeService>();
         services.AddSingleton<IPortalSessionIssuer, PortalSessionTokenIssuer>();
         AddEmailSender(services, isDevelopment);
@@ -131,14 +132,17 @@ public static class ClientPortalExtensions
     /// <summary>
     /// Reads the public address of the portal, without a trailing slash.
     /// </summary>
+    /// <param name="isDevelopment">Whether the API runs in the Development environment.</param>
     /// <returns>The address.</returns>
-    /// <exception cref="InvalidOperationException">When the variable is not an absolute http or https address.</exception>
-    private static string ReadPortalBaseUrl()
+    /// <exception cref="InvalidOperationException">When the variable is missing outside Development, or is not an absolute http or https address.</exception>
+    private static string ReadPortalBaseUrl(bool isDevelopment)
     {
         var value = Environment.GetEnvironmentVariable(PortalBaseUrlVariable);
         if (string.IsNullOrWhiteSpace(value))
         {
-            return DefaultPortalBaseUrl;
+            return isDevelopment
+                ? DevelopmentPortalBaseUrl
+                : throw new InvalidOperationException($"The environment variable '{PortalBaseUrlVariable}' is not set; it is the public address of the site, used in the links sent to clients.");
         }
 
         var trimmed = value.Trim().TrimEnd('/');

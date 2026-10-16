@@ -115,3 +115,19 @@ button {
 .stack--tight {
   gap: var(--space-xs);
 }
+
+.environment-banner {
+  background: var(--color-surface);
+  border-bottom: 4px solid var(--color-accent);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+}
+
+a {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

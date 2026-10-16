@@ -4,9 +4,9 @@ import { ResponseShapeError } from '../api/guards';
 import { portalBooking, SAMPLE_TOKEN } from '../test/fixtures';
 import { describeLoadError } from './apiErrors';
 import { depositDue, hasProofInReview, nextSteps } from './booking';
-import { DEFAULT_API_URL, normalizeApiUrl } from './env';
+import { DEFAULT_API_URL, normalizeApiUrl, normalizeEnvironment } from './env';
 import { formatDateTime, formatDay, formatMoney, formatTimeRange } from './format';
-import { parseTokenFromPath } from './route';
+import { parseTokenFromPath, resolveRoute } from './route';
 
 describe('parseTokenFromPath', () => {
   it('reads the token of a booking link, with or without a trailing slash', () => {
@@ -136,5 +136,31 @@ describe('describeLoadError', () => {
 
     expect(view.title).toContain(title);
     expect(view.canRetry).toBe(true);
+  });
+});
+
+describe('resolveRoute', () => {
+  it('shows the main page at the root', () => {
+    expect(resolveRoute('/')).toEqual({ kind: 'home' });
+    expect(resolveRoute('')).toEqual({ kind: 'home' });
+  });
+
+  it('opens a booking for a link', () => {
+    expect(resolveRoute(`/b/${SAMPLE_TOKEN}`)).toEqual({ kind: 'booking', token: SAMPLE_TOKEN });
+  });
+
+  it.each(['/b/short', '/about', '/b', `/b/${SAMPLE_TOKEN}/more`])('says %p is not found', (path) => {
+    expect(resolveRoute(path)).toEqual({ kind: 'notFound' });
+  });
+});
+
+describe('normalizeEnvironment', () => {
+  it('accepts the known test environments, ignoring case and spaces', () => {
+    expect(normalizeEnvironment('develop')).toBe('develop');
+    expect(normalizeEnvironment('  Develop ')).toBe('develop');
+  });
+
+  it.each([undefined, '', '   ', 'production', 'prod', 'develp'])('treats %p as production', (raw) => {
+    expect(normalizeEnvironment(raw)).toBeNull();
   });
 });

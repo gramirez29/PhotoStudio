@@ -139,21 +139,31 @@ describe('BookingPage and App', () => {
     expect(screen.getByText('PhotoSense Studio')).toBeInTheDocument();
   });
 
-  it('asks to open the link when the address has no token, without calling the API', () => {
+  it('shows the main page at the root, and tells where a booking is opened from, without calling the API', () => {
     window.history.pushState({}, '', '/');
 
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Abre el enlace de tu reserva' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Bienvenido a PhotoSense Studio' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '¿Tienes una reserva?' })).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('does not call the API for an address that only looks like a link', () => {
+  it('says the page does not exist for an address that only looks like a link, without calling the API', () => {
     window.history.pushState({}, '', '/b/short');
 
     render(<App />);
 
-    expect(screen.getByRole('heading', { name: 'Abre el enlace de tu reserva' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Esta página no existe' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 've a la página principal' })).toHaveAttribute('href', '/');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('shows no test-site mark in production', () => {
+    window.history.pushState({}, '', '/');
+
+    render(<App />);
+
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
   });
 });

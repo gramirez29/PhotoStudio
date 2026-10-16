@@ -1,7 +1,7 @@
 import { buildLinkMessage, shareLinkOutcomeMessage } from '../portalLink';
 
 describe('buildLinkMessage', () => {
-  const url = 'https://book.photosensestudio.com/b/abc';
+  const url = 'https://develop.photosensestudio.com/b/abc';
 
   it('greets the client by first name, names the package and carries the link', () => {
     const message = buildLinkMessage('María Pérez Mora', 'Retrato Familiar', url, true);

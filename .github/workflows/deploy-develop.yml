@@ -1,0 +1,58 @@
+name: Deploy develop
+
+# Every push to develop runs the whole CI and, only if it passes, publishes the site (landing and client portal) to Cloudflare
+# Pages. The API and the worker are built by Railway from the same branch with "Wait for CI" turned on, so they wait for the
+# checks of this run and never deploy code that failed (docs/Deployment.md).
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and a deploy that is already running is finished, not cancelled halfway.
+concurrency:
+  group: deploy-develop
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  site:
+    name: Site to Cloudflare Pages
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The secrets and variables live in the "develop" environment of the repository, so a pull request from a fork never sees them.
+    environment:
+      name: develop
+      url: ${{ vars.SITE_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: portal/package-lock.json
+
+      - name: Build the site
+        working-directory: portal
+        env:
+          # Public values: they end up in the bundle. The secrets never reach the build.
+          VITE_API_URL: ${{ vars.API_URL }}
+          VITE_ENVIRONMENT: develop
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: portal
+          # develop is the production branch of this Pages project, so the deploy is served by its custom domain.
+          command: pages deploy dist --project-name=${{ vars.PAGES_PROJECT }} --branch=develop --commit-dirty=true

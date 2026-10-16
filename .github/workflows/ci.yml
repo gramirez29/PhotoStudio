@@ -1,0 +1,95 @@
+name: CI
+
+# Builds and tests the three projects. It runs on every pull request, and the deploy workflows call it first, so nothing is
+# deployed that did not pass. The actions are pinned to a commit (the comment says which version) because the repository is public.
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (build and tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: backend/global.json
+
+      # The integration tests need a MongoDB replica set (transactions), exactly like production. The compose file starts one
+      # on 127.0.0.1:27019, the address the tests use by default, and --wait returns once it is healthy.
+      - name: Start MongoDB
+        working-directory: backend
+        run: docker compose up -d --wait mongo
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore
+
+      - name: Build (warnings are errors)
+        working-directory: backend
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        working-directory: backend
+        run: dotnet test --no-build --configuration Release
+
+  image:
+    name: Backend (production image builds)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # Railway builds this same Dockerfile, so a broken image should fail here and not in the middle of a deploy.
+      - name: Build the image
+        run: docker build --tag photostudio-api:ci backend
+
+  mobile:
+    name: Mobile (types, lint, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+      - run: npm run verify
+
+  portal:
+    name: Portal (types, lint, tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: portal
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: portal/package-lock.json
+
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run build
