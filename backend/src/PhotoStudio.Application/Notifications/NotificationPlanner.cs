@@ -76,4 +76,33 @@ public sealed class NotificationPlanner(IBookingRepository bookings, INotificati
                 now),
             cancellationToken);
     }
+
+    /// <summary>
+    /// Schedules the notice that a proof of payment waits for verification, due right away: the photographer should hear about
+    /// it as soon as the next delivery run. Whether the proof is still pending is decided when the notice comes due, because
+    /// the photographer may resolve it first. Does nothing when the booking or the payment does not exist.
+    /// </summary>
+    /// <param name="bookingId">Booking the proof belongs to.</param>
+    /// <param name="paymentId">Payment the client submitted.</param>
+    /// <param name="now">Current instant.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the notice is scheduled.</returns>
+    public async Task SchedulePaymentProofAsync(Guid bookingId, Guid paymentId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var booking = await bookings.GetByIdAsync(bookingId, cancellationToken);
+        if (booking is null || booking.Payments.All(payment => payment.Id != paymentId))
+        {
+            return;
+        }
+
+        await notifications.TryAddAsync(
+            Notification.Schedule(
+                booking.PhotographerId,
+                booking.Id,
+                NotificationType.PaymentProofSubmitted,
+                Notification.PaymentProofKey(paymentId),
+                now,
+                now),
+            cancellationToken);
+    }
 }

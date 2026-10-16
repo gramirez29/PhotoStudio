@@ -20,6 +20,7 @@ export function NotificationListItem({
 }: NotificationListItemProps): ReactElement {
   const text = describeNotification(notification);
   const unread = notification.readAt === null;
+  const isProof = notification.type === 'PaymentProofSubmitted';
 
   return (
     <View style={[styles.card, unread && styles.unreadCard]}>
@@ -30,11 +31,17 @@ export function NotificationListItem({
       <Text style={styles.detail}>{text.detail}</Text>
       <Text style={styles.time}>{formatDateTime(notification.deliveredAt)}</Text>
       <View style={styles.actions}>
-        <ActionButton label="Enviar por WhatsApp" onPress={() => onSendWhatsApp(notification)} />
+        {isProof ? (
+          <ActionButton label="Revisar comprobante" onPress={() => onOpenBooking(notification)} />
+        ) : (
+          <ActionButton label="Enviar por WhatsApp" onPress={() => onSendWhatsApp(notification)} />
+        )}
         <View style={styles.secondaryRow}>
-          <Pressable accessibilityRole="button" onPress={() => onOpenBooking(notification)} hitSlop={spacing.sm}>
-            <Text style={styles.link}>Ver reserva</Text>
-          </Pressable>
+          {!isProof && (
+            <Pressable accessibilityRole="button" onPress={() => onOpenBooking(notification)} hitSlop={spacing.sm}>
+              <Text style={styles.link}>Ver reserva</Text>
+            </Pressable>
+          )}
           {unread && (
             <Pressable accessibilityRole="button" onPress={() => onMarkRead(notification)} hitSlop={spacing.sm}>
               <Text style={styles.link}>Marcar como leído</Text>

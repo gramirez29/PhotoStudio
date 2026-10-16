@@ -103,6 +103,48 @@ public sealed class NotificationPlannerTests
     }
 
     /// <summary>
+    /// A submitted proof gets a notice due right away, keyed by its payment.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task SchedulePaymentProof_ForAnExistingPayment_SchedulesTheNoticeForNow()
+    {
+        var booking = BookingFactory.Confirmed();
+        var payment = booking.SubmitPaymentProof(
+            Guid.CreateVersion7(), Money.Create(10_000m, "CRC"), PaymentMethod.SinpeMovil, "proof-1", BookingFactory.CreatedAt);
+        _bookings.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
+        var now = BookingFactory.CreatedAt.AddMinutes(5);
+
+        await _planner.SchedulePaymentProofAsync(booking.Id, payment.Id, now, TestContext.Current.CancellationToken);
+
+        await _notifications.Received(1).TryAddAsync(
+            Arg.Is<Notification>(notification =>
+                notification.Type == NotificationType.PaymentProofSubmitted
+                && notification.DedupKey == Notification.PaymentProofKey(payment.Id)
+                && notification.DueAt == now
+                && notification.PhotographerId == booking.PhotographerId),
+            Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A missing booking or a payment that is not in the booking gets no proof notice.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task SchedulePaymentProof_WhenTheBookingOrThePaymentIsMissing_SchedulesNothing()
+    {
+        var booking = BookingFactory.Confirmed();
+        _bookings.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
+        var missing = Guid.CreateVersion7();
+        _bookings.GetByIdAsync(missing, Arg.Any<CancellationToken>()).Returns((Booking?)null);
+
+        await _planner.SchedulePaymentProofAsync(booking.Id, Guid.CreateVersion7(), BookingFactory.CreatedAt, TestContext.Current.CancellationToken);
+        await _planner.SchedulePaymentProofAsync(missing, Guid.CreateVersion7(), BookingFactory.CreatedAt, TestContext.Current.CancellationToken);
+
+        await _notifications.DidNotReceiveWithAnyArgs().TryAddAsync(default!, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
     /// A booking that is not completed gets no balance notice.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>

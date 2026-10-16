@@ -23,6 +23,7 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
     packageName: 'Retrato Familiar',
     sessionStart: '2026-10-17T21:00:00+00:00',
     balance: null,
+    proofAmount: null,
     deliveredAt: '2026-10-16T21:00:00+00:00',
     readAt: null,
     ...overrides,
@@ -31,6 +32,9 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
 
 /** A balance notice for 50 000 colones. */
 const balanceDue = notification({ type: 'BalanceDue', balance: { amount: 50000, currency: 'CRC' } });
+
+/** A proof-of-payment notice for 25 000 colones. */
+const paymentProof = notification({ type: 'PaymentProofSubmitted', proofAmount: { amount: 25000, currency: 'CRC' } });
 
 describe('describeNotification', () => {
   it('words a session reminder with the client, package and date', () => {
@@ -48,6 +52,17 @@ describe('describeNotification', () => {
     expect(text.title).toBe('Saldo pendiente');
     expect(text.detail).toContain('₡');
     expect(text.detail.replace(/\D/g, '')).toContain('5000000');
+  });
+});
+
+describe('describeNotification (proof)', () => {
+  it('words a proof notice with the client, the declared amount and the package', () => {
+    const text = describeNotification(paymentProof);
+
+    expect(text.title).toBe('Comprobante por verificar');
+    expect(text.detail).toContain('María Pérez Solano');
+    expect(text.detail).toContain('Retrato Familiar');
+    expect(text.detail.replace(/\D/g, '')).toContain('2500000');
   });
 });
 
@@ -72,6 +87,15 @@ describe('buildWhatsAppMessage', () => {
 
     expect(message).toContain('Hola María, te escribo por el saldo pendiente de ');
     expect(message).toContain('fotos finales');
+  });
+});
+
+describe('buildWhatsAppMessage (proof)', () => {
+  it('acknowledges the proof instead of reminding about a session', () => {
+    const message = buildWhatsAppMessage(paymentProof);
+
+    expect(message).toContain('Hola María, recibí tu comprobante de ');
+    expect(message).not.toContain('te recuerdo');
   });
 });
 

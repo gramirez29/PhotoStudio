@@ -14,6 +14,7 @@ import { expectRecord, readArray, readLiteral, readNullableString, readNumber, r
 export function parseNotification(value: unknown, path = 'notification'): NotificationResponse {
   const record = expectRecord(value, path);
   const balance = record.balance;
+  const proofAmount = record.proofAmount;
   return {
     id: readString(record, 'id', path),
     type: readLiteral(record, 'type', NOTIFICATION_TYPES, path),
@@ -23,6 +24,7 @@ export function parseNotification(value: unknown, path = 'notification'): Notifi
     packageName: readString(record, 'packageName', path),
     sessionStart: readString(record, 'sessionStart', path),
     balance: balance === null || balance === undefined ? null : parseMoney(balance, `${path}.balance`),
+    proofAmount: proofAmount === null || proofAmount === undefined ? null : parseMoney(proofAmount, `${path}.proofAmount`),
     deliveredAt: readString(record, 'deliveredAt', path),
     readAt: readNullableString(record, 'readAt', path),
   };

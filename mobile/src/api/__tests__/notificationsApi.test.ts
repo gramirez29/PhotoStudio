@@ -12,6 +12,7 @@ const reminder = {
   packageName: 'Retrato Familiar',
   sessionStart: '2026-10-17T21:00:00+00:00',
   balance: null,
+  proofAmount: null,
   deliveredAt: '2026-10-16T21:00:00+00:00',
   readAt: null,
 } as const;
@@ -22,6 +23,13 @@ describe('parseNotification', () => {
     expect(
       parseNotification({ ...reminder, type: 'BalanceDue', balance: { amount: 50000, currency: 'CRC' }, readAt: '2026-10-17T00:00:00+00:00' }),
     ).toMatchObject({ type: 'BalanceDue', balance: { amount: 50000, currency: 'CRC' }, readAt: '2026-10-17T00:00:00+00:00' });
+  });
+
+  it('parses a proof notice with its declared amount', () => {
+    expect(
+      parseNotification({ ...reminder, type: 'PaymentProofSubmitted', proofAmount: { amount: 25000, currency: 'CRC' } }),
+    ).toMatchObject({ type: 'PaymentProofSubmitted', proofAmount: { amount: 25000, currency: 'CRC' }, balance: null });
+    expect(() => parseNotification({ ...reminder, proofAmount: { amount: 'x', currency: 'CRC' } })).toThrow(ResponseShapeError);
   });
 
   it('rejects an unknown type or a mistyped field', () => {

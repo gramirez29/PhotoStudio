@@ -22,6 +22,8 @@ export interface NotificationResponse {
   readonly sessionStart: string;
   /** Amount still owed; present only for balance notices. */
   readonly balance: MoneyResponse | null;
+  /** Amount the client declared in the proof of payment; present only for proof notices. */
+  readonly proofAmount: MoneyResponse | null;
   /** Instant the notification reached the inbox, ISO 8601. */
   readonly deliveredAt: string;
   /** Instant the photographer read it, ISO 8601, or null while it is unread. */

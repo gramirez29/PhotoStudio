@@ -92,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<IDomainEventHandler<BookingExpired>, BookingNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<ClientMarkedAbsent>, BookingNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<SessionCompleted>, SessionCompletedNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<PaymentSubmitted>, PaymentNotificationsHandler>();
 
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();

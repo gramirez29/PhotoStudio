@@ -11,7 +11,14 @@ namespace PhotoStudio.Domain.Notifications;
 /// <param name="PackageName">Name of the booked package.</param>
 /// <param name="SessionStart">Start of the session (UTC).</param>
 /// <param name="Balance">Amount still owed; set only for <see cref="NotificationType.BalanceDue"/>.</param>
-public sealed record NotificationDetails(string ClientName, string ClientPhone, string PackageName, DateTimeOffset SessionStart, Money? Balance);
+/// <param name="ProofAmount">Amount the client declared in the proof of payment; set only for <see cref="NotificationType.PaymentProofSubmitted"/>.</param>
+public sealed record NotificationDetails(
+    string ClientName,
+    string ClientPhone,
+    string PackageName,
+    DateTimeOffset SessionStart,
+    Money? Balance,
+    Money? ProofAmount = null);
 
 /// <summary>
 /// A notice for the photographer about one of their bookings. It is created <see cref="NotificationStatus.Scheduled"/> for a
@@ -137,12 +144,36 @@ public sealed class Notification : AggregateRoot<Guid>
     public static string BalanceDueKey(Guid bookingId) => $"{NotificationType.BalanceDue}:{bookingId:N}";
 
     /// <summary>
+    /// Builds the key that identifies the notice of a proof of payment: there is one per payment, so two proofs of the same
+    /// booking are two notices and the same proof delivered twice by the outbox is one.
+    /// </summary>
+    /// <param name="paymentId">Payment the proof belongs to.</param>
+    /// <returns>The key.</returns>
+    public static string PaymentProofKey(Guid paymentId) => $"{NotificationType.PaymentProofSubmitted}:{paymentId:N}";
+
+    /// <summary>
+    /// Reads the payment a proof notice is about from its key, the same way a reminder key holds the session start it was
+    /// planned for.
+    /// </summary>
+    /// <param name="dedupKey">Key of a notification.</param>
+    /// <param name="paymentId">Receives the payment identifier when the key is a proof key.</param>
+    /// <returns><see langword="true"/> when the key was built by <see cref="PaymentProofKey"/>.</returns>
+    public static bool TryGetPaymentId(string dedupKey, out Guid paymentId)
+    {
+        paymentId = Guid.Empty;
+        var prefix = $"{NotificationType.PaymentProofSubmitted}:";
+        return dedupKey is not null
+            && dedupKey.StartsWith(prefix, StringComparison.Ordinal)
+            && Guid.TryParseExact(dedupKey.AsSpan(prefix.Length), "N", out paymentId);
+    }
+
+    /// <summary>
     /// Schedules a notification.
     /// </summary>
     /// <param name="photographerId">Photographer it is for.</param>
     /// <param name="bookingId">Booking it is about.</param>
     /// <param name="type">What it is about.</param>
-    /// <param name="dedupKey">Key that makes scheduling idempotent (see <see cref="SessionReminderKey"/> and <see cref="BalanceDueKey"/>).</param>
+    /// <param name="dedupKey">Key that makes scheduling idempotent (see <see cref="SessionReminderKey"/>, <see cref="BalanceDueKey"/> and <see cref="PaymentProofKey"/>).</param>
     /// <param name="dueAt">Instant it becomes due.</param>
     /// <param name="now">Current instant.</param>
     /// <returns>The scheduled notification.</returns>

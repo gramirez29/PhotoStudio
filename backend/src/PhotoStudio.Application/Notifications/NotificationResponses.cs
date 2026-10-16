@@ -15,6 +15,7 @@ namespace PhotoStudio.Application.Notifications;
 /// <param name="PackageName">Name of the booked package.</param>
 /// <param name="SessionStart">Start of the session (UTC).</param>
 /// <param name="Balance">Amount still owed; present only for <see cref="NotificationType.BalanceDue"/>.</param>
+/// <param name="ProofAmount">Amount the client declared; present only for <see cref="NotificationType.PaymentProofSubmitted"/>.</param>
 /// <param name="DeliveredAt">Instant it reached the inbox (UTC).</param>
 /// <param name="ReadAt">Instant the photographer read it (UTC), or <see langword="null"/> while it is unread.</param>
 public sealed record NotificationResponse(
@@ -26,6 +27,7 @@ public sealed record NotificationResponse(
     string PackageName,
     DateTimeOffset SessionStart,
     MoneyResponse? Balance,
+    MoneyResponse? ProofAmount,
     DateTimeOffset DeliveredAt,
     DateTimeOffset? ReadAt);
 
@@ -72,6 +74,7 @@ public static class NotificationResponseMappings
             details.PackageName,
             details.SessionStart,
             details.Balance is null ? null : new MoneyResponse(details.Balance.Amount, details.Balance.Currency),
+            details.ProofAmount is null ? null : new MoneyResponse(details.ProofAmount.Amount, details.ProofAmount.Currency),
             notification.DeliveredAt.Value,
             notification.ReadAt);
     }

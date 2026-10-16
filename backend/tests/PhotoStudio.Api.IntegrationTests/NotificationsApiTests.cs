@@ -140,6 +140,91 @@ public sealed class NotificationsApiTests(ApiFixture fixture)
     }
 
     /// <summary>
+    /// A proof of payment uploaded by the client through the portal reaches the photographer's inbox in the next maintenance
+    /// pass, with the declared amount, and only the owner sees it.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ProofSubmittedByTheClient_ProducesANoticeOnlyTheOwnerCanSee()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var client = fixture.CreateClient();
+        var owner = await client.LoginAsync(await fixture.CreateUserAsync());
+        var other = await client.LoginAsync(await fixture.CreateUserAsync());
+        var (bookingId, _) = await SubmitProofAsync(client, owner.AccessToken, 50_000);
+
+        await RunMaintenancePassAsync();
+
+        var inbox = await (await client.SendAsync(HttpMethod.Get, "/api/notifications", owner.AccessToken)).ReadJsonAsync();
+        var item = inbox.GetProperty("items").EnumerateArray().Single(notification => notification.GetProperty("bookingId").GetGuid() == bookingId);
+        item.GetProperty("type").GetString().ShouldBe("PaymentProofSubmitted");
+        item.GetProperty("proofAmount").GetProperty("amount").GetDecimal().ShouldBe(50_000m);
+        item.GetProperty("balance").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
+        inbox.GetProperty("unreadCount").GetInt32().ShouldBe(1);
+
+        var foreignInbox = await (await client.SendAsync(HttpMethod.Get, "/api/notifications", other.AccessToken)).ReadJsonAsync();
+        foreignInbox.GetProperty("items").GetArrayLength().ShouldBe(0);
+
+        // Running the pass again delivers nothing new: the notice is keyed by its payment.
+        await RunMaintenancePassAsync();
+        var again = await (await client.SendAsync(HttpMethod.Get, "/api/notifications", owner.AccessToken)).ReadJsonAsync();
+        again.GetProperty("items").GetArrayLength().ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A proof the photographer already resolved before the pass runs produces no notice: there is nothing left to do.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ProofResolvedBeforeTheDelivery_ProducesNoNotice()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var client = fixture.CreateClient();
+        var owner = await client.LoginAsync(await fixture.CreateUserAsync());
+        var (bookingId, paymentId) = await SubmitProofAsync(client, owner.AccessToken, 50_000);
+        (await client.SendAsync(HttpMethod.Post, $"/api/bookings/{bookingId}/payments/{paymentId}/verify", owner.AccessToken)).EnsureSuccessStatusCode();
+
+        await RunMaintenancePassAsync();
+
+        var inbox = await (await client.SendAsync(HttpMethod.Get, "/api/notifications", owner.AccessToken)).ReadJsonAsync();
+        inbox.GetProperty("items").EnumerateArray()
+            .Count(notification => notification.GetProperty("type").GetString() == "PaymentProofSubmitted").ShouldBe(0);
+    }
+
+    /// <summary>
+    /// Creates a booking with a client email and a link, and acts as the client: opens a portal session with the emailed code
+    /// and uploads a proof of payment.
+    /// </summary>
+    /// <param name="client">HTTP client.</param>
+    /// <param name="accessToken">Access token of the photographer who owns the booking.</param>
+    /// <param name="amount">Amount the client declares.</param>
+    /// <returns>The booking and the payment identifiers.</returns>
+    private async Task<(Guid BookingId, Guid PaymentId)> SubmitProofAsync(HttpClient client, string accessToken, int amount)
+    {
+        var clientEmail = $"c{Guid.NewGuid():N}@example.com";
+        var booking = await client.CreateBookingAsync(accessToken, new Dictionary<string, object> { ["clientEmail"] = clientEmail });
+        var bookingId = booking.GetProperty("id").GetGuid();
+        var link = await client.SendAsync(HttpMethod.Post, $"/api/bookings/{bookingId}/link", accessToken);
+        link.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var token = (await link.ReadJsonAsync()).GetProperty("token").GetString()!;
+
+        (await client.SendAsync(HttpMethod.Post, $"/public/bookings/{token}/code", null)).StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        var verified = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{token}/code/verify", null, new { code = fixture.Emails.LastCodeFor(clientEmail) });
+        verified.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var portalToken = (await verified.ReadJsonAsync()).GetProperty("accessToken").GetString()!;
+
+        var proof = await client.SendAsync(
+            HttpMethod.Post,
+            $"/public/bookings/{token}/payments",
+            portalToken,
+            new { amount, reference = "SINPE-4455", idempotencyKey = Guid.NewGuid().ToString() });
+        proof.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var seen = await (await client.SendAsync(HttpMethod.Get, $"/api/bookings/{bookingId}", accessToken)).ReadJsonAsync();
+        var paymentId = seen.GetProperty("payments")[0].GetProperty("id").GetGuid();
+        return (bookingId, paymentId);
+    }
+
+    /// <summary>
     /// Runs one maintenance pass in-process, the way the worker does, without using the rate-limited endpoint.
     /// </summary>
     /// <returns>A task that completes when the pass ends.</returns>

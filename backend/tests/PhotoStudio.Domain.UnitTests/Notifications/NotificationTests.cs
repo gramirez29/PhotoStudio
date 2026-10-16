@@ -29,6 +29,20 @@ public sealed class NotificationTests
     }
 
     /// <summary>
+    /// The key of a proof notice carries its payment, so it can be read back; other keys do not read as proof keys.
+    /// </summary>
+    [Fact]
+    public void PaymentProofKey_RoundTripsThePaymentId()
+    {
+        var paymentId = Guid.CreateVersion7();
+
+        Notification.TryGetPaymentId(Notification.PaymentProofKey(paymentId), out var read).ShouldBeTrue();
+        read.ShouldBe(paymentId);
+        Notification.TryGetPaymentId(Notification.BalanceDueKey(paymentId), out _).ShouldBeFalse();
+        Notification.TryGetPaymentId("PaymentProofSubmitted:not-a-guid", out _).ShouldBeFalse();
+    }
+
+    /// <summary>
     /// A new notification is scheduled and not yet due.
     /// </summary>
     [Fact]
