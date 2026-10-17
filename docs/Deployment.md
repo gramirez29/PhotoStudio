@@ -43,6 +43,7 @@ El sitio de develop se marca con una franja **"Ambiente de pruebas"** (`VITE_ENV
 | `.github/workflows/ci.yml` | Compila y prueba backend (con MongoDB en réplica), construye la imagen de producción, y verifica mobile y portal. Corre en cada pull request y lo reutiliza el despliegue |
 | `.github/workflows/deploy-develop.yml` | En cada push a `develop`: CI y, solo si pasa, publica sitio, API y worker |
 | `backend/scripts/configure-railway.mjs` | Fija los ajustes de construcción y arranque de los dos servicios de Railway (Dockerfile; API con health check `/health/ready`; worker con su comando y su cron `*/15 * * * *`). Es repetible: compara y solo escribe si algo difiere |
+| `mobile/eas.json`, `mobile/app.config.ts` | Perfil de build de desarrollo de EAS (APK interno) y lectura del `google-services.json` de Firebase desde una variable de EAS; ver la sección 7 y `docs/PushNotifications.md` |
 | `backend/Dockerfile` | Usa `CMD` (no `ENTRYPOINT`): el worker usa la misma imagen con otro comando |
 | `portal/public/_headers`, `_redirects`, `robots.txt` | Cabeceras de seguridad, rutas de la SPA y no indexar |
 
@@ -99,6 +100,7 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
    | `MONGODB_CONNECTION_STRING` | `${{photostudio-api.MONGODB_CONNECTION_STRING}}` |
    | `MONGODB_DATABASE_NAME` | `${{photostudio-api.MONGODB_DATABASE_NAME}}` |
    | `WORKER_RUN_ONCE` | `true` |
+   | `EXPO_ACCESS_TOKEN` | **opcional**, la misma que la API: el worker también entrega avisos y sus pushes |
 
 7. **Token del ambiente:** Project settings → **Tokens** → ambiente `develop` → crear → copiarlo. Es un **token de proyecto**: solo sirve para ese ambiente. Cuando exista producción tendrá el suyo, guardado en su propio *environment* de GitHub.
 8. **Ajustes de los servicios** (una vez, y de nuevo si cambian). Railway **no aplica** la sección `deploy` de un `railway.json` subido con `railway up` (el servicio del worker arrancó la API), así que esos ajustes se fijan en el servicio con un script. Necesita haber iniciado sesión (`npx @railway/cli@5.69.0 login`) y el ID del proyecto (Project settings → General):
@@ -157,6 +159,8 @@ Haz un push (o *Run workflow* en Actions → *Deploy develop*) y comprueba:
 - Que `--ci` haga fallar el job cuando la construcción falla (solo lo vimos con construcciones que terminaron bien).
 - Que Pages ofrezca el dominio personalizado sin pasos extra cuando el proyecto se crea con `wrangler`.
 - La primera pasada del cron del worker en Railway.
+- **Un push real a un teléfono** (Expo → FCM → Android). El build de desarrollo existe y las credenciales están subidas a EAS, pero ningún mensaje se ha enviado todavía a un dispositivo (ver `docs/PushNotifications.md` §11 y §14).
+- Que el despertador de la API (`OutboxWakeUpService`) corra bien en Railway tras el primer despliegue que lo incluya.
 
 Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arranca la API por defecto; los workflows pasan `actionlint`; el sitio compila con `npm run build`.
 
@@ -166,11 +170,12 @@ Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arra
 - **Distinguir versiones en el health check** (por ejemplo, exponer el commit desplegado) para que el job de la API no dé por bueno un despliegue que Railway rechazó.
 - **Contenido de la página principal** (hoy provisional) y si en producción se indexa o no.
 - **Reply-To** de los correos y un remitente que no sea `no-reply`.
-- **Respaldo semanal** con `mongodump` hacia R2 (CLAUDE.md §12).
+- **Respaldo semanal** con `mongodump` hacia R2.
+- **Producción de la app móvil:** perfil `production` de EAS, keystore y Firebase de producción, Google Play, y las credenciales de iOS (APNs). Detalle en `docs/PushNotifications.md` §14.
 
 ## 7. App móvil: build de desarrollo y push (EAS)
 
-El push no funciona en Expo Go: hace falta un *development build* con `expo-dev-client` y `expo-notifications`.
+El push no funciona en Expo Go: hace falta un *development build* con `expo-dev-client` y `expo-notifications`. La guía completa del push (herramientas, plataformas, decisiones, pruebas y TODO) está en [`PushNotifications.md`](PushNotifications.md); aquí solo el resumen de despliegue.
 
 - **Identificador:** `com.photosensestudio.app` (Android e iOS). No se puede cambiar después de publicar.
 - **Proyecto de EAS:** `@g.raba29-dev/photostudio` (`extra.eas.projectId` en `mobile/app.json`). `mobile/eas.json` tiene el perfil `development` (APK interno, `EXPO_PUBLIC_API_URL` apuntando a develop).
