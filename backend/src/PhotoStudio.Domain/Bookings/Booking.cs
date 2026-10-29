@@ -295,6 +295,25 @@ public sealed class Booking : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Records that the copy of the signed contract was emailed to the client. It changes no status and raises no event; it only
+    /// keeps the copy from being sent twice when the outbox delivers the signature event again. Doing it twice keeps the first instant.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the contract has not been signed.</exception>
+    public void MarkContractCopySent(DateTimeOffset now)
+    {
+        if (Contract is null)
+        {
+            throw new DomainException(DomainErrorCodes.GuardFailed, "The contract is not signed, so there is no copy to send.");
+        }
+
+        if (Contract.CopySentAt is null)
+        {
+            Contract = Contract with { CopySentAt = now };
+        }
+    }
+
+    /// <summary>
     /// B3. Registers a SINPE Móvil proof uploaded by the client. Retrying with the same idempotency key returns the original payment.
     /// </summary>
     /// <param name="paymentId">Identifier for the new payment.</param>

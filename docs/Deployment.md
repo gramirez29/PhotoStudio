@@ -100,6 +100,8 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
    | `MONGODB_CONNECTION_STRING` | `${{photostudio-api.MONGODB_CONNECTION_STRING}}` |
    | `MONGODB_DATABASE_NAME` | `${{photostudio-api.MONGODB_DATABASE_NAME}}` |
    | `WORKER_RUN_ONCE` | `true` |
+   | `RESEND_API_KEY` | **la misma que la API.** El worker entrega el outbox y con él los correos que siguen a un evento (hoy, la copia del contrato firmado). Sin ella en producción esos mensajes fallan y se reintentan |
+   | `EMAIL_FROM` | **el mismo que la API** |
    | `EXPO_ACCESS_TOKEN` | **opcional**, la misma que la API: el worker también entrega avisos y sus pushes |
 
 7. **Token del ambiente:** Project settings → **Tokens** → ambiente `develop` → crear → copiarlo. Es un **token de proyecto**: solo sirve para ese ambiente. Cuando exista producción tendrá el suyo, guardado en su propio *environment* de GitHub.

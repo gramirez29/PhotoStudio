@@ -115,6 +115,7 @@ public static class BookingDocumentMappings
         SignedAt = contract.SignedAt.UtcDateTime,
         Declaration = contract.Declaration?.ToDocument(),
         SignedText = contract.SignedText,
+        CopySentAt = contract.CopySentAt?.UtcDateTime,
     };
 
     /// <summary>
@@ -129,7 +130,8 @@ public static class BookingDocumentMappings
         Enum.Parse<Channel>(document.Channel),
         ToOffset(document.SignedAt),
         document.Declaration?.ToDomain(),
-        document.SignedText);
+        document.SignedText,
+        document.CopySentAt is { } copySentAt ? ToOffset(copySentAt) : null);
 
     /// <summary>
     /// Maps what the client declared to its document.

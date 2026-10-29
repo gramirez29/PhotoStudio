@@ -11,6 +11,7 @@ using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
+using PhotoStudio.Application.Contracts;
 using PhotoStudio.Application.Identity;
 using PhotoStudio.Application.Identity.ChangePassword;
 using PhotoStudio.Application.Identity.Login;
@@ -101,6 +102,9 @@ public static class DependencyInjection
         services.AddScoped<IDomainEventHandler<ClientMarkedAbsent>, BookingNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<SessionCompleted>, SessionCompletedNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<PaymentSubmitted>, PaymentNotificationsHandler>();
+
+        // Contracts: the client gets an email copy of the contract they signed through the portal.
+        services.AddScoped<IDomainEventHandler<ContractSigned>, ContractCopyHandler>();
 
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();

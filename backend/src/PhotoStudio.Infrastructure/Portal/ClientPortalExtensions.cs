@@ -103,11 +103,13 @@ public static class ClientPortalExtensions
 
     /// <summary>
     /// Registers the email provider: Resend when its key is set, the log sender in Development, and a sender that fails
-    /// loudly otherwise.
+    /// loudly otherwise. The API needs it for the verification codes and the worker for the emails that follow events, such as
+    /// the copy of a signed contract, so both processes call it.
     /// </summary>
     /// <param name="services">Service collection to configure.</param>
-    /// <param name="isDevelopment">Whether the API runs in the Development environment.</param>
-    private static void AddEmailSender(IServiceCollection services, bool isDevelopment)
+    /// <param name="isDevelopment">Whether the process runs in the Development environment.</param>
+    /// <returns>The same service collection, for chaining.</returns>
+    public static IServiceCollection AddEmailSender(this IServiceCollection services, bool isDevelopment)
     {
         var email = EmailOptions.FromEnvironment();
         if (email is not null)
@@ -127,6 +129,8 @@ public static class ClientPortalExtensions
         {
             services.AddSingleton<IEmailSender, UnavailableEmailSender>();
         }
+
+        return services;
     }
 
     /// <summary>

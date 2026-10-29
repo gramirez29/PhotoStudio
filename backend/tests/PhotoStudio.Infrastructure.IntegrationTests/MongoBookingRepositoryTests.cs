@@ -641,6 +641,31 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The instant the copy of the contract was emailed survives a round trip through MongoDB, and a contract without it reads as not sent.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateAsync_KeepsTheInstantTheContractCopyWasSent()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = NewRepository();
+        var booking = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
+        await repository.AddAsync(booking, TestContext.Current.CancellationToken);
+        var loaded = (await repository.GetByIdAsync(booking.Id, TestContext.Current.CancellationToken))!;
+        loaded.SignContract("María Pérez", "v1", Actor.Client, Channel.Portal, Now, ClientDeclaration.Create("112345678", 2, null, ImageUse.Authorized), "texto");
+        await repository.UpdateAsync(loaded, TestContext.Current.CancellationToken);
+        (await repository.GetByIdAsync(booking.Id, TestContext.Current.CancellationToken))!.Contract!.CopySentAt.ShouldBeNull();
+
+        var signed = (await repository.GetByIdAsync(booking.Id, TestContext.Current.CancellationToken))!;
+        signed.MarkContractCopySent(Now.AddMinutes(3));
+        await repository.UpdateAsync(signed, TestContext.Current.CancellationToken);
+
+        var stored = await repository.GetByIdAsync(booking.Id, TestContext.Current.CancellationToken);
+        stored!.Contract!.CopySentAt.ShouldBe(Now.AddMinutes(3));
+        stored.Contract.SignedText.ShouldBe("texto");
+    }
+
+    /// <summary>
     /// Creates a tentative booking for the slot.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>

@@ -1,5 +1,6 @@
 using PhotoStudio.Application;
 using PhotoStudio.Infrastructure;
+using PhotoStudio.Infrastructure.Portal;
 using PhotoStudio.Worker;
 
 // Composition root of the PhotoStudio worker. Configuration comes from environment variables (Railway service variables).
@@ -9,6 +10,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+builder.Services.AddEmailSender(builder.Environment.IsDevelopment());
 
 var runOnce = RunOnceJob.IsEnabled();
 if (!runOnce)

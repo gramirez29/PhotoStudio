@@ -50,6 +50,9 @@ public sealed record ContractSignature
     /// <summary>Gets the exact text of the contract the client signed through the portal; <see langword="null"/> for a signature registered by the photographer.</summary>
     public string? SignedText { get; }
 
+    /// <summary>Gets the instant the copy of the contract was emailed to the client (UTC), or <see langword="null"/> while it has not been sent. It keeps a repeated delivery of the event from sending the copy twice.</summary>
+    public DateTimeOffset? CopySentAt { get; init; }
+
     /// <summary>
     /// Creates a signature record after validating its values.
     /// </summary>
@@ -60,6 +63,7 @@ public sealed record ContractSignature
     /// <param name="signedAt">Instant of the signature.</param>
     /// <param name="declaration">What the client declared, when they signed through the portal.</param>
     /// <param name="signedText">Exact text the client signed, when they signed through the portal.</param>
+    /// <param name="copySentAt">Instant the copy was emailed to the client, if it already was.</param>
     /// <returns>The signature record.</returns>
     /// <exception cref="DomainException">When the signer name or template version is empty.</exception>
     public static ContractSignature Create(
@@ -69,7 +73,8 @@ public sealed record ContractSignature
         Channel channel,
         DateTimeOffset signedAt,
         ClientDeclaration? declaration = null,
-        string? signedText = null)
+        string? signedText = null,
+        DateTimeOffset? copySentAt = null)
     {
         if (string.IsNullOrWhiteSpace(signerName))
         {
@@ -81,6 +86,6 @@ public sealed record ContractSignature
             throw new DomainException(DomainErrorCodes.RequiredValue, "The contract template version is required.");
         }
 
-        return new ContractSignature(signerName.Trim(), templateVersion.Trim(), signedBy, channel, signedAt, declaration, signedText);
+        return new ContractSignature(signerName.Trim(), templateVersion.Trim(), signedBy, channel, signedAt, declaration, signedText) { CopySentAt = copySentAt };
     }
 }
