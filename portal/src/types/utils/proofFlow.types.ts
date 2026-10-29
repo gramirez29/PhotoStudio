@@ -22,7 +22,7 @@ export interface ProofFlowState {
 
 /** Something that happens in the proof flow. */
 export type ProofFlowEvent =
-  | { readonly type: 'open'; readonly now: number }
+  | { readonly type: 'open'; readonly now: number; readonly session: PortalSession | null }
   | { readonly type: 'codeSent'; readonly maskedEmail: string }
   | { readonly type: 'verified'; readonly session: PortalSession }
   | { readonly type: 'sessionExpired' }

@@ -17,6 +17,7 @@ export const portalBookingPayload = {
   payments: [],
   canSubmitProof: true,
   canReceiveCode: true,
+  canSignContract: true,
 } as const;
 
 /**

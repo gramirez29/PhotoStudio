@@ -211,6 +211,43 @@ describe('portal API, code and proof', () => {
     expect(booking.packageName).toBe('Retrato Familiar');
   });
 
+  it('reads the contract with the session token and parses it', async () => {
+    const { api, fetchFn } = apiAnswering(200, { templateVersion: 'v1', text: 'CONTRATO', signed: false });
+
+    const contract = await api.getContract(SAMPLE_TOKEN, 'jwt');
+
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(`https://api.example.test/public/bookings/${SAMPLE_TOKEN}/contract`);
+    expect(fetchFn.mock.calls[0]?.[1]?.method).toBe('GET');
+    expect(fetchFn.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer jwt' });
+    expect(contract).toEqual({ templateVersion: 'v1', text: 'CONTRATO', signed: false });
+  });
+
+  it('refuses a contract answer with the wrong shape', async () => {
+    await expect(apiAnswering(200, { templateVersion: 'v1', text: 'x' }).api.getContract(SAMPLE_TOKEN, 'jwt')).rejects.toBeInstanceOf(
+      ResponseShapeError,
+    );
+  });
+
+  it('signs the contract with the session token and parses the booking', async () => {
+    const { api, fetchFn } = apiAnswering(200, portalBookingPayload);
+    const request = {
+      templateVersion: 'v1',
+      signerName: 'María Pérez',
+      idNumber: '112345678',
+      participantCount: 3,
+      imageUse: 'Authorized',
+      acceptsTerms: true,
+    } as const;
+
+    const booking = await api.signContract(SAMPLE_TOKEN, 'jwt', request);
+
+    expect(fetchFn.mock.calls[0]?.[0]).toBe(`https://api.example.test/public/bookings/${SAMPLE_TOKEN}/contract`);
+    expect(fetchFn.mock.calls[0]?.[1]?.method).toBe('POST');
+    expect(fetchFn.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: 'Bearer jwt' });
+    expect(JSON.parse(String(fetchFn.mock.calls[0]?.[1]?.body))).toEqual(request);
+    expect(booking.canSignContract).toBe(true);
+  });
+
   it('rejects an answer that does not match the contract', async () => {
     await expect(apiAnswering(202, { maskedEmail: 5 }).api.requestCode(SAMPLE_TOKEN)).rejects.toBeInstanceOf(ResponseShapeError);
     await expect(apiAnswering(200, { accessToken: 'x' }).api.verifyCode(SAMPLE_TOKEN, '123456')).rejects.toBeInstanceOf(ResponseShapeError);

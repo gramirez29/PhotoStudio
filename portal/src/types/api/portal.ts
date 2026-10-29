@@ -2,10 +2,13 @@
  * TypeScript mirror of the response DTOs of the portal endpoints (PhotoStudio.Application.Portal). Names are camelCase, enums
  * travel as strings and dates as ISO 8601. Keep in sync with the backend, or replace with types generated from /openapi/v1.json.
  */
-import type { BOOKING_STATUSES, PAYMENT_STATUSES } from '../../constants/booking';
+import type { BOOKING_STATUSES, IMAGE_USES, PAYMENT_STATUSES } from '../../constants/booking';
 
 /** Lifecycle status of a booking. */
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
+/** What the client allows to do with the photos of the session. */
+export type ImageUse = (typeof IMAGE_USES)[number];
 
 /** Verification status of a payment. */
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
@@ -86,4 +89,34 @@ export interface PortalBooking {
   readonly canSubmitProof: boolean;
   /** Whether the booking has an email to send verification codes to. */
   readonly canReceiveCode: boolean;
+  /** Whether the client can sign the contract now: it is unsigned, the booking waits for confirmation and there is an email for the code. */
+  readonly canSignContract: boolean;
+}
+
+/** Contract of a booking as the client reads it (backend `PortalContractResponse`). */
+export interface PortalContract {
+  /** Version of the template; it is sent back when signing so the client signs what they read. */
+  readonly templateVersion: string;
+  /** Text of the contract. Before signing, what the client still has to declare is shown as blanks; after signing it is the text that was signed. */
+  readonly text: string;
+  /** Whether the contract is already signed. */
+  readonly signed: boolean;
+}
+
+/** Body to sign the contract (backend `PortalSignContractRequest`). */
+export interface SignContractRequest {
+  /** Version of the contract the client read. */
+  readonly templateVersion: string;
+  /** Name typed by the signer. */
+  readonly signerName: string;
+  /** Identity number of the signer, as typed (the server keeps the digits). */
+  readonly idNumber: string;
+  /** Number of people in the session. */
+  readonly participantCount: number;
+  /** Place of the session; omitted when the client left it blank. */
+  readonly sessionLocation?: string;
+  /** What the client allows to do with the photos. */
+  readonly imageUse: ImageUse;
+  /** Whether the client ticked the box that says they read and accept the contract. */
+  readonly acceptsTerms: boolean;
 }

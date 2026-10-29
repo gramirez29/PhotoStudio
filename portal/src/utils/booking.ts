@@ -62,8 +62,14 @@ export function nextSteps(booking: PortalBooking): readonly string[] {
       const due = depositDue(booking);
       if (due.amount > 0) {
         steps.push(`Para confirmarla falta el anticipo de ${formatMoney(due)}.`);
-      } else if (!booking.contractSigned) {
-        steps.push('Tu anticipo está cubierto. Falta firmar el contrato con tu fotógrafo.');
+      }
+
+      if (!booking.contractSigned) {
+        if (booking.canSignContract) {
+          steps.push('También falta firmar el contrato. Puedes leerlo y firmarlo aquí mismo.');
+        } else if (due.amount <= 0) {
+          steps.push('Tu anticipo está cubierto. Falta firmar el contrato con tu fotógrafo.');
+        }
       }
 
       break;

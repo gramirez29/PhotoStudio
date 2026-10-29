@@ -12,7 +12,7 @@ import { StepHeading } from './StepHeading';
  * @param props Component props.
  * @returns The step.
  */
-export function CodeRequestStep({ token, notice, onSent, onCancel }: CodeRequestStepProps): ReactElement {
+export function CodeRequestStep({ token, purpose, notice, onSent, onCancel }: CodeRequestStepProps): ReactElement {
   const request = useRequestCode(token);
   const wait = useCountdown();
   const [error, setError] = useState<ActionErrorView | null>(null);
@@ -37,9 +37,7 @@ export function CodeRequestStep({ token, notice, onSent, onCancel }: CodeRequest
   return (
     <section className="card" aria-labelledby="proof-step-title">
       <StepHeading>Confirma que eres tú</StepHeading>
-      <p>
-        Para subir tu comprobante te enviaremos un código de 6 dígitos al correo que tu fotógrafo registró para esta reserva.
-      </p>
+      <p>{`Para ${purpose} te enviaremos un código de 6 dígitos al correo que tu fotógrafo registró para esta reserva.`}</p>
 
       {notice !== null && <p className="notice">{notice}</p>}
 

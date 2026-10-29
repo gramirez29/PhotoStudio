@@ -5,6 +5,6 @@ import type { PortalBooking } from '../api/portal';
 export interface BookingViewProps {
   /** Booking to show. */
   readonly booking: PortalBooking;
-  /** What the client can do next (the payment proof flow), shown right after what comes next. */
+  /** What the client can do next (the contract and the payment proof flows), shown right after what comes next. */
   readonly action?: ReactNode;
 }

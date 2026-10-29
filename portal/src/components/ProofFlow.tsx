@@ -19,7 +19,7 @@ const SESSION_EXPIRED_NOTICE = 'Tu verificación venció. Confirma tu correo otr
  * @param props Component props.
  * @returns The current step, or nothing.
  */
-export function ProofFlow({ token, booking }: ProofFlowProps): ReactElement | null {
+export function ProofFlow({ token, booking, session, onSessionChange }: ProofFlowProps): ReactElement | null {
   const [state, dispatch] = useReducer(proofFlowReducer, INITIAL_PROOF_FLOW);
   const [values, setValues] = useState<ProofFormValues>(() => initialProofValues(booking));
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
@@ -37,6 +37,7 @@ export function ProofFlow({ token, booking }: ProofFlowProps): ReactElement | nu
       return (
         <CodeRequestStep
           token={token}
+          purpose="subir tu comprobante"
           notice={notice}
           onSent={(maskedEmail) => {
             setNotice(null);
@@ -50,7 +51,10 @@ export function ProofFlow({ token, booking }: ProofFlowProps): ReactElement | nu
         <CodeEntryStep
           token={token}
           maskedEmail={state.maskedEmail ?? ''}
-          onVerified={(session) => dispatch({ type: 'verified', session })}
+          onVerified={(verified) => {
+            onSessionChange(verified);
+            dispatch({ type: 'verified', session: verified });
+          }}
           onCancel={() => dispatch({ type: 'close' })}
         />
       );
@@ -66,6 +70,7 @@ export function ProofFlow({ token, booking }: ProofFlowProps): ReactElement | nu
           onSent={() => dispatch({ type: 'proofSent' })}
           onSessionExpired={() => {
             setNotice(SESSION_EXPIRED_NOTICE);
+            onSessionChange(null);
             dispatch({ type: 'sessionExpired' });
           }}
           onCancel={() => dispatch({ type: 'close' })}
@@ -95,7 +100,7 @@ export function ProofFlow({ token, booking }: ProofFlowProps): ReactElement | nu
       <h2 id="proof-title">¿Ya pagaste por SINPE Móvil?</h2>
       <p>Cuéntale a tu fotógrafo cuánto transferiste para que lo verifique.</p>
       <div className="actions">
-        <button type="button" className="button" onClick={() => dispatch({ type: 'open', now: Date.now() })}>
+        <button type="button" className="button" onClick={() => dispatch({ type: 'open', now: Date.now(), session })}>
           Subir comprobante
         </button>
       </div>

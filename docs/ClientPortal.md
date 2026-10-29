@@ -90,8 +90,8 @@ El portal es una página web en otro origen que el API, así que el navegador ex
 ## 6. Pendiente
 
 - ~~**App del fotógrafo**~~ Hecho: campo de correo (opcional) al crear la reserva, tarjeta "Enlace del cliente" (crea el enlace y abre WhatsApp con el mensaje) y tarjeta "Comprobantes por verificar" (verificar con confirmación, rechazar con motivo). Queda sin pantalla para **agregar el correo a una reserva que ya existe** (no hay endpoint para editarlo).
-- ~~**Portal web**~~ Hecho en `portal/` (React 19 + Vite, en el mismo sitio que la página principal; ver `docs/ClientPortalWeb.md` y `docs/Deployment.md`). Falta su entrega 4 (pulido y pruebas de punta a punta) y la pantalla del contrato (el backend ya está, §2.1).
+- ~~**Portal web**~~ Hecho en `portal/` (React 19 + Vite, en el mismo sitio que la página principal; ver `docs/ClientPortalWeb.md` y `docs/Deployment.md`). Falta su entrega 4 (pulido y pruebas de punta a punta) y la copia del contrato por correo (la pantalla y el backend ya están, §2.1).
 - ~~**Aviso al fotógrafo** cuando llega un comprobante~~ Hecho: `PaymentSubmitted` genera un aviso en la bandeja y un push (`PushNotifications.md`); la tarjeta "Revisar comprobante" abre la reserva.
-- ~~**Firma del contrato por el cliente**~~ y la autorización de imagen: hecho en el backend (§2.1). Falta la pantalla en el portal, la copia del contrato por correo al cliente (consumidor de `ContractSigned`) y mostrar la declaración en la app del fotógrafo.
+- ~~**Firma del contrato por el cliente**~~ y la autorización de imagen: hecho en el backend (§2.1). La pantalla del portal está hecha (`docs/ClientPortalWeb.md` §8). Falta la copia del contrato por correo al cliente (consumidor de `ContractSigned`) y mostrar la declaración en la app del fotógrafo.
 - **Comprobante como imagen** (necesita R2 y URLs prefirmadas).
 - Recibo por correo al verificar el pago.

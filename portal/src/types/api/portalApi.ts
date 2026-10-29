@@ -1,4 +1,4 @@
-import type { PortalBooking, PortalCodeSent, PortalSession, SubmitProofRequest } from './portal';
+import type { PortalBooking, PortalCodeSent, PortalContract, PortalSession, SignContractRequest, SubmitProofRequest } from './portal';
 
 /** Portal endpoints the page calls. */
 export interface PortalApi {
@@ -36,4 +36,23 @@ export interface PortalApi {
    * @returns The booking after the proof.
    */
   submitProof(token: string, accessToken: string, request: SubmitProofRequest, signal?: AbortSignal): Promise<PortalBooking>;
+
+  /**
+   * Reads the contract of the booking, with its data filled in. It needs the session because the text holds personal data.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param signal Optional signal to cancel the request.
+   * @returns The contract text and whether it is signed.
+   */
+  getContract(token: string, accessToken: string, signal?: AbortSignal): Promise<PortalContract>;
+
+  /**
+   * Signs the contract on behalf of the client.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param request What the client declared, the version they read and their acceptance.
+   * @param signal Optional signal to cancel the request.
+   * @returns The booking after signing.
+   */
+  signContract(token: string, accessToken: string, request: SignContractRequest, signal?: AbortSignal): Promise<PortalBooking>;
 }
