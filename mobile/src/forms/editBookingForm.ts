@@ -15,7 +15,7 @@ export function initialEditValues(booking: BookingResponse): EditBookingFormValu
     clientPhone: formatStoredPhone(booking.clientPhone),
     clientEmail: booking.clientEmail ?? '',
     packageName: booking.packageName,
-    price: String(Math.round(booking.packagePrice.amount)),
+    price: String(Math.round(booking.basePrice.amount)),
   };
 }
 
@@ -49,7 +49,7 @@ export function validateEditBookingForm(values: EditBookingFormValues, booking: 
   }
 
   let packageName = booking.packageName;
-  let packagePrice = booking.packagePrice.amount;
+  let packagePrice = booking.basePrice.amount;
   if (packageEditable) {
     packageName = values.packageName.trim();
     if (packageName.length === 0) {

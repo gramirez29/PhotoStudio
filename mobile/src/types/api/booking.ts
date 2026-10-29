@@ -9,6 +9,7 @@ import type {
   BOOKING_STATUSES,
   CHANNELS,
   IMAGE_USES,
+  PACKAGE_TIERS,
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
 } from '../../constants/booking';
@@ -58,6 +59,23 @@ export interface PaymentResponse {
 /** What the client allowed to do with the photos of the session. */
 export type ImageUse = (typeof IMAGE_USES)[number];
 
+/** Package the client booked (backend `PackageTier`). */
+export type PackageTier = (typeof PACKAGE_TIERS)[number];
+
+/** Extra sold with a booking (backend `BookingExtraResponse`). */
+export interface BookingExtraResponse {
+  /** Stable code of the extra. */
+  readonly code: string;
+  /** Name of the extra. */
+  readonly name: string;
+  /** Price of one unit when the booking was made. */
+  readonly unitPrice: MoneyResponse;
+  /** Number of units. */
+  readonly quantity: number;
+  /** Price of every unit together. */
+  readonly total: MoneyResponse;
+}
+
 /** What the client declared when signing the contract through the portal (backend `ClientDeclarationResponse`). */
 export interface ClientDeclarationResponse {
   /** Identity number of the signer, digits only (cédula of 9 digits or DIMEX of 11 or 12). */
@@ -94,7 +112,7 @@ export interface BookingResponse {
   readonly clientName: string;
   /** Client phone. */
   readonly clientPhone: string;
-  /** Package name. */
+  /** Name of the session (family portrait, pre-wedding...). */
   readonly packageName: string;
   /** Current status. */
   readonly status: BookingStatus;
@@ -104,7 +122,7 @@ export interface BookingResponse {
   readonly sessionEnd: string;
   /** End of the tentative hold (ISO 8601), or null. */
   readonly expiresAt: string | null;
-  /** Package price. */
+  /** What the client pays: the package plus the extras minus the discount. */
   readonly packagePrice: MoneyResponse;
   /** Deposit required to confirm. */
   readonly depositRequired: MoneyResponse;
@@ -116,6 +134,14 @@ export interface BookingResponse {
   readonly contract: ContractResponse | null;
   /** Recorded payments. */
   readonly payments: readonly PaymentResponse[];
+  /** Package the client booked, or null for bookings made before it was recorded. */
+  readonly packageTier: PackageTier | null;
+  /** Price of the package alone, before extras and discount. */
+  readonly basePrice: MoneyResponse;
+  /** Extras sold with the booking. */
+  readonly extras: readonly BookingExtraResponse[];
+  /** Discount given to the client; zero when there is none. */
+  readonly discount: MoneyResponse;
   /** Actions the caller can perform right now. */
   readonly allowedActions: readonly BookingAction[];
   /** Client email, or null when the booking has none. The client portal sends its verification codes there. */
@@ -166,9 +192,9 @@ export interface CreateBookingRequest {
   readonly clientPhone: string;
   /** Client email, optional. Without it the client can see the booking through the link but cannot act on it. */
   readonly clientEmail?: string;
-  /** Package name. */
+  /** Name of the session (family portrait, pre-wedding...). */
   readonly packageName: string;
-  /** Package price. */
+  /** Price of the package alone, before extras and discount. */
   readonly packagePrice: number;
   /** ISO 4217 currency code. */
   readonly currency: string;
@@ -176,6 +202,24 @@ export interface CreateBookingRequest {
   readonly sessionStart: string;
   /** Session end (ISO 8601). */
   readonly sessionEnd: string;
+  /** Package the client booked. */
+  readonly packageTier?: PackageTier;
+  /** Extras sold with the booking; omitted when there are none. */
+  readonly extras?: readonly BookingExtraRequest[];
+  /** Discount given to the client in colones; omitted when there is none. */
+  readonly discount?: number;
+}
+
+/** Extra sold with a booking, as sent when it is created (backend `BookingExtraRequest`). */
+export interface BookingExtraRequest {
+  /** Stable code of the extra. */
+  readonly code: string;
+  /** Name of the extra. */
+  readonly name: string;
+  /** Price of one unit when the booking is made. */
+  readonly unitPrice: number;
+  /** Number of units. */
+  readonly quantity: number;
 }
 
 /** Body to move a confirmed booking to another slot (backend `RescheduleBookingRequest`). */
@@ -236,7 +280,7 @@ export interface EditBookingDetailsRequest {
   readonly clientEmail?: string;
   /** Name of the package. */
   readonly packageName: string;
-  /** Price of the package, in the currency of the booking. */
+  /** Price of the package alone, in the currency of the booking. The extras and the discount do not change. */
   readonly packagePrice: number;
 }
 

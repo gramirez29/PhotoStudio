@@ -1,7 +1,16 @@
-import { BOOKING_ACTIONS, BOOKING_STATUSES, CHANNELS, IMAGE_USES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../constants/booking';
+import {
+  BOOKING_ACTIONS,
+  BOOKING_STATUSES,
+  CHANNELS,
+  IMAGE_USES,
+  PACKAGE_TIERS,
+  PAYMENT_METHODS,
+  PAYMENT_STATUSES,
+} from '../constants/booking';
 import type {
   BookingAction,
   BookingContractResponse,
+  BookingExtraResponse,
   BookingLinkResponse,
   BookingResponse,
   BookingSummaryResponse,
@@ -34,6 +43,23 @@ export function parseMoney(value: unknown, path: string): MoneyResponse {
   return {
     amount: readNumber(record, 'amount', path),
     currency: readString(record, 'currency', path),
+  };
+}
+
+/**
+ * Parses an extra sold with a booking.
+ * @param value Unknown value from the response.
+ * @param path Location of the value, for error messages.
+ * @returns The typed extra.
+ */
+export function parseBookingExtra(value: unknown, path: string): BookingExtraResponse {
+  const record = expectRecord(value, path);
+  return {
+    code: readString(record, 'code', path),
+    name: readString(record, 'name', path),
+    unitPrice: parseMoney(record.unitPrice, `${path}.unitPrice`),
+    quantity: readNumber(record, 'quantity', path),
+    total: parseMoney(record.total, `${path}.total`),
   };
 }
 
@@ -161,6 +187,10 @@ export function parseBooking(value: unknown): BookingResponse {
     ),
     allowedActions,
     clientEmail: readNullableString(record, 'clientEmail', path),
+    packageTier: record.packageTier === null ? null : readLiteral(record, 'packageTier', PACKAGE_TIERS, path),
+    basePrice: parseMoney(record.basePrice, `${path}.basePrice`),
+    extras: readArray(record, 'extras', path).map((extra, index) => parseBookingExtra(extra, `${path}.extras[${index}]`)),
+    discount: parseMoney(record.discount, `${path}.discount`),
   };
 }
 

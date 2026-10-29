@@ -3,6 +3,16 @@ using PhotoStudio.Domain.Bookings;
 namespace PhotoStudio.Application.Bookings.Responses;
 
 /// <summary>
+/// Extra sold with a booking, as exposed by the API.
+/// </summary>
+/// <param name="Code">Stable code of the extra.</param>
+/// <param name="Name">Name of the extra.</param>
+/// <param name="UnitPrice">Price of one unit when the booking was made.</param>
+/// <param name="Quantity">Number of units.</param>
+/// <param name="Total">Price of every unit together.</param>
+public sealed record BookingExtraResponse(string Code, string Name, MoneyResponse UnitPrice, int Quantity, MoneyResponse Total);
+
+/// <summary>
 /// Monetary amount as exposed by the API.
 /// </summary>
 /// <param name="Amount">Numeric amount.</param>
@@ -80,6 +90,10 @@ public sealed record BookingContractResponse(string TemplateVersion, string Text
 /// <param name="Payments">Recorded payments.</param>
 /// <param name="AllowedActions">Actions the caller can perform right now.</param>
 /// <param name="ClientEmail">Client email, or <see langword="null"/> when the booking has none.</param>
+/// <param name="PackageTier">Package the client booked, or <see langword="null"/> for bookings made before it was recorded.</param>
+/// <param name="BasePrice">Price of the package alone; <c>PackagePrice</c> is what the client pays: this plus the extras minus the discount.</param>
+/// <param name="Extras">Extras sold with the booking.</param>
+/// <param name="Discount">Discount given to the client; zero when there is none.</param>
 public sealed record BookingResponse(
     Guid Id,
     Guid PhotographerId,
@@ -97,7 +111,11 @@ public sealed record BookingResponse(
     ContractResponse? Contract,
     IReadOnlyList<PaymentResponse> Payments,
     IReadOnlyList<BookingAction> AllowedActions,
-    string? ClientEmail = null);
+    string? ClientEmail = null,
+    PackageTier? PackageTier = null,
+    MoneyResponse? BasePrice = null,
+    IReadOnlyList<BookingExtraResponse>? Extras = null,
+    MoneyResponse? Discount = null);
 
 /// <summary>
 /// Compact booking for lists. The mobile app mirrors this shape in TypeScript; the full detail comes from <see cref="BookingResponse"/>.

@@ -14,6 +14,48 @@ describe('parseBooking', () => {
     expect(booking.allowedActions).toEqual(['RecordInPersonPayment', 'Reschedule', 'Cancel']);
   });
 
+  it('reads the package, the extras and the discount that make up the price', () => {
+    const booking = parseBooking({
+      ...bookingPayload,
+      packageTier: 'Premium',
+      basePrice: { amount: 110000, currency: 'CRC' },
+      extras: [
+        {
+          code: 'makeup',
+          name: 'Maquillaje',
+          unitPrice: { amount: 20000, currency: 'CRC' },
+          quantity: 2,
+          total: { amount: 40000, currency: 'CRC' },
+        },
+      ],
+      discount: { amount: 10000, currency: 'CRC' },
+      packagePrice: { amount: 140000, currency: 'CRC' },
+    });
+
+    expect(booking.packageTier).toBe('Premium');
+    expect(booking.basePrice.amount).toBe(110000);
+    expect(booking.extras).toEqual([
+      {
+        code: 'makeup',
+        name: 'Maquillaje',
+        unitPrice: { amount: 20000, currency: 'CRC' },
+        quantity: 2,
+        total: { amount: 40000, currency: 'CRC' },
+      },
+    ]);
+    expect(booking.discount.amount).toBe(10000);
+  });
+
+  it('reads a booking made before packages existed, with no package', () => {
+    const booking = parseBooking({ ...bookingPayload, packageTier: null });
+
+    expect(booking.packageTier).toBeNull();
+  });
+
+  it('rejects a package that is not one of the tiers', () => {
+    expect(() => parseBooking({ ...bookingPayload, packageTier: 'Gold' })).toThrow(ResponseShapeError);
+  });
+
   it('reads the client email and the reference of a proof, and treats them as null when the backend sends none', () => {
     const withBoth = parseBooking({
       ...bookingPayload,

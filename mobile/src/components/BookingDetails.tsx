@@ -29,7 +29,12 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
       )}
 
       <View style={styles.card}>
-        <AmountRow label="Precio del paquete" money={booking.packagePrice} />
+        <AmountRow label="Precio del paquete" money={booking.basePrice} />
+        {booking.extras.map((extra) => (
+          <AmountRow key={extra.code} label={`${extra.name} × ${extra.quantity}`} money={extra.total} />
+        ))}
+        {booking.discount.amount > 0 && <AmountRow label="Descuento" money={{ amount: -booking.discount.amount, currency: booking.discount.currency }} />}
+        {(booking.extras.length > 0 || booking.discount.amount > 0) && <AmountRow label="Total" money={booking.packagePrice} emphasized />}
         <AmountRow label="Anticipo requerido" money={booking.depositRequired} />
         <AmountRow label="Pagado" money={booking.totalPaid} />
         <AmountRow label="Saldo" money={booking.balance} emphasized />

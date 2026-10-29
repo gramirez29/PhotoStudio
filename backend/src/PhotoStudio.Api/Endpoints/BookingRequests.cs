@@ -10,16 +10,28 @@ using PhotoStudio.Domain.Bookings;
 namespace PhotoStudio.Api.Endpoints;
 
 /// <summary>
+/// HTTP body of an extra sold with a booking.
+/// </summary>
+/// <param name="Code">Stable code of the extra.</param>
+/// <param name="Name">Name of the extra.</param>
+/// <param name="UnitPrice">Price of one unit when the booking is made.</param>
+/// <param name="Quantity">Number of units, from 1 to 99.</param>
+public sealed record BookingExtraRequest(string Code, string Name, decimal UnitPrice, int Quantity);
+
+/// <summary>
 /// HTTP body to create a booking.
 /// </summary>
 /// <param name="ClientName">Client name.</param>
 /// <param name="ClientPhone">Client phone.</param>
-/// <param name="PackageName">Package name.</param>
-/// <param name="PackagePrice">Package price.</param>
+/// <param name="PackageName">Name of the session (family portrait, pre-wedding...).</param>
+/// <param name="PackagePrice">Price of the package alone, before extras and discount.</param>
 /// <param name="Currency">ISO 4217 currency code, for example "CRC".</param>
 /// <param name="SessionStart">Session start, with offset.</param>
 /// <param name="SessionEnd">Session end, with offset.</param>
 /// <param name="ClientEmail">Client email, optional. The client portal sends its verification codes there.</param>
+/// <param name="PackageTier">Package the client booked (<c>Basic</c>, <c>Standard</c>, <c>Premium</c>, <c>Custom</c> or <c>Other</c>), optional.</param>
+/// <param name="Extras">Extras sold with the booking, optional.</param>
+/// <param name="Discount">Discount given to the client; zero or absent when there is none.</param>
 public sealed record CreateBookingRequest(
     string ClientName,
     string ClientPhone,
@@ -28,7 +40,10 @@ public sealed record CreateBookingRequest(
     string Currency,
     DateTimeOffset SessionStart,
     DateTimeOffset SessionEnd,
-    string? ClientEmail = null);
+    string? ClientEmail = null,
+    PackageTier? PackageTier = null,
+    IReadOnlyList<BookingExtraRequest>? Extras = null,
+    decimal Discount = 0m);
 
 /// <summary>
 /// HTTP body to correct the data of a booking. It carries every editable value; what did not change is the same as before.
@@ -37,7 +52,7 @@ public sealed record CreateBookingRequest(
 /// <param name="ClientPhone">Phone of the client.</param>
 /// <param name="ClientEmail">Email of the client, or empty for none.</param>
 /// <param name="PackageName">Name of the package.</param>
-/// <param name="PackagePrice">Price of the package, in the currency of the booking.</param>
+/// <param name="PackagePrice">Price of the package alone, in the currency of the booking. The extras and the discount do not change.</param>
 public sealed record EditBookingDetailsRequest(string ClientName, string ClientPhone, string? ClientEmail, string PackageName, decimal PackagePrice);
 
 /// <summary>
@@ -109,7 +124,10 @@ public static class BookingRequestMappings
             request.Currency,
             request.SessionStart,
             request.SessionEnd,
-            request.ClientEmail);
+            request.ClientEmail,
+            request.PackageTier,
+            request.Extras?.Select(extra => new BookingExtraInput(extra.Code, extra.Name, extra.UnitPrice, extra.Quantity)).ToList(),
+            request.Discount);
     }
 
     /// <summary>

@@ -48,7 +48,7 @@ describe('EditBookingForm', () => {
     expect(screen.getByLabelText('Teléfono').props.value).toBe('7018-9220');
     expect(screen.getByLabelText('Correo (opcional)')).toBeTruthy();
     expect(screen.getByText('Paquete')).toBeTruthy();
-    expect(screen.getByLabelText('Precio (₡)')).toBeTruthy();
+    expect(screen.getByLabelText('Precio del paquete (₡)')).toBeTruthy();
   });
 
   it('shows the package and the price, without letting them change, once they are locked', () => {
@@ -56,7 +56,7 @@ describe('EditBookingForm', () => {
 
     render(<EditBookingForm booking={booking} />);
 
-    expect(screen.queryByLabelText('Precio (₡)')).toBeNull();
+    expect(screen.queryByLabelText('Precio del paquete (₡)')).toBeNull();
     expect(screen.getByText('Paquete y precio')).toBeTruthy();
     expect(screen.getByText(/No se pueden cambiar porque el contrato ya está firmado o hay pagos registrados/)).toBeTruthy();
   });

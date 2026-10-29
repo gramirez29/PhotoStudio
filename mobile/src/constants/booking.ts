@@ -7,6 +7,9 @@
 /** Every value of the backend `BookingStatus` enum. */
 export const BOOKING_STATUSES = ['Tentative', 'Confirmed', 'Completed', 'Cancelled', 'Expired', 'ClientAbsent'] as const;
 
+/** Every value of the backend `PackageTier` enum: the package the client booked. */
+export const PACKAGE_TIERS = ['Basic', 'Standard', 'Premium', 'Custom', 'Other'] as const;
+
 /** Every value of the backend `PaymentMethod` enum. */
 export const PAYMENT_METHODS = ['SinpeMovil', 'Cash', 'Card'] as const;
 

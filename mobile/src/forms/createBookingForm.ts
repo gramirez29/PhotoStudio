@@ -6,7 +6,8 @@ import type {
 import { addHours, nextDayAt } from '../utils/date';
 import { normalizeEmail } from '../utils/email';
 import { normalizePhone } from '../utils/phone';
-import { parsePrice } from '../utils/price';
+import { parseOptionalAmount, parsePrice } from '../utils/price';
+import { extrasTotal } from '../utils/pricing';
 
 /** Currency used for every booking until the photographer can configure one. */
 export const DEFAULT_CURRENCY = 'CRC';
@@ -31,7 +32,10 @@ export function initialFormValues(now: Date): CreateBookingFormValues {
     clientPhone: '',
     clientEmail: '',
     packageName: '',
+    packageTier: null,
     price: '',
+    extras: [],
+    discount: '',
     start: nextDayAt(now, DEFAULT_START_HOUR),
     durationHours: DEFAULT_DURATION_HOURS,
   };
@@ -68,7 +72,11 @@ export function validateCreateBookingForm(
 
   const packageName = values.packageName.trim();
   if (packageName.length === 0) {
-    errors.packageName = 'Elige un paquete.';
+    errors.packageName = 'Elige un tipo de sesión.';
+  }
+
+  if (values.packageTier === null) {
+    errors.packageTier = 'Elige un paquete.';
   }
 
   const packagePrice = parsePrice(values.price);
@@ -76,11 +84,19 @@ export function validateCreateBookingForm(
     errors.price = 'Escribe un precio mayor a cero.';
   }
 
+  // The discount is optional, but it cannot be more than the client would pay without it.
+  const discount = parseOptionalAmount(values.discount);
+  if (discount === null) {
+    errors.discount = 'Escribe un descuento válido o déjalo vacío.';
+  } else if (packagePrice !== null && discount > packagePrice + extrasTotal(values.extras)) {
+    errors.discount = 'El descuento no puede ser mayor al precio del paquete y los extras.';
+  }
+
   if (values.start.getTime() <= now.getTime()) {
     errors.start = 'La sesión debe empezar en el futuro.';
   }
 
-  if (clientPhone === null || packagePrice === null || Object.keys(errors).length > 0) {
+  if (clientPhone === null || packagePrice === null || discount === null || values.packageTier === null || Object.keys(errors).length > 0) {
     return { ok: false, errors };
   }
 
@@ -95,6 +111,11 @@ export function validateCreateBookingForm(
       currency: DEFAULT_CURRENCY,
       sessionStart: values.start.toISOString(),
       sessionEnd: addHours(values.start, values.durationHours).toISOString(),
+      packageTier: values.packageTier,
+      ...(values.extras.length === 0
+        ? {}
+        : { extras: values.extras.map((extra) => ({ code: extra.code, name: extra.name, unitPrice: extra.unitPrice, quantity: extra.quantity })) }),
+      ...(discount > 0 ? { discount } : {}),
     },
   };
 }

@@ -69,6 +69,10 @@ export const bookingPayload = {
     },
   ],
   allowedActions: ['RecordInPersonPayment', 'Reschedule', 'Cancel'],
+  packageTier: 'Standard',
+  basePrice: { amount: 100000, currency: 'CRC' },
+  extras: [],
+  discount: { amount: 0, currency: 'CRC' },
 } as const;
 
 /** A valid booking summary as produced by the list endpoint of the backend. */

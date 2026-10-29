@@ -666,6 +666,59 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The package, the extras and the discount survive a round trip through MongoDB, and the total is still worked out from them.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task AddAsync_StoresTheTierTheExtrasAndTheDiscount()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var booking = Booking.Create(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            ClientContact.Create("María Pérez", "+506 8888-8888"),
+            "Retrato familiar",
+            Money.Create(65_000m, "CRC"),
+            TimeSlot.Create(SessionStart, SessionStart.AddHours(2)),
+            BookingPolicy.Default,
+            Now,
+            PackageTier.Standard,
+            [BookingExtra.Create("extra-hour", "Hora adicional", Money.Create(15_000m, "CRC"), 2)],
+            Money.Create(5_000m, "CRC"));
+        var repository = NewRepository();
+
+        await repository.AddAsync(booking, TestContext.Current.CancellationToken);
+
+        var stored = (await repository.GetByIdAsync(booking.Id, TestContext.Current.CancellationToken))!;
+        stored.PackageTier.ShouldBe(PackageTier.Standard);
+        stored.BasePrice.Amount.ShouldBe(65_000m);
+        stored.Extras.Single().Quantity.ShouldBe(2);
+        stored.Discount.Amount.ShouldBe(5_000m);
+        stored.PackagePrice.Amount.ShouldBe(90_000m);
+    }
+
+    /// <summary>
+    /// A booking stored before extras and discounts existed has only <c>packagePrice</c>; it is read as a package with no extras.
+    /// </summary>
+    [Fact]
+    public void ToDomain_WithADocumentFromBeforeExtras_ReadsThePackagePriceAsTheBasePrice()
+    {
+        var document = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2)).ToDocument(0);
+        document.BasePrice = null;
+        document.Discount = null;
+        document.PackageTier = null;
+        document.Extras = [];
+
+        var booking = document.ToDomain();
+
+        booking.BasePrice.Amount.ShouldBe(100_000m);
+        booking.PackagePrice.Amount.ShouldBe(100_000m);
+        booking.PackageTier.ShouldBeNull();
+        booking.Extras.ShouldBeEmpty();
+        booking.Discount.Amount.ShouldBe(0m);
+    }
+
+    /// <summary>
     /// Creates a tentative booking for the slot.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>

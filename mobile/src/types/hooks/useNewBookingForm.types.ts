@@ -1,3 +1,4 @@
+import type { BookingTotals, SelectedExtra } from '../utils/pricing.types';
 import type {
   CreateBookingFormErrors,
   CreateBookingFormValues,
@@ -20,8 +21,14 @@ export interface NewBookingFormState {
   readonly setText: (field: CreateBookingTextField, text: string) => void;
   /** Updates the client phone, formatted as 0000-0000, and clears its validation message. */
   readonly setPhone: (text: string) => void;
-  /** Selects the package (service) and clears its validation message. */
-  readonly setPackage: (packageName: string) => void;
+  /** What the booking costs, worked out from the price, the extras and the discount. */
+  readonly totals: BookingTotals;
+  /** Selects the type of session and clears its validation message. */
+  readonly setSessionType: (packageName: string) => void;
+  /** Selects the package by its name in the drop-down; fills in its price and session length when it has them. */
+  readonly setPackageTier: (label: string) => void;
+  /** Replaces the extras chosen. */
+  readonly setExtras: (extras: readonly SelectedExtra[]) => void;
   /** Updates the session start and clears its validation message. */
   readonly setStart: (start: Date) => void;
   /** Updates the session duration, in hours. */

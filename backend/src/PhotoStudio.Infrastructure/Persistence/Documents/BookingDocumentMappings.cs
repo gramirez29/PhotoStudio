@@ -27,6 +27,16 @@ public static class BookingDocumentMappings
             ClientPhone = booking.Client.Phone,
             ClientEmail = booking.Client.Email,
             PackageName = booking.PackageName,
+            PackageTier = booking.PackageTier?.ToString(),
+            BasePrice = booking.BasePrice.Amount,
+            Extras = [.. booking.Extras.Select(extra => new BookingExtraDocument
+            {
+                Code = extra.Code,
+                Name = extra.Name,
+                UnitPrice = extra.UnitPrice.Amount,
+                Quantity = extra.Quantity,
+            })],
+            Discount = booking.Discount.Amount == 0m ? null : booking.Discount.Amount,
             PackagePrice = booking.PackagePrice.Amount,
             Currency = booking.PackagePrice.Currency,
             SlotStart = booking.Slot.Start.UtcDateTime,
@@ -58,7 +68,7 @@ public static class BookingDocumentMappings
             document.PhotographerId,
             ClientContact.Create(document.ClientName, document.ClientPhone, document.ClientEmail),
             document.PackageName,
-            Money.Restore(document.PackagePrice, document.Currency),
+            Money.Restore(document.BasePrice ?? document.PackagePrice, document.Currency),
             TimeSlot.Create(ToOffset(document.SlotStart), ToOffset(document.SlotEnd)),
             document.Policy.ToDomain(),
             Enum.Parse<BookingStatus>(document.Status),
@@ -68,7 +78,10 @@ public static class BookingDocumentMappings
             document.RescheduleCount,
             ToNullableOffset(document.ClientAbsentMarkedAt),
             document.Payments.Select(payment => payment.ToDomain()),
-            document.History.Select(transition => transition.ToDomain()));
+            document.History.Select(transition => transition.ToDomain()),
+            document.PackageTier is null ? null : Enum.Parse<PackageTier>(document.PackageTier),
+            document.Extras.Select(extra => BookingExtra.Create(extra.Code, extra.Name, Money.Restore(extra.UnitPrice, document.Currency), extra.Quantity)),
+            Money.Restore(document.Discount ?? 0m, document.Currency));
     }
 
     /// <summary>
