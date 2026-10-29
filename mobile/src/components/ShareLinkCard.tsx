@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useShareLink } from '../hooks/useShareLink';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { ShareLinkCardProps } from '../types/components/ShareLinkCard.types';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card to send the client the link of the booking by WhatsApp. It is shown while the booking can still receive payments
@@ -13,6 +15,7 @@ import { AppCard } from './AppCard';
  * @returns The card, or nothing when the booking is closed.
  */
 export function ShareLinkCard({ booking }: ShareLinkCardProps): ReactElement | null {
+  const styles = useStyles();
   const link = useShareLink(booking);
 
   if (booking.status !== 'Tentative' && booking.status !== 'Confirmed' && booking.status !== 'Completed') {
@@ -40,22 +43,24 @@ export function ShareLinkCard({ booking }: ShareLinkCardProps): ReactElement | n
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.sm,
     marginTop: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   body: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   error: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

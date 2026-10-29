@@ -1,8 +1,10 @@
 import type { ReactElement } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { ScrollView, Text, View } from 'react-native';
+import { radius, spacing } from '../theme/tokens';
 import type { ContractTextProps } from '../types/components/ContractText.types';
 import { splitContractText } from '../utils/contract';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * The text of the contract as the client reads it on the phone: the title and then one paragraph per line, in its own box that
@@ -11,6 +13,7 @@ import { splitContractText } from '../utils/contract';
  * @returns The contract.
  */
 export function ContractText({ text }: ContractTextProps): ReactElement {
+  const styles = useStyles();
   const layout = splitContractText(text);
 
   return (
@@ -28,9 +31,9 @@ export function ContractText({ text }: ContractTextProps): ReactElement {
 }
 
 /** Styles of the contract box. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   box: {
-    backgroundColor: colors.surface,
+    backgroundColor: palette.surfaceVariant,
     borderRadius: radius.md,
     maxHeight: 360,
   },
@@ -39,16 +42,17 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   paragraph: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: FONT_FAMILIES.body,
   },
   indented: {
     paddingLeft: spacing.md,
   },
-});
+}));

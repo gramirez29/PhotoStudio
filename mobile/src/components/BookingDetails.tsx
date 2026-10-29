@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { ScrollView, Text } from 'react-native';
+import { spacing } from '../theme/tokens';
 import type { BookingDetailsProps } from '../types/components/BookingDetails.types';
 import { formatDateTime } from '../utils/format';
 import { AmountRow } from './AmountRow';
@@ -11,6 +11,8 @@ import { SettlementCard } from './SettlementCard';
 import { ShareLinkCard } from './ShareLinkCard';
 import { StatusBadge } from './StatusBadge';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Body of the booking screen once the booking is loaded: status, client, amounts, contract and available actions.
@@ -18,6 +20,7 @@ import { AppCard } from './AppCard';
  * @returns The booking details.
  */
 export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
+  const styles = useStyles();
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <StatusBadge status={booking.status} />
@@ -55,27 +58,29 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
 }
 
 /** Styles of the booking details. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     padding: spacing.md,
     gap: spacing.sm,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
     marginTop: spacing.sm,
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   warning: {
-    color: colors.warning,
+    color: palette.warning,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   card: {
     gap: spacing.xs,
     marginTop: spacing.md,
   },
-});
+}));

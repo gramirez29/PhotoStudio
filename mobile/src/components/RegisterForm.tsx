@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { MIN_PASSWORD_LENGTH } from '../forms/registerForm';
 import { useRegisterForm } from '../hooks/useRegisterForm';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Account creation fields and button: name, phone, username and password (typed twice). The account is created and signed
@@ -12,6 +14,7 @@ import { FormInput } from './FormInput';
  * @returns The fields.
  */
 export function RegisterForm(): ReactElement {
+  const styles = useStyles();
   const form = useRegisterForm();
 
   return (
@@ -101,17 +104,19 @@ export function RegisterForm(): ReactElement {
 }
 
 /** Styles of the fields. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     gap: spacing.md,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
     marginTop: -spacing.sm,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

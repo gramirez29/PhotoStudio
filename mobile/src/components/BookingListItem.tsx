@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { Pressable, Text, View } from 'react-native';
+import { radius, spacing } from '../theme/tokens';
 import type { BookingListItemProps } from '../types/components/BookingListItem.types';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { StatusBadge } from './StatusBadge';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card of the booking list: client, package, session date, status and outstanding balance.
@@ -11,6 +13,7 @@ import { StatusBadge } from './StatusBadge';
  * @returns The card.
  */
 export function BookingListItem({ booking, onPress }: BookingListItemProps): ReactElement {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -34,9 +37,9 @@ export function BookingListItem({ booking, onPress }: BookingListItemProps): Rea
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: palette.surfaceVariant,
     borderRadius: radius.md,
     gap: spacing.xs,
     padding: spacing.md,
@@ -51,19 +54,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   client: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     flex: 1,
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   detail: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   balance: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 14,
-    fontWeight: '600',
     marginTop: spacing.xs,
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

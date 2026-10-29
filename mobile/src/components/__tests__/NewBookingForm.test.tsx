@@ -118,14 +118,14 @@ describe('NewBookingForm', () => {
     expect(screen.getByLabelText('Extras (₡)').props.editable).toBe(false);
   });
 
-  it('shows the total to pay before the button that creates the booking, bigger and in bold', () => {
+  it('shows the total to pay before the button that creates the booking, bigger and in a bold font', () => {
     jest.mocked(useNewBookingForm).mockReturnValue(formState({ totals: { packagePrice: 65000, extrasTotal: 0, discount: 0, total: 65000 } }));
 
     render(<NewBookingForm />);
 
     const total = screen.getByLabelText('Total a pagar');
     expect(total.props.children).toMatch(/65\D*000/);
-    expect(total.props.style).toEqual(expect.objectContaining({ fontWeight: '700', fontSize: 26 }));
+    expect(total.props.style).toEqual(expect.objectContaining({ fontFamily: 'JosefinSans_700Bold', fontSize: 26 }));
     expect(screen.getByText('Total a pagar')).toBeTruthy();
   });
 

@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useRunMaintenance } from '../hooks/useRunMaintenance';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import { maintenanceErrorMessage } from '../utils/apiErrors';
 import { describeMaintenanceResult } from '../utils/maintenance';
 import { ActionButton } from './ActionButton';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Button that runs the maintenance pass on demand, so a hold that already ended frees its slot without waiting for the
@@ -12,6 +14,7 @@ import { ActionButton } from './ActionButton';
  * @returns The button with its result message.
  */
 export function MaintenanceButton(): ReactElement {
+  const styles = useStyles();
   const maintenance = useRunMaintenance();
 
   let message: string | null = null;
@@ -35,21 +38,23 @@ export function MaintenanceButton(): ReactElement {
 }
 
 /** Styles of the button and its messages. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     marginBottom: spacing.md,
   },
   hint: {
-    color: colors.muted,
+    color: palette.muted,
     fontSize: 13,
     marginTop: spacing.xs,
+    fontFamily: FONT_FAMILIES.body,
   },
   message: {
-    color: colors.success,
+    color: palette.success,
     fontSize: 14,
     marginTop: spacing.sm,
+    fontFamily: FONT_FAMILIES.body,
   },
   error: {
-    color: colors.danger,
+    color: palette.error,
   },
-});
+}));

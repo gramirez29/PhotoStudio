@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { ApiStatus } from '../components/ApiStatus';
 import { BookingListItem } from '../components/BookingListItem';
 import { ChangePasswordButton } from '../components/ChangePasswordButton';
@@ -12,8 +12,11 @@ import { RefundsButton } from '../components/RefundsButton';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
 import { useSessionStore } from '../session/sessionStore';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { BookingSummaryResponse } from '../types/api/booking';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 /** Room left at the end of the list so the floating button never hides the last booking. */
 const LIST_END_SPACE = 96;
@@ -23,6 +26,8 @@ const LIST_END_SPACE = 96;
  * @returns The screen.
  */
 export default function HomeScreen(): ReactElement {
+  const styles = useStyles();
+  const { palette } = useAppTheme();
   const query = useBookings();
   // The maintenance pass works on every photographer's data: the backend only accepts it from system operators.
   const isSystemOperator = useSessionStore((state) => state.session?.isSystemOperator === true);
@@ -30,7 +35,7 @@ export default function HomeScreen(): ReactElement {
 
   let empty: ReactElement;
   if (query.isPending) {
-    empty = <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando reservas" style={styles.loader} />;
+    empty = <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reservas" style={styles.loader} />;
   } else if (query.isError) {
     empty = (
       <Placeholder
@@ -70,7 +75,7 @@ export default function HomeScreen(): ReactElement {
 }
 
 /** Styles of the home screen. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   screen: {
     flex: 1,
   },
@@ -79,12 +84,12 @@ const styles = StyleSheet.create({
     paddingBottom: LIST_END_SPACE,
   },
   sectionTitle: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 17,
-    fontWeight: '700',
     marginBottom: spacing.sm,
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   loader: {
     marginTop: spacing.lg,
   },
-});
+}));

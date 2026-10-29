@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { SERVICES } from '../constants/services';
 import { useEditBookingForm } from '../hooks/useEditBookingForm';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { EditBookingFormProps } from '../types/components/EditBookingForm.types';
 import { formatMoney } from '../utils/format';
 import { packageLabel } from '../utils/pricing';
@@ -14,6 +14,8 @@ import { PackageFields } from './PackageFields';
 import { SelectField } from './SelectField';
 import { TotalToPay } from './TotalToPay';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Screen content that corrects a booking: the data of the client, and the type of session, package, price, extras and discount
@@ -23,6 +25,7 @@ import { AppCard } from './AppCard';
  * @returns The form.
  */
 export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement {
+  const styles = useStyles();
   const form = useEditBookingForm(booking);
 
   return (
@@ -116,25 +119,28 @@ export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   locked: {
     gap: spacing.xs,
   },
   lockedTitle: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
   lockedValue: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

@@ -1,15 +1,18 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useLoginForm } from '../hooks/useLoginForm';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Sign-in fields and button: username and password. The navigator replaces the screen by itself once the session is in place.
  * @returns The fields.
  */
 export function LoginForm(): ReactElement {
+  const styles = useStyles();
   const form = useLoginForm();
 
   return (
@@ -52,12 +55,13 @@ export function LoginForm(): ReactElement {
 }
 
 /** Styles of the fields. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     gap: spacing.md,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

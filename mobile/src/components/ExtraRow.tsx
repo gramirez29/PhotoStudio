@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { MAX_EXTRA_QUANTITY } from '../config/pricing';
-import { colors, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
 import type { ExtraRowProps } from '../types/components/ExtraRow.types';
 import { formatColones } from '../utils/pricing';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Row of the list of extras: its name, the price of one unit and a control to add or remove units.
@@ -11,6 +13,7 @@ import { formatColones } from '../utils/pricing';
  * @returns The row.
  */
 export function ExtraRow({ extra, quantity, onChange }: ExtraRowProps): ReactElement {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <View style={styles.text}>
@@ -47,7 +50,7 @@ export function ExtraRow({ extra, quantity, onChange }: ExtraRowProps): ReactEle
 }
 
 /** Styles of the row. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   row: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -60,12 +63,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
+    fontFamily: FONT_FAMILIES.body,
   },
   price: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   stepper: {
     alignItems: 'center',
@@ -74,7 +79,7 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: palette.primary,
     borderRadius: radius.pill,
     height: 36,
     justifyContent: 'center',
@@ -84,15 +89,15 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   buttonText: {
-    color: colors.textInverse,
+    color: palette.onPrimary,
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.title,
   },
   quantity: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
     minWidth: 28,
     textAlign: 'center',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
-});
+}));

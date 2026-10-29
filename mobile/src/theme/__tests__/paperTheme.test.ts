@@ -1,7 +1,6 @@
 import { FONT_ASSETS, FONT_FAMILIES } from '../fonts';
 import { DARK_PALETTE, LIGHT_PALETTE } from '../palettes';
 import { buildPaperTheme } from '../paperTheme';
-import { colors } from '../tokens';
 
 describe('buildPaperTheme', () => {
   it('paints the library with the light palette of the brand', () => {
@@ -58,30 +57,5 @@ describe('buildPaperTheme', () => {
     const asked = Object.values(buildPaperTheme('dark').fonts).map((font) => font.fontFamily);
 
     expect(asked.every((family) => loaded.includes(family))).toBe(true);
-  });
-});
-
-describe('colors, the compatibility layer', () => {
-  it('keeps the names the components use, with the colors of the light palette', () => {
-    expect(colors.background).toBe(LIGHT_PALETTE.background);
-    expect(colors.surface).toBe(LIGHT_PALETTE.surfaceVariant);
-    expect(colors.textPrimary).toBe(LIGHT_PALETTE.onBackground);
-    expect(colors.primary).toBe(LIGHT_PALETTE.primary);
-    expect(colors.danger).toBe(LIGHT_PALETTE.error);
-    expect(Object.keys(colors)).toEqual([
-      'background',
-      'surface',
-      'border',
-      'textPrimary',
-      'textSecondary',
-      'textInverse',
-      'primary',
-      'success',
-      'warning',
-      'danger',
-      'info',
-      'muted',
-      'overlay',
-    ]);
   });
 });

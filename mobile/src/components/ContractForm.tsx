@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { useContractForm } from '../hooks/useContractForm';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { ContractFormProps } from '../types/components/ContractForm.types';
 import { imageUseFromChoice, IMAGE_USE_CHOICE_LABELS } from '../utils/contract';
 import { formatDateTime } from '../utils/format';
@@ -11,6 +11,8 @@ import { ContractText } from './ContractText';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { SelectField } from './SelectField';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Screen content that records the signature of the contract. When the client signs on the phone it shows them the contract to
@@ -20,6 +22,7 @@ import { SelectField } from './SelectField';
  * @returns The form.
  */
 export function ContractForm({ booking }: ContractFormProps): ReactElement {
+  const styles = useStyles();
   const form = useContractForm(booking);
   const paper = form.values.kind === 'Paper';
   const waitingForContract = form.showsContract && form.contractText === null;
@@ -137,26 +140,29 @@ export function ContractForm({ booking }: ContractFormProps): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   errorBox: {
     gap: spacing.sm,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   acceptance: {
     alignItems: 'center',
@@ -164,8 +170,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   acceptanceLabel: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     flex: 1,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

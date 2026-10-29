@@ -1,26 +1,7 @@
-import { LIGHT_PALETTE } from './palettes';
-
 /**
- * Colors of the light theme under the names the app used before the theme existed. It is a compatibility layer, not the way to
- * read a color: a color read here never changes with the theme. Components that read it keep working, always in light, until
- * they move to the theme of the app (`useAppTheme`), one by one, in the phases of docs/MobileUi.md; then this file goes away.
- * The spacing and the radius below are not colors and stay.
+ * The scales of the interface that are not colors: the spacing and the corner radius. The colors are not here: they belong to
+ * the theme (`useAppTheme`, `makeStyles`, `src/theme/palettes.ts`), so they follow the light and the dark themes.
  */
-export const colors = {
-  background: LIGHT_PALETTE.background,
-  surface: LIGHT_PALETTE.surfaceVariant,
-  border: LIGHT_PALETTE.outlineVariant,
-  textPrimary: LIGHT_PALETTE.onBackground,
-  textSecondary: LIGHT_PALETTE.onSurfaceVariant,
-  textInverse: LIGHT_PALETTE.onPrimary,
-  primary: LIGHT_PALETTE.primary,
-  success: LIGHT_PALETTE.success,
-  warning: LIGHT_PALETTE.warning,
-  danger: LIGHT_PALETTE.error,
-  info: LIGHT_PALETTE.info,
-  muted: LIGHT_PALETTE.muted,
-  overlay: 'rgba(11, 26, 64, 0.45)',
-} as const;
 
 /** Spacing scale in density-independent pixels. */
 export const spacing = {

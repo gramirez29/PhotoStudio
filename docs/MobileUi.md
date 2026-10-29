@@ -45,9 +45,9 @@ Un PR por fase, hacia `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas
 | 1 | Cimientos: Paper, paletas, tema, fuentes, fondo, preferencia de tema (sin selector) | **Hecha** |
 | 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | **Hecha** (ver §3.1) |
 | 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`makeStyles`) | **Hecha** (ver §3.2) |
-| 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | Pendiente |
+| 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | **Hecha** (ver §3.3) |
 | 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | Pendiente |
-| 6 | Limpieza: quitar `tokens.ts`, regla de ESLint contra colores fijos, actualizar documentos | Pendiente |
+| 6 | Limpieza: regla de ESLint contra colores fijos (hoy lo hace `noFixedColors.test.ts`), actualizar documentos. `colors` de `tokens.ts` ya se quitó en la fase 4 | Pendiente |
 
 ### 3.1 Fase 2: qué cambió en los componentes base
 
@@ -73,6 +73,16 @@ Todos leen sus colores del tema, así que ya siguen el tema claro y el oscuro. *
 - **Botón flotante "Nueva reserva"** (`NewBookingFab`, el `FAB` extendido de Material 3 en el color principal) en la esquina de abajo a la derecha, sobre la barra de navegación del sistema; reemplaza el "+ Nueva" que estaba en la cabecera (`NewBookingButton`, eliminado). La lista deja espacio al final para que no tape la última reserva.
 - **Barra de estado** (`statusBarStyleFor`): íconos claros sobre la banda, en cualquier tema; sin banda (acceso, cargando, sin conexión) siguen el tema.
 - **`makeStyles`** (`src/theme/makeStyles.ts`): la forma de escribir estilos que dependen del tema. `const useStyles = makeStyles((palette, scheme) => ({ title: { color: palette.onSurface } }))` y, dentro del componente, `const styles = useStyles();`. Se recalculan solo cuando cambia el tema. Lo usan `HeaderBrand` y `SignOutButton`; las fases 4 y 5 lo usan en las pantallas.
+
+### 3.3 Fase 4: qué cambió en las pantallas
+
+Todas las pantallas y componentes con estilos propios pasaron de los colores fijos de `tokens.ts` a **la paleta del tema** (`makeStyles`), y todo el texto usa las fuentes de la marca:
+
+- **Colores:** cada estilo lee su color de un rol de la paleta (`onSurface`, `onSurfaceVariant`, `primary`, `error`, `surfaceVariant`...). Así, al activar el tema oscuro en la fase 5, **nada se queda en claro**. Los pares de texto y fondo ya cumplen WCAG AA en los dos temas (prueba de `palettes`) y también sobre la parte más clara y más oscura de la foto de fondo (prueba de `background`).
+- **Fuentes:** el texto que tenía un `fontSize` y un `fontWeight` ahora tiene su familia: los títulos de 17 puntos o más en negrita van en **Josefin Sans** y el resto en **DM Sans** (normal, media o negrita). En Android cada peso es un archivo distinto, por eso no queda ningún `fontWeight` suelto.
+- **Los colores dinámicos** (`ApiStatus`, los estados) ahora son roles de la paleta (`ApiHealthDescription.color` es una clave de `Palette`).
+- **`tokens.ts` ya no tiene `colors`**: solo quedan `spacing` y `radius`. `src/theme/__tests__/noFixedColors.test.ts` impide que vuelvan: ninguna pantalla ni componente puede escribir un color (hex o `rgb()`), importar `colors` ni usar un `fontWeight`.
+- Comportamiento, rutas, hooks, formularios y API: sin cambios.
 
 **Recorridos a repetir en el teléfono** (antes de fusionar las fases 2 a 5): iniciar sesión y salir; crear una reserva con
 paquete, extras y descuento; editarla; firmar el contrato en el celular; registrar un pago; completar; cancelar con motivo;

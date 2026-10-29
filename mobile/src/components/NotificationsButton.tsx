@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { useNotifications } from '../hooks/useNotifications';
 import { openNotifications } from '../navigation/appNavigation';
-import { colors, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
 import { inboxLabel } from '../utils/notifications';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Entry to the inbox of notices, with the number of unread ones. The counter comes from the same query the inbox uses, so
@@ -11,6 +13,7 @@ import { inboxLabel } from '../utils/notifications';
  * @returns The button.
  */
 export function NotificationsButton(): ReactElement {
+  const styles = useStyles();
   const unreadCount = useNotifications().data?.unreadCount ?? 0;
 
   return (
@@ -26,26 +29,26 @@ export function NotificationsButton(): ReactElement {
 }
 
 /** Styles of the button. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   button: {
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: palette.surfaceVariant,
     borderRadius: radius.md,
     marginBottom: spacing.md,
     padding: spacing.md,
   },
   highlighted: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.primary,
   },
   pressed: {
     opacity: 0.8,
   },
   label: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   highlightedLabel: {
-    color: colors.textInverse,
+    color: palette.onPrimary,
   },
-});
+}));

@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { SERVICES } from '../constants/services';
 import { DURATION_OPTIONS_HOURS } from '../forms/createBookingForm';
 import { useNewBookingForm } from '../hooks/useNewBookingForm';
-import { colors, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
 import { DateTimeField } from './DateTimeField';
 import { DurationPicker } from './DurationPicker';
 import { ExtrasFields } from './ExtrasFields';
@@ -12,6 +12,9 @@ import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { PackageFields } from './PackageFields';
 import { SelectField } from './SelectField';
 import { TotalToPay } from './TotalToPay';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 /**
  * Form to create a booking in a few taps: client, type of session, package, price, day, time, duration, extras and discount. The
@@ -19,6 +22,8 @@ import { TotalToPay } from './TotalToPay';
  * @returns The form.
  */
 export function NewBookingForm(): ReactElement {
+  const styles = useStyles();
+  const { palette } = useAppTheme();
   const form = useNewBookingForm();
 
   return (
@@ -106,7 +111,7 @@ export function NewBookingForm(): ReactElement {
           style={({ pressed }) => [styles.submit, form.isPending && styles.submitDisabled, pressed && styles.submitPressed]}
         >
           {form.isPending ? (
-            <ActivityIndicator color={colors.textInverse} accessibilityLabel="Creando reserva" />
+            <ActivityIndicator color={palette.onPrimary} accessibilityLabel="Creando reserva" />
           ) : (
             <Text style={styles.submitLabel}>Crear reserva</Text>
           )}
@@ -116,19 +121,21 @@ export function NewBookingForm(): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
     marginTop: -spacing.sm,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   submit: {
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: palette.primary,
     borderRadius: radius.sm,
     paddingVertical: spacing.md,
   },
@@ -139,8 +146,8 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   submitLabel: {
-    color: colors.textInverse,
+    color: palette.onPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

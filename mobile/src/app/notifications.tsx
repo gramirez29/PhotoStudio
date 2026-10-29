@@ -1,18 +1,23 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { ActionButton } from '../components/ActionButton';
 import { ListSeparator } from '../components/ListSeparator';
 import { NotificationListItem } from '../components/NotificationListItem';
 import { Placeholder } from '../components/Placeholder';
 import { useNotificationActions } from '../hooks/useNotificationActions';
 import { useNotifications } from '../hooks/useNotifications';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 /**
  * Inbox of notices: session reminders and balances still owed, with the actions to message the client on WhatsApp.
  * @returns The screen.
  */
 export default function NotificationsScreen(): ReactElement {
+  const styles = useStyles();
+  const { palette } = useAppTheme();
   const query = useNotifications();
   const actions = useNotificationActions();
   const items = query.data?.items ?? [];
@@ -20,7 +25,7 @@ export default function NotificationsScreen(): ReactElement {
 
   let empty: ReactElement;
   if (query.isPending) {
-    empty = <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando avisos" style={styles.loader} />;
+    empty = <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando avisos" style={styles.loader} />;
   } else if (query.isError) {
     empty = (
       <Placeholder
@@ -66,7 +71,7 @@ export default function NotificationsScreen(): ReactElement {
 }
 
 /** Styles of the screen. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     padding: spacing.md,
   },
@@ -75,10 +80,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   error: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   loader: {
     marginTop: spacing.lg,
   },
-});
+}));
