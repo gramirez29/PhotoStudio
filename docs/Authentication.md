@@ -575,7 +575,7 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 
 ## 18. Límites conocidos y siguientes pasos
 
-1. **Sin recuperación de contraseña ni verificación del correo.** El correo y el teléfono se piden y se guardan, pero **no se verifican**: nada envía mensajes todavía (Resend no está configurado y no hay dominio). Así que alguien puede registrarse con el correo de otra persona y **ocupar esa dirección**. El correo está listo para ser la vía de recuperación de contraseña, pero solo será fiable cuando se verifique con un código enviado a esa dirección. Hasta entonces, cerrar el registro en producción (`AUTH_REGISTRATION_ENABLED=false`) una vez creada tu cuenta es la mitigación.
+1. **Sin recuperación de contraseña ni verificación del correo.** El correo y el teléfono se piden y se guardan, pero **no se verifican**: el envío de correo ya existe (`IEmailSender` con Resend, hoy solo para el código del portal del cliente), pero todavía no se usa para verificar cuentas ni para recuperar la contraseña. Así que alguien puede registrarse con el correo de otra persona y **ocupar esa dirección**. El correo está listo para ser la vía de recuperación de contraseña, pero solo será fiable cuando se verifique con un código enviado a esa dirección. Hasta entonces, cerrar el registro en producción (`AUTH_REGISTRATION_ENABLED=false`) una vez creada tu cuenta es la mitigación.
 2. ~~**`/api/maintenance/run` es trabajo global**~~ **Resuelto:** exige el rol de sistema (§19). Queda que el rol es un booleano en el usuario, sin gestión de roles más fina.
 3. **Un atacante que conozca tu usuario puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por usuario). Mitigación futura: bloquear por (usuario, IP) o retardos progresivos.
 4. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión). Es el precio de no consultar la base en cada petición.
@@ -584,7 +584,7 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 7. **Un usuario = un fotógrafo = un tenant.** Para estudios con varios fotógrafos habría que separar "cuenta" de "tenant" y añadir roles.
 8. **Cerrar sesión sin conexión** deja vivo el refresh token en el servidor hasta que expire (30 días), aunque el teléfono ya lo olvidó.
 9. **Rotar `JWT_SIGNING_KEY`** invalida los access tokens vigentes (la app los renueva sola); no invalida los refresh tokens.
-10. **Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.
+10. ~~**Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.~~ **Resuelto** en el backend con un mecanismo aparte (token de enlace guardado como hash y código por correo; ver `ClientPortal.md`). La verificación de correo y la recuperación de contraseña **del fotógrafo** siguen pendientes (punto 1).
 
 ---
 

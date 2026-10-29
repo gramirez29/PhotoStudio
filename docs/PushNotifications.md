@@ -70,7 +70,7 @@ Cada push lleva, además del texto, `data` con `notificationId`, `bookingId` y `
 
 | Plataforma | Estado | Notas |
 |---|---|---|
-| **Android, dispositivo físico, build de desarrollo (EAS)** | **Implementado, sin verificar en un teléfono** | Es el objetivo actual. APK interno (`distribution: internal`). Canal `default` ("Avisos"). Android 13+ pide permiso `POST_NOTIFICATIONS` (lo gestiona `expo-notifications`). |
+| **Android, dispositivo físico, build de desarrollo (EAS)** | **Implementado y verificado con un push real (2026-10-28)** | Es el objetivo actual. APK interno (`distribution: internal`). Canal `default` ("Avisos"). Android 13+ pide permiso `POST_NOTIFICATIONS` (lo gestiona `expo-notifications`). |
 | iOS | Pendiente | El código ya contempla `Platform.OS === 'ios'` y el backend acepta `platform: Ios`, pero faltan Apple Developer, la clave APNs en EAS y un build. No hay canal que crear en iOS. |
 | Expo Go | **No funciona** | Desde SDK 53 el push remoto en Android exige un build propio. |
 | Emulador / simulador | No | `Device.isDevice` es falso: la app responde `unavailable` y no registra nada. |
@@ -227,7 +227,7 @@ Un build de desarrollo **no trae el JavaScript**: al abrirlo muestra "Developmen
 
 Nota (Windows): Smart App Control puede bloquear el DLL recién compilado y hacer fallar *todas* las pruebas con `An Application Control policy has blocked this file`. No es un fallo del código: corre la suite en un contenedor sobre una copia sin `bin/obj` (CLAUDE.md §6).
 
-**Manual, en un teléfono Android** (aún no se ha hecho)
+**Manual, en un teléfono Android** (hecho el 2026-10-28; sirve para repetirla tras cambios nativos)
 
 1. Instala el APK de desarrollo (enlace del build en expo.dev).
 2. En la computadora: `cd mobile && npx expo start --dev-client`; en el teléfono abre la app y conéctala (misma red, QR o URL).
@@ -268,7 +268,7 @@ Ordenados por prioridad.
 **Bloqueantes**
 
 - [x] **Probar un push real en un teléfono Android** (§11). Hecho el 2026-10-28: el tramo Expo → FCM → teléfono funciona.
-- [ ] Fusionar el PR (#31) y confirmar que el despliegue en develop arranca con el despertador sin errores.
+- [x] Fusionar el PR (#31) y confirmar que el despliegue en develop arranca con el despertador sin errores. Fusionado el 2026-10-16; el despliegue de develop del 2026-10-29 (PR #32) terminó bien y `/health/ready` responde `Healthy`.
 
 **Antes de usarlo con clientes reales**
 
