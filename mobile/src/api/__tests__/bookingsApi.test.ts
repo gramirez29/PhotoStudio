@@ -1,4 +1,4 @@
-import { createBookingsApi, parseBooking, parseBookingSummaries } from '../bookingsApi';
+import { createBookingsApi, parseBooking, parseBookingContract, parseBookingSummaries } from '../bookingsApi';
 import { ResponseShapeError } from '../guards';
 import { createHttpClient } from '../httpClient';
 import { bookingPayload, bookingSummaryPayload, jsonResponse, stubFetch } from '../__fixtures__/testResponses';
@@ -240,6 +240,37 @@ describe('createBookingsApi', () => {
       expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
     });
 
+    it('sends what the client declared when they sign on the phone', async () => {
+      const { api, requests } = recordingApi();
+      const request = {
+        signerName: 'María Pérez',
+        templateVersion: 'v1',
+        isPaperContract: false,
+        declaration: { idNumber: '112345678', participantCount: 3, imageUse: 'Authorized' },
+      } as const;
+
+      await api.signContractInPerson(bookingPayload.id, request);
+
+      expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    });
+
+    it('reads the contract of the booking with a GET and parses it', async () => {
+      const requests: { readonly url: string; readonly init: RequestInit | undefined }[] = [];
+      const contract = { templateVersion: 'v1', text: 'CONTRATO', signed: false };
+      const client = createHttpClient('https://api.example.test', {
+        fetchFn: jest.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+          requests.push({ url: String(url), init });
+          return jsonResponse(200, contract);
+        }),
+      });
+
+      const result = await createBookingsApi(client).getContract(bookingPayload.id);
+
+      expect(requests[0]?.url).toBe(`${base}/contract`);
+      expect(requests[0]?.init?.method).toBe('GET');
+      expect(result).toEqual(contract);
+    });
+
     it('posts to the link endpoint with no body and parses the link', async () => {
       const requests: { readonly url: string; readonly init: RequestInit | undefined }[] = [];
       const link = { token: 'secret', url: 'https://book.example.test/b/secret', expiresAt: '2027-01-01T00:00:00+00:00' };
@@ -282,5 +313,21 @@ describe('createBookingsApi', () => {
       expect(requests[0]?.url).toBe(`${base}/payments/in-person`);
       expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
     });
+  });
+});
+
+describe('parseBookingContract', () => {
+  it('parses the contract of a booking', () => {
+    expect(parseBookingContract({ templateVersion: 'v1', text: 'CONTRATO', signed: true })).toEqual({
+      templateVersion: 'v1',
+      text: 'CONTRATO',
+      signed: true,
+    });
+  });
+
+  it('rejects an answer with a missing or mistyped field', () => {
+    expect(() => parseBookingContract({ templateVersion: 'v1', text: 'x' })).toThrow('contract.signed');
+    expect(() => parseBookingContract({ templateVersion: 1, text: 'x', signed: false })).toThrow(ResponseShapeError);
+    expect(() => parseBookingContract(null)).toThrow(ResponseShapeError);
   });
 });

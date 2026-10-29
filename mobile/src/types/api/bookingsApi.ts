@@ -1,4 +1,5 @@
 import type {
+  BookingContractResponse,
   BookingLinkResponse,
   BookingResponse,
   BookingSummaryResponse,
@@ -123,4 +124,12 @@ export interface BookingsApi {
    * @returns The booking.
    */
   getBooking(id: string, signal?: AbortSignal): Promise<BookingResponse>;
+
+  /**
+   * Reads the contract of a booking, with the booking data filled in, so the client can read it on the phone before signing.
+   * @param id Booking identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The contract text and whether it is signed.
+   */
+  getContract(id: string, signal?: AbortSignal): Promise<BookingContractResponse>;
 }

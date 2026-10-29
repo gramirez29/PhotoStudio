@@ -1,4 +1,5 @@
 import type { Channel, ClientDeclarationResponse, ContractResponse, ImageUse } from '../types/api/booking';
+import type { ContractLayout } from '../types/utils/contract.types';
 import { formatDateTime } from './format';
 
 /** How each channel of a signature reads after "Firmado por ...". */
@@ -53,4 +54,34 @@ export function describeContract(contract: ContractResponse | null): readonly st
 
   const signature = `Firmado por ${contract.signerName} ${CHANNEL_LABELS[contract.channel]} el ${formatDateTime(contract.signedAt)}`;
   return contract.declaration === null ? [signature] : [signature, ...describeDeclaration(contract.declaration)];
+}
+
+/** How each image use reads when the client chooses it on the phone (clause 12 of the contract). */
+export const IMAGE_USE_CHOICE_LABELS: Readonly<Record<ImageUse, string>> = {
+  Authorized: 'Autorizo publicar las fotos',
+  NotAuthorized: 'No autorizo publicar las fotos',
+};
+
+/**
+ * Finds the image use that a label of the list stands for.
+ * @param label Label the user picked.
+ * @returns The image use, or null when the label is not one of the choices.
+ */
+export function imageUseFromChoice(label: string): ImageUse | null {
+  return (Object.keys(IMAGE_USE_CHOICE_LABELS) as ImageUse[]).find((use) => IMAGE_USE_CHOICE_LABELS[use] === label) ?? null;
+}
+
+/**
+ * Splits the text of the contract into what the screen draws: the title, then one paragraph per non-blank line. A line that starts
+ * with spaces (the options of the image use) is marked as indented.
+ * @param text Text of the contract, one paragraph per line.
+ * @returns The title and the paragraphs.
+ */
+export function splitContractText(text: string): ContractLayout {
+  const lines = text.split('\n').filter((line) => line.trim().length > 0);
+  const [title, ...body] = lines;
+  return {
+    title: title === undefined ? null : title.trim(),
+    paragraphs: body.map((line) => ({ text: line.trim(), indented: /^\s/.test(line) })),
+  };
 }

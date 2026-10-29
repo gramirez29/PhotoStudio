@@ -200,6 +200,30 @@ export interface SignContractInPersonRequest {
   readonly templateVersion: string;
   /** True when the contract is a paper one (channel `External`), false when the client signs on the phone (`InPerson`). */
   readonly isPaperContract: boolean;
+  /** What the client declared when signing on the phone; omitted for a contract on paper. */
+  readonly declaration?: InPersonDeclarationRequest;
+}
+
+/** What the client declared when signing the contract on the photographer's phone (backend `InPersonDeclarationRequest`). */
+export interface InPersonDeclarationRequest {
+  /** Identity number of the signer: a cédula of 9 digits or a DIMEX of 11 or 12. */
+  readonly idNumber: string;
+  /** Number of people in the session. */
+  readonly participantCount: number;
+  /** Place of the session; omitted when the client left it blank. */
+  readonly sessionLocation?: string;
+  /** What the client allows to do with the photos. */
+  readonly imageUse: ImageUse;
+}
+
+/** Contract of a booking as the photographer reads it (backend `BookingContractResponse`). */
+export interface BookingContractResponse {
+  /** Version of the template; it is sent back when signing so the client signs what they read. */
+  readonly templateVersion: string;
+  /** Text of the contract. Before signing, what the client still has to declare is shown as blanks; after signing it is the text that was signed, or empty for a contract on paper. */
+  readonly text: string;
+  /** Whether the contract is already signed. */
+  readonly signed: boolean;
 }
 
 /** Body to record a payment received in person (backend `RecordInPersonPaymentRequest`). */
