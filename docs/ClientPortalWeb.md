@@ -51,7 +51,7 @@ Ver `docs/Deployment.md`: un solo sitio (página principal en `/` y portal en `/
 | # | Contenido | Estado |
 |---|---|---|
 | 1 | CORS en el API para `/public/**` (`docs/ClientPortal.md` §5.1) | **Hecho** |
-| 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + configuración de Pages | **Hecho** (falta crear el proyecto en Pages y los DNS: pasos en `portal/README.md`) |
+| 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + configuración de Pages | **Hecho** (el proyecto de Pages `photosense-develop` ya existe y se publica desde Actions en `develop.photosensestudio.com`, protegido con Cloudflare Access; pendiente el de producción: pasos en `portal/README.md`) |
 | 3 | Código por correo + formulario de comprobante + estados del pago | **Hecho** |
 | 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
 

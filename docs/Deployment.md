@@ -168,6 +168,7 @@ Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arra
 
 - **Producción:** segundo ambiente de Railway con su token, proyecto de Pages `photosense`, `deploy-production.yml` con un *environment* `production` que exija aprobación manual, y los dominios finales.
 - **Distinguir versiones en el health check** (por ejemplo, exponer el commit desplegado) para que el job de la API no dé por bueno un despliegue que Railway rechazó.
+- **Volver el job de backend a `ubuntu-latest`.** Hoy corre en `ubuntu-22.04` porque MongoDB se niega a arrancar en kernels Linux 6.19 hasta 7.0.13 (SERVER-121912, incompatibilidad con `tcmalloc`; afecta a todas las imágenes de `mongo`, Docker incluido) y `ubuntu-latest` pasó a uno de esos kernels entre las imágenes de runner `20261012` y `20261025`. Síntoma: el paso `Start MongoDB` falla con `container photostudio-mongo is unhealthy` a los 0,5 s y el log de Mongo dice `MongoDB cannot start: Linux kernel versions 6.19 and newer...`. Revisar cuando el runner traiga un kernel 7.0.14 o más nuevo; el paso `MongoDB diagnostics` del workflow imprime esos logs. Lo mismo puede ocurrir en local si WSL2 se actualiza a un kernel de ese rango (hoy: 6.6.114).
 - **Contenido de la página principal** (hoy provisional) y si en producción se indexa o no.
 - **Reply-To** de los correos y un remitente que no sea `no-reply`.
 - **Respaldo semanal** con `mongodump` hacia R2.
