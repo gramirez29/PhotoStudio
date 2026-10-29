@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Application.Maintenance.RunMaintenance;
 
 namespace PhotoStudio.Api.IntegrationTests;
 
@@ -299,6 +302,51 @@ public sealed class PortalApiTests(ApiFixture fixture)
         var again = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", portalToken, body);
         again.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await again.ReadCodeAsync()).ShouldBe("booking.contract_already_signed");
+    }
+
+    /// <summary>
+    /// Once the client signs, the next maintenance pass (the worker, or the wake-up of the API) emails them the exact text they
+    /// signed, once. A contract signed in person sends nothing.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task SignContract_EmailsTheClientACopyOfTheSignedText_Once()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        var scenario = await NewScenarioAsync();
+        var portalToken = await scenario.OpenPortalSessionAsync(fixture);
+        var version = (await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/contract", portalToken)).ReadJsonAsync())
+            .GetProperty("templateVersion").GetString()!;
+        var signed = await scenario.Client.SendAsync(
+            HttpMethod.Post,
+            $"/public/bookings/{scenario.Token}/contract",
+            portalToken,
+            new { templateVersion = version, signerName = "María Pérez", idNumber = "1-1234-5678", participantCount = 3, imageUse = "Authorized", acceptsTerms = true });
+        signed.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await RunMaintenancePassAsync();
+        await RunMaintenancePassAsync();
+
+        var copies = fixture.Emails.Messages
+            .Where(message => string.Equals(message.To, scenario.ClientEmail, StringComparison.OrdinalIgnoreCase) && message.Subject.Contains("contrato firmado", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var copy = copies.ShouldHaveSingleItem();
+        copy.TextBody.ShouldContain("cédula 112345678");
+        copy.TextBody.ShouldContain("[x] Autorizo");
+        copy.TextBody.ShouldContain("Firmado electrónicamente el");
+        var seen = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/api/bookings/{scenario.BookingId}", scenario.Session.AccessToken)).ReadJsonAsync();
+        seen.GetProperty("contract").GetProperty("channel").GetString().ShouldBe("Portal");
+    }
+
+    /// <summary>
+    /// Runs one maintenance pass in-process, the way the worker does, so the outbox delivers the events of the test.
+    /// </summary>
+    /// <returns>A task that completes when the pass ends.</returns>
+    private async Task RunMaintenancePassAsync()
+    {
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var handler = scope.ServiceProvider.GetRequiredService<ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>>();
+        await handler.HandleAsync(new RunMaintenanceCommand(), TestContext.Current.CancellationToken);
     }
 
     /// <summary>
