@@ -1,33 +1,36 @@
 /*
- * Design tokens of the portal. Light: the palette of the mobile app (mobile/src/theme/tokens.ts), plus one brand color taken
- * from the logo, #3A4466. Dark: the palette the web had before it adopted the one of the app (navy and copper, the colors of the
- * logo); it is also the palette the app will use for its own dark mode. Components read colors only from these variables, and
- * the page follows the setting of the device. Every text/background pair used on screen is checked for contrast, in both
+ * Design tokens of the portal: the brand palette in its light and dark variations. Light is cream and terracotta; dark is navy
+ * and copper, the colors of the logo. These are the two themes the mobile app will use too, once its UI is worked on (the app
+ * still has a neutral light palette in mobile/src/theme/tokens.ts). Components read colors only from these variables, and the
+ * page follows the setting of the device. Every text/background pair used on screen is checked for contrast, in both
  * variations, by src/theme/tokens.test.ts; keep that test in sync when a pair is added.
  *
- * Light: #FFFFFF #F4F4F5 #18181B #52525B #27272A #15803D #B45309 #B91C1C, brand #3A4466
- * Dark:  #020D2C #26324F #F4F1EC #C9CDD6 #E3A97F #6FCF97 #F2766B, brand #3A4466
- * Brand (logo): #3A4466 is the band with the logo and its name. Headings and the focus ring use the heading color, which is the
- * brand color on the light page and copper on the dark one (the brand color is too dark to read on navy).
- * Silver (#C9CDD6) is the border of the logo, taken from the silver of the mark.
- * The status dots (success, warning, danger) are small marks next to a text label, never the only carrier of the meaning.
+ * Light: #FBF3EA #F6D5BE #0B1A40 #3A4466 #C4552E
+ * Dark:  #020D2C #26324F #E3A97F #C9CDD6 #F4F1EC
+ * #3A4466 (the slate blue of the logo) is the band with the logo and its name, and the headings on the light page. Headings and
+ * the focus ring use the heading color: the slate blue on the light page and copper on the dark one (slate is too dark to read on
+ * navy). Silver (#C9CDD6) is the border of the logo, taken from the silver of the mark.
+ * The status dots (success, warning, danger) are not part of the brand palette: they are small marks next to a text label,
+ * never the only carrier of the meaning.
+ * Light accent (#C4552E): 4.08:1 against the cream background, so it is never the color of running text. It is the fill of a
+ * button (whose label is bold and 19px, large text) and a border or mark; the contrast test enforces these limits.
  */
 :root {
   color-scheme: light dark;
 
-  --color-bg: #ffffff;
-  --color-surface: #f4f4f5;
-  --color-text: #18181b;
-  --color-text-muted: #52525b;
-  --color-accent: #27272a;
-  --color-on-accent: #ffffff;
+  --color-bg: #fbf3ea;
+  --color-surface: #f6d5be;
+  --color-text: #0b1a40;
+  --color-text-muted: #3a4466;
+  --color-accent: #c4552e;
+  --color-on-accent: #fbf3ea;
   --color-brand: #3a4466;
   --color-on-brand: #ffffff;
   --color-heading: #3a4466;
   --color-silver: #c9cdd6;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
+  --color-success: #2e7d4f;
+  --color-warning: #a8681a;
+  --color-danger: #b3261e;
 
   --font-title: 'Josefin Sans Variable', 'Josefin Sans', system-ui, sans-serif;
   --font-body: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;

@@ -29,7 +29,7 @@ src/
 ├── hooks/        usePortalBooking
 ├── types/        TODAS las interfaces y tipos, en espejo de las capas
 ├── utils/        Funciones puras: formato es-CR, textos de estado, ruta, errores
-├── theme/        tokens.css (paleta de la app + color de marca), global.css, booking.css, prueba de contraste
+├── theme/        tokens.css (paleta clara y oscura), global.css, booking.css, prueba de contraste
 ├── constants/    Valores `as const` del backend
 └── config/       env.ts
 ```
@@ -38,9 +38,11 @@ Las mismas reglas que `mobile/`: sin `any`, nada de tipos dentro de componentes/
 
 ## Tema
 
-Claro: la paleta de la app del fotógrafo más un color de marca del logo (`#3A4466`, la banda superior). Oscuro: la paleta azul noche
-y cobre que tuvo la web, que también será la del modo oscuro de la app. La página sigue `prefers-color-scheme`. Los colores viven solo
-en `src/theme/tokens.css`; `tokens.test.ts` comprueba el contraste de cada par de texto y fondo (WCAG AA) en las dos variaciones.
+La paleta de la marca tiene dos variaciones y la página sigue la configuración del dispositivo (`prefers-color-scheme`): crema y
+terracota en claro, azul noche y cobre en oscuro (el azul pizarra `#3A4466` del logo es la banda superior). Los colores viven solo en
+`src/theme/tokens.css`; `tokens.test.ts` comprueba el contraste de cada par de texto y fondo (WCAG AA) en las dos variaciones. El
+terracota claro (`#C4552E`) da 4,08:1 sobre el crema: se usa como relleno de botón con texto grande y en negrita y como borde, nunca
+como color de texto corrido. La app móvil usará estos dos temas cuando se trabaje su UI.
 
 ## Despliegue
 

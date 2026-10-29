@@ -62,8 +62,6 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ['--color-heading', '--color-surface'],
   // The name of the studio on the band of the logo.
   ['--color-on-brand', '--color-brand'],
-  // The label of an action.
-  ['--color-on-accent', '--color-accent'],
 ];
 
 describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
@@ -75,6 +73,23 @@ describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
     expect(front).toBeDefined();
     expect(back).toBeDefined();
     expect(contrast(front ?? '', back ?? '')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // The light terracotta (#C4552E) is 4.08:1 against its cream text, under the 4.5:1 of normal text. It is only used where
+  // WCAG asks for 3:1: the label of a button, which is bold and 19px (large text), and fills and borders (non-text). It is
+  // never used as the color of running text. If a pair below must hold 4.5:1, the brand accent has to be darkened.
+  it('keeps the label of an accent button readable as large text (3:1)', () => {
+    const label = tokens['--color-on-accent'] ?? variations.light['--color-on-accent'];
+    const fill = tokens['--color-accent'] ?? variations.light['--color-accent'];
+
+    expect(contrast(label ?? '', fill ?? '')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps the accent visible against the background as a fill or a border (3:1)', () => {
+    const fill = tokens['--color-accent'] ?? variations.light['--color-accent'];
+    const background = tokens['--color-bg'] ?? variations.light['--color-bg'];
+
+    expect(contrast(fill ?? '', background ?? '')).toBeGreaterThanOrEqual(3);
   });
 
   it('keeps the focus ring, which is the heading color, visible against the page (3:1)', () => {
@@ -99,20 +114,19 @@ describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
 });
 
 describe('brand palette', () => {
-  it('light is the palette of the mobile app (its tokens.ts) plus the brand color of the logo', () => {
-    const appPalette = ['#ffffff', '#f4f4f5', '#18181b', '#52525b', '#27272a', '#15803d', '#b45309', '#b91c1c'];
+  it('light is the cream and terracotta palette of the brand', () => {
+    const lightBrand = ['#fbf3ea', '#f6d5be', '#0b1a40', '#3a4466', '#c4552e'];
 
-    expect(appPalette.every((color) => Object.values(variations.light).includes(color))).toBe(true);
-    expect(variations.light['--color-brand']).toBe('#3a4466');
+    expect(lightBrand.every((color) => Object.values(variations.light).includes(color))).toBe(true);
   });
 
-  it('dark is the navy and copper palette the web had before, which the app will use for its own dark mode', () => {
+  it('dark is the navy and copper palette of the brand', () => {
     const darkBrand = ['#020d2c', '#26324f', '#e3a97f', '#c9cdd6', '#f4f1ec'];
 
     expect(darkBrand.every((color) => Object.values(variations.dark).includes(color))).toBe(true);
   });
 
-  it('keeps the brand color on the band in both variations', () => {
+  it('keeps the slate blue of the logo on the band in both variations', () => {
     expect(variations.dark['--color-brand']).toBeUndefined();
     expect(variations.light['--color-brand']).toBe('#3a4466');
   });
