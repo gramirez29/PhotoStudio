@@ -6,9 +6,9 @@
 # dark photo under a wash is almost invisible. -Gamma below 1 brightens the middle tones. The wash (white in the light theme,
 # navy in the dark one) is laid over it by the app (src/theme/background.ts).
 #
-# Usage, from the mobile folder:  powershell -ExecutionPolicy Bypass -File scripts/blur-background.ps1 [-Radius 22] [-Gamma 0.85]
+# Usage, from the mobile folder:  powershell -ExecutionPolicy Bypass -File scripts/blur-background.ps1 [-Radius 8] [-Gamma 0.85]
 param(
-    [int]$Radius = 22,
+    [int]$Radius = 8,
     [double]$Gamma = 0.85
 )
 
