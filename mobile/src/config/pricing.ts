@@ -1,4 +1,4 @@
-import type { ExtraOption, PackageOption } from '../types/config/pricing.types';
+import type { ExtraOption, PackageOption } from "../types/config/pricing.types";
 
 /**
  * Prices of the photographer: the packages with the price and the session length each one brings, and the extras with their
@@ -12,11 +12,11 @@ import type { ExtraOption, PackageOption } from '../types/config/pricing.types';
  * field for the photographer to fill in.
  */
 export const PACKAGES: readonly PackageOption[] = [
-  { tier: 'Basic', label: 'Básico', price: 35000, durationHours: 1 },
-  { tier: 'Standard', label: 'Estándar', price: 65000, durationHours: 2 },
-  { tier: 'Premium', label: 'Premium', price: 110000, durationHours: 3 },
-  { tier: 'Custom', label: 'Custom', price: null, durationHours: null },
-  { tier: 'Other', label: 'Otro', price: null, durationHours: null },
+  { tier: "Basic", label: "Básico", price: 35000, durationHours: 1 },
+  { tier: "Standard", label: "Estándar", price: 65000, durationHours: 2 },
+  { tier: "Premium", label: "Premium", price: 110000, durationHours: 3 },
+  { tier: "Custom", label: "Custom", price: null, durationHours: null },
+  { tier: "Other", label: "Otro", price: null, durationHours: null },
 ];
 
 /**
@@ -24,12 +24,16 @@ export const PACKAGES: readonly PackageOption[] = [
  * here, an extra adds nothing to the total.
  */
 export const EXTRAS: readonly ExtraOption[] = [
-  { code: 'extra-hour', label: 'Hora adicional', unitPrice: 0 },
-  { code: 'extra-person', label: 'Persona adicional', unitPrice: 0 },
-  { code: 'extra-edited-photo', label: 'Foto editada adicional', unitPrice: 0 },
-  { code: 'rush-delivery', label: 'Entrega urgente', unitPrice: 0 },
-  { code: 'extra-print', label: 'Impresión adicional', unitPrice: 0 },
-  { code: 'makeup', label: 'Maquillaje', unitPrice: 0 },
+  { code: "extra-hour", label: "Hora adicional", unitPrice: 30000 },
+  { code: "extra-person", label: "Persona adicional", unitPrice: 5000 },
+  {
+    code: "extra-edited-photo",
+    label: "Foto editada adicional",
+    unitPrice: 3000,
+  },
+  { code: "rush-delivery", label: "Entrega urgente", unitPrice: 15000 },
+  { code: "extra-print", label: "Impresión adicional", unitPrice: 0 },
+  { code: "makeup", label: "Maquillaje", unitPrice: 0 },
 ];
 
 /** Largest quantity of a single extra; the backend accepts the same. */
