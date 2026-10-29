@@ -32,6 +32,19 @@ Fotógrafo                         API                              Cliente
 | POST | `/public/bookings/{token}/code` | Token (10/min/IP) | **202** `{ maskedEmail, expiresAt }` · 404 · 409 `portal.email_missing` · 429 `portal.otp_rate_limited` (+`Retry-After`) · 503 `email.delivery_failed` |
 | POST | `/public/bookings/{token}/code/verify` | Token (10/min/IP) | `{ code }` → 200 `{ accessToken, expiresAt }` · 422 `portal.invalid_code` · 404 |
 | POST | `/public/bookings/{token}/payments` | **Sesión de portal** (10/min/IP) | `{ amount, reference?, idempotencyKey }` → 200 vista · 401 sin sesión · 404 si la sesión es de otra reserva · 422 `money.invalid_amount` |
+| GET | `/public/bookings/{token}/contract` | **Sesión de portal** (60/min/IP) | 200 `{ templateVersion, text, signed }`: el contrato con los datos de la reserva (sus políticas congeladas) y lo que solo sabe el cliente en blanco; ya firmado, el texto exacto que se firmó. Pide sesión porque el texto lleva el teléfono y, firmado, la cédula: el enlace solo no debe revelarlos · 401 sin sesión · 404 si la sesión es de otra reserva |
+| POST | `/public/bookings/{token}/contract` | **Sesión de portal** (10/min/IP) | `{ templateVersion, signerName, idNumber, participantCount, sessionLocation?, imageUse, acceptsTerms }` → 200 vista · 401 sin sesión · 404 si la sesión es de otra reserva · 409 `contract.template_changed` (el cliente leyó otra versión) o `booking.contract_already_signed` · 422 `domain.required_value` (no aceptó o falta el nombre), `contract.invalid_id_number`, `contract.invalid_details` |
+
+
+## 2.1 Contrato
+
+El texto del contrato vive en `backend/src/PhotoStudio.Application/Contracts/Templates/contract-v1.md`, incrustado en el ensamblado, con variables `{{nombre}}` que rellena `ContractRenderer`. **Una versión no se edita una vez que un cliente la firmó**: un cambio de redacción es un archivo nuevo (`contract-v2.md`) y se cambia `ContractTemplates.CurrentVersion`.
+
+- **Las cifras salen de la reserva, no del texto:** horas de apartado, aviso para reprogramar, número de reprogramaciones, ventana de cancelación sin costo y tolerancia de ausencia son los valores de la política **congelada en esa reserva** (`BOOKING_*`, ver `CLAUDE.md` §8.11), así el contrato dice lo que el sistema hará con esa reserva aunque los valores por defecto cambien después. También salen de ahí el servicio, la fecha y hora (hora de Costa Rica), el precio, el anticipo y el saldo.
+- **Lo que declara el cliente al firmar:** cédula (9 dígitos) o DIMEX (11 o 12), número de personas (1–100), lugar (opcional; en blanco dice que se definirá con el fotógrafo) y el uso de imagen (cláusula 12, dos opciones excluyentes: `Authorized` / `NotAuthorized`). Se guardan en `bookings.contract.declaration`; el fotógrafo las ve en `contract.declaration` de la reserva. La cédula no se escribe en logs ni se expone por el enlace.
+- **Evidencia:** la firma guarda el texto exacto que el cliente firmó (`contract.signedText`), la versión, el nombre escrito, el canal (`Portal`) y la fecha. El cliente manda la `templateVersion` que leyó; si ya no es la vigente, 409 y debe volver a leer. Las firmas del fotógrafo (presencial o en papel) no llevan declaración ni texto.
+- **Firma:** por ahora se escribe el nombre y se acepta con una casilla; no se dibuja.
+- Firmar con el anticipo ya cubierto confirma la reserva sola (B6). El contrato solo se puede firmar mientras la reserva está `Tentative`.
 
 ## 3. Seguridad
 
@@ -77,8 +90,8 @@ El portal es una página web en otro origen que el API, así que el navegador ex
 ## 6. Pendiente
 
 - ~~**App del fotógrafo**~~ Hecho: campo de correo (opcional) al crear la reserva, tarjeta "Enlace del cliente" (crea el enlace y abre WhatsApp con el mensaje) y tarjeta "Comprobantes por verificar" (verificar con confirmación, rechazar con motivo). Queda sin pantalla para **agregar el correo a una reserva que ya existe** (no hay endpoint para editarlo).
-- ~~**Portal web**~~ Hecho en `portal/` (React 19 + Vite, en el mismo sitio que la página principal; ver `docs/ClientPortalWeb.md` y `docs/Deployment.md`). Falta su entrega 4 (pulido y pruebas de punta a punta) y la firma del contrato.
+- ~~**Portal web**~~ Hecho en `portal/` (React 19 + Vite, en el mismo sitio que la página principal; ver `docs/ClientPortalWeb.md` y `docs/Deployment.md`). Falta su entrega 4 (pulido y pruebas de punta a punta) y la pantalla del contrato (el backend ya está, §2.1).
 - ~~**Aviso al fotógrafo** cuando llega un comprobante~~ Hecho: `PaymentSubmitted` genera un aviso en la bandeja y un push (`PushNotifications.md`); la tarjeta "Revisar comprobante" abre la reserva.
-- **Firma del contrato por el cliente** (B2, canal Portal) y la autorización de imagen.
+- ~~**Firma del contrato por el cliente**~~ y la autorización de imagen: hecho en el backend (§2.1). Falta la pantalla en el portal, la copia del contrato por correo al cliente (consumidor de `ContractSigned`) y mostrar la declaración en la app del fotógrafo.
 - **Comprobante como imagen** (necesita R2 y URLs prefirmadas).
 - Recibo por correo al verificar el pago.

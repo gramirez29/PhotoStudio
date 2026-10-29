@@ -105,6 +105,7 @@ public sealed partial class GlobalExceptionHandler(
         DomainErrorCodes.InvalidTransition or
         DomainErrorCodes.GuardFailed or
         DomainErrorCodes.ContractAlreadySigned or
+        DomainErrorCodes.ContractTemplateChanged or
         DomainErrorCodes.InvalidPaymentStatus;
 
     /// <summary>

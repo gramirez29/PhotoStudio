@@ -257,9 +257,18 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="templateVersion">Contract template version.</param>
     /// <param name="actor">Client (through the portal) or photographer (in person or external paper contract).</param>
     /// <param name="channel">Channel of the signature; must match the actor.</param>
+    /// <param name="declaration">What the client declared; given when the client signs through the portal.</param>
+    /// <param name="signedText">Exact text the client signed; given when the client signs through the portal.</param>
     /// <param name="now">Current instant.</param>
     /// <exception cref="DomainException">When the status, actor, channel or contract state does not allow signing.</exception>
-    public void SignContract(string signerName, string templateVersion, Actor actor, Channel channel, DateTimeOffset now)
+    public void SignContract(
+        string signerName,
+        string templateVersion,
+        Actor actor,
+        Channel channel,
+        DateTimeOffset now,
+        ClientDeclaration? declaration = null,
+        string? signedText = null)
     {
         EnsureStatus(nameof(SignContract), BookingStatus.Tentative);
 
@@ -280,7 +289,7 @@ public sealed class Booking : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.ContractAlreadySigned, "The contract is already signed.");
         }
 
-        Contract = ContractSignature.Create(signerName, templateVersion, actor, channel, now);
+        Contract = ContractSignature.Create(signerName, templateVersion, actor, channel, now, declaration, signedText);
         Raise(new ContractSigned(Id, Contract.TemplateVersion, channel, now));
         TryConfirm(now);
     }

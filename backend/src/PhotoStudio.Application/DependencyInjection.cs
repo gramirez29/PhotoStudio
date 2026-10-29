@@ -35,7 +35,9 @@ using PhotoStudio.Application.Bookings.VerifyPayment;
 using PhotoStudio.Application.Portal;
 using PhotoStudio.Application.Portal.CreateLink;
 using PhotoStudio.Application.Portal.GetBooking;
+using PhotoStudio.Application.Portal.GetContract;
 using PhotoStudio.Application.Portal.RequestCode;
+using PhotoStudio.Application.Portal.SignContract;
 using PhotoStudio.Application.Portal.SubmitProof;
 using PhotoStudio.Application.Portal.VerifyCode;
 
@@ -122,6 +124,8 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RequestPortalCodeCommand, PortalCodeSentResponse>, RequestPortalCodeHandler>();
         services.AddScoped<ICommandHandler<VerifyPortalCodeCommand, PortalSessionResponse>, VerifyPortalCodeHandler>();
         services.AddScoped<ICommandHandler<SubmitPortalPaymentProofCommand, PortalBookingResponse>, SubmitPortalPaymentProofHandler>();
+        services.AddScoped<IQueryHandler<GetPortalContractQuery, PortalContractResponse>, GetPortalContractHandler>();
+        services.AddScoped<ICommandHandler<SignPortalContractCommand, PortalBookingResponse>, SignPortalContractHandler>();
 
         return services;
     }

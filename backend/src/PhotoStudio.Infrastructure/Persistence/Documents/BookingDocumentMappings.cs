@@ -113,6 +113,8 @@ public static class BookingDocumentMappings
         SignedBy = contract.SignedBy.ToString(),
         Channel = contract.Channel.ToString(),
         SignedAt = contract.SignedAt.UtcDateTime,
+        Declaration = contract.Declaration?.ToDocument(),
+        SignedText = contract.SignedText,
     };
 
     /// <summary>
@@ -125,7 +127,33 @@ public static class BookingDocumentMappings
         document.TemplateVersion,
         Enum.Parse<Actor>(document.SignedBy),
         Enum.Parse<Channel>(document.Channel),
-        ToOffset(document.SignedAt));
+        ToOffset(document.SignedAt),
+        document.Declaration?.ToDomain(),
+        document.SignedText);
+
+    /// <summary>
+    /// Maps what the client declared to its document.
+    /// </summary>
+    /// <param name="declaration">Declaration to map.</param>
+    /// <returns>The document.</returns>
+    private static ClientDeclarationDocument ToDocument(this ClientDeclaration declaration) => new()
+    {
+        IdNumber = declaration.IdNumber,
+        ParticipantCount = declaration.ParticipantCount,
+        SessionLocation = declaration.SessionLocation,
+        ImageUse = declaration.ImageUse.ToString(),
+    };
+
+    /// <summary>
+    /// Maps a declaration document to the domain declaration.
+    /// </summary>
+    /// <param name="document">Document to map.</param>
+    /// <returns>The declaration.</returns>
+    private static ClientDeclaration ToDomain(this ClientDeclarationDocument document) => ClientDeclaration.Create(
+        document.IdNumber,
+        document.ParticipantCount,
+        document.SessionLocation,
+        Enum.Parse<ImageUse>(document.ImageUse));
 
     /// <summary>
     /// Maps a payment to its document.

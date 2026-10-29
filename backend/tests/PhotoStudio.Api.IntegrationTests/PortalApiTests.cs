@@ -247,6 +247,121 @@ public sealed class PortalApiTests(ApiFixture fixture)
     }
 
     /// <summary>
+    /// The contract flow: the client reads it from the link, signs it with their session, and the photographer then sees what they
+    /// declared. Reading again returns the exact text that was signed, and a second signature is a conflict.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ContractFlow_ClientReadsAndSigns_AndThePhotographerSeesTheDeclaration()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        var scenario = await NewScenarioAsync();
+        var client = scenario.Client;
+
+        // The text holds the client's phone and, once signed, their identity number, so reading it needs the portal session.
+        (await client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/contract", null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        var portalToken = await scenario.OpenPortalSessionAsync(fixture);
+        var before = await (await client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/contract", portalToken)).ReadJsonAsync();
+        before.GetProperty("signed").GetBoolean().ShouldBeFalse();
+        var version = before.GetProperty("templateVersion").GetString()!;
+        before.GetProperty("text").GetString()!.ShouldContain("María Pérez");
+        (await (await client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}", null)).ReadJsonAsync())
+            .GetProperty("canSignContract").GetBoolean().ShouldBeTrue();
+
+        var body = new
+        {
+            templateVersion = version,
+            signerName = "María Pérez",
+            idNumber = "1-1234-5678",
+            participantCount = 3,
+            sessionLocation = "Parque La Sabana",
+            imageUse = "Authorized",
+            acceptsTerms = true,
+        };
+        var signed = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", portalToken, body);
+
+        signed.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var afterSigning = await signed.ReadJsonAsync();
+        afterSigning.GetProperty("contractSigned").GetBoolean().ShouldBeTrue();
+        afterSigning.GetProperty("canSignContract").GetBoolean().ShouldBeFalse();
+
+        var after = await (await client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/contract", portalToken)).ReadJsonAsync();
+        after.GetProperty("signed").GetBoolean().ShouldBeTrue();
+        after.GetProperty("text").GetString()!.ShouldContain("cédula 112345678");
+
+        var seenByPhotographer = await (await client.SendAsync(HttpMethod.Get, $"/api/bookings/{scenario.BookingId}", scenario.Session.AccessToken)).ReadJsonAsync();
+        var contract = seenByPhotographer.GetProperty("contract");
+        contract.GetProperty("channel").GetString().ShouldBe("Portal");
+        contract.GetProperty("declaration").GetProperty("idNumber").GetString().ShouldBe("112345678");
+        contract.GetProperty("declaration").GetProperty("participantCount").GetInt32().ShouldBe(3);
+        contract.GetProperty("declaration").GetProperty("imageUse").GetString().ShouldBe("Authorized");
+
+        var again = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", portalToken, body);
+        again.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await again.ReadCodeAsync()).ShouldBe("booking.contract_already_signed");
+    }
+
+    /// <summary>
+    /// Signing needs a portal session, an accepted contract, the version the client read and valid values.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task SignContract_RejectsMissingSessionAndInvalidRequests()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        var scenario = await NewScenarioAsync();
+        var client = scenario.Client;
+        var portalToken = await scenario.OpenPortalSessionAsync(fixture);
+        var version = (await (await client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/contract", portalToken)).ReadJsonAsync())
+            .GetProperty("templateVersion").GetString()!;
+        object Body(string templateVersion = "", string idNumber = "112345678", bool accepts = true) => new
+        {
+            templateVersion = templateVersion.Length == 0 ? version : templateVersion,
+            signerName = "María Pérez",
+            idNumber,
+            participantCount = 2,
+            imageUse = "NotAuthorized",
+            acceptsTerms = accepts,
+        };
+
+        (await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", null, Body())).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", scenario.Session.AccessToken, Body())).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        var notAccepted = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", portalToken, Body(accepts: false));
+        var badId = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", portalToken, Body(idNumber: "123"));
+        var outdated = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/contract", portalToken, Body(templateVersion: "v0"));
+
+        notAccepted.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        badId.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await badId.ReadCodeAsync()).ShouldBe("contract.invalid_id_number");
+        outdated.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await outdated.ReadCodeAsync()).ShouldBe("contract.template_changed");
+        (await (await client.SendAsync(HttpMethod.Get, $"/api/bookings/{scenario.BookingId}", scenario.Session.AccessToken)).ReadJsonAsync())
+            .GetProperty("contract").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// A portal session opens the contract of its own booking only: with a link that opens nothing, or with the link of another
+    /// booking, the answer is a 404 and the text (which holds personal data) is not returned.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task Contract_WithAnUnknownTokenOrAnotherBookingsLink_Answers404()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        var mine = await NewScenarioAsync();
+        var other = await NewScenarioAsync();
+        var portalToken = await mine.OpenPortalSessionAsync(fixture);
+
+        var unknown = await mine.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{Guid.NewGuid():N}/contract", portalToken);
+        var ofAnotherBooking = await mine.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{other.Token}/contract", portalToken);
+
+        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        ofAnotherBooking.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await ofAnotherBooking.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldNotContain("CONTRATO");
+    }
+
+    /// <summary>
     /// A portal session is not a photographer token: the photographer API refuses it.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>

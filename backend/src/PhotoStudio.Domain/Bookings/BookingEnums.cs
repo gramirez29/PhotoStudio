@@ -119,3 +119,15 @@ public enum BookingAction
     /// <summary>Undo a client-absent mark made by mistake.</summary>
     RevertClientAbsent,
 }
+
+/// <summary>
+/// What the client allowed the photographer to do with the photos of the session (clause 12 of the contract).
+/// </summary>
+public enum ImageUse
+{
+    /// <summary>The photographer may publish photos of the session in the portfolio, social networks and promotional material.</summary>
+    Authorized,
+
+    /// <summary>The photographer may not publish the photos.</summary>
+    NotAuthorized,
+}

@@ -35,7 +35,22 @@ public sealed record PaymentResponse(
 /// <param name="TemplateVersion">Signed template version.</param>
 /// <param name="Channel">Channel of the signature.</param>
 /// <param name="SignedAt">Instant of the signature (UTC).</param>
-public sealed record ContractResponse(string SignerName, string TemplateVersion, Channel Channel, DateTimeOffset SignedAt);
+/// <param name="Declaration">What the client declared, when they signed through the portal.</param>
+public sealed record ContractResponse(
+    string SignerName,
+    string TemplateVersion,
+    Channel Channel,
+    DateTimeOffset SignedAt,
+    ClientDeclarationResponse? Declaration = null);
+
+/// <summary>
+/// What the client declared when signing the contract through the portal, as the photographer sees it.
+/// </summary>
+/// <param name="IdNumber">Identity number of the signer, digits only.</param>
+/// <param name="ParticipantCount">Number of people in the session.</param>
+/// <param name="SessionLocation">Place of the session, if the client wrote one.</param>
+/// <param name="ImageUse">What the client allowed to do with the photos.</param>
+public sealed record ClientDeclarationResponse(string IdNumber, int ParticipantCount, string? SessionLocation, ImageUse ImageUse);
 
 /// <summary>
 /// Booking as exposed by the API. The mobile app mirrors this shape in TypeScript.

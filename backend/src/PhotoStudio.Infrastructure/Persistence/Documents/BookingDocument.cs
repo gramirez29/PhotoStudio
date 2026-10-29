@@ -153,6 +153,16 @@ public sealed class ContractSignatureDocument
     /// <summary>Gets or sets the signature instant (UTC).</summary>
     [BsonElement("signedAt")]
     public DateTime SignedAt { get; set; }
+
+    /// <summary>Gets or sets what the client declared when signing through the portal, if anything.</summary>
+    [BsonElement("declaration")]
+    [BsonIgnoreIfNull]
+    public ClientDeclarationDocument? Declaration { get; set; }
+
+    /// <summary>Gets or sets the exact text the client signed through the portal, if any.</summary>
+    [BsonElement("signedText")]
+    [BsonIgnoreIfNull]
+    public string? SignedText { get; set; }
 }
 
 /// <summary>
@@ -239,4 +249,27 @@ public sealed class StatusTransitionDocument
     /// <summary>Gets or sets the transition instant (UTC).</summary>
     [BsonElement("occurredAt")]
     public DateTime OccurredAt { get; set; }
+}
+
+/// <summary>
+/// MongoDB data model of what the client declared when signing the contract through the portal.
+/// </summary>
+public sealed class ClientDeclarationDocument
+{
+    /// <summary>Gets or sets the identity number of the signer, digits only.</summary>
+    [BsonElement("idNumber")]
+    public string IdNumber { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the number of people in the session.</summary>
+    [BsonElement("participantCount")]
+    public int ParticipantCount { get; set; }
+
+    /// <summary>Gets or sets the place of the session, if the client wrote one.</summary>
+    [BsonElement("sessionLocation")]
+    [BsonIgnoreIfNull]
+    public string? SessionLocation { get; set; }
+
+    /// <summary>Gets or sets the name of the image use the client chose.</summary>
+    [BsonElement("imageUse")]
+    public string ImageUse { get; set; } = string.Empty;
 }

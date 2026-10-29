@@ -65,6 +65,15 @@ public static class DomainErrorCodes
     /// <summary>The password is shorter than the minimum length or longer than the maximum.</summary>
     public const string WeakPassword = "user.weak_password";
 
+    /// <summary>The identity number (cédula or DIMEX) given when signing the contract has no valid shape.</summary>
+    public const string InvalidIdNumber = "contract.invalid_id_number";
+
+    /// <summary>The contract template changed between the moment the client read it and the moment they signed.</summary>
+    public const string ContractTemplateChanged = "contract.template_changed";
+
+    /// <summary>The number of people or the location given when signing the contract is not valid.</summary>
+    public const string InvalidContractDetails = "contract.invalid_details";
+
     /// <summary>The push token is not an Expo push token.</summary>
     public const string InvalidPushToken = "push.invalid_token";
 }

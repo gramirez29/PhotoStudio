@@ -14,6 +14,11 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
+  <!-- The contract templates ship inside the assembly; a version is immutable once a client has signed it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Contracts\Templates\*.md" LogicalName="PhotoStudio.Application.Contracts.Templates.%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="PhotoStudio.Application.UnitTests" />
   </ItemGroup>
