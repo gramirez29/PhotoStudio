@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { usePaymentReview } from '../hooks/usePaymentReview';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import type { PendingPaymentsCardProps } from '../types/components/PendingPaymentsCard.types';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { ActionButton } from './ActionButton';
+import { AppCard } from './AppCard';
 
 /**
  * Card with the payment proofs the client sent through the link and the photographer has not resolved yet. For each one it
@@ -22,7 +23,7 @@ export function PendingPaymentsCard({ booking }: PendingPaymentsCardProps): Reac
   }
 
   return (
-    <View style={styles.card}>
+    <AppCard style={styles.card}>
       <Text style={styles.title}>Comprobantes por verificar</Text>
       <Text style={styles.hint}>Compara el monto y la referencia con tu banco antes de verificar.</Text>
 
@@ -44,18 +45,15 @@ export function PendingPaymentsCard({ booking }: PendingPaymentsCardProps): Reac
       ))}
 
       {review.errorMessage !== null && <Text style={styles.error}>{review.errorMessage}</Text>}
-    </View>
+    </AppCard>
   );
 }
 
 /** Styles of the card. */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.sm,
     marginTop: spacing.md,
-    padding: spacing.md,
   },
   title: {
     color: colors.textPrimary,

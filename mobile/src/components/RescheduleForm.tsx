@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useRescheduleForm } from '../hooks/useRescheduleForm';
 import { colors, radius, spacing } from '../theme/tokens';
 import type { RescheduleFormProps } from '../types/components/RescheduleForm.types';
 import { formatDateTime } from '../utils/format';
 import { DateTimeField } from './DateTimeField';
+import { AppCard } from './AppCard';
 
 /**
  * Form shown once the booking is loaded: the current date, a picker for the new one and the confirm button.
@@ -19,10 +20,10 @@ export function RescheduleForm({ booking }: RescheduleFormProps): ReactElement {
       <Text style={styles.title}>{booking.clientName}</Text>
       <Text style={styles.subtitle}>{booking.packageName}</Text>
 
-      <View style={styles.card}>
+      <AppCard style={styles.card}>
         <Text style={styles.cardLabel}>Fecha actual</Text>
         <Text style={styles.cardValue}>{formatDateTime(booking.sessionStart)}</Text>
-      </View>
+      </AppCard>
 
       <DateTimeField
         label="Nueva fecha y hora"
@@ -67,10 +68,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.xs,
-    padding: spacing.md,
   },
   cardLabel: {
     color: colors.textSecondary,

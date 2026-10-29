@@ -1,10 +1,11 @@
 import type { ReactElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import type { RefundListItemProps } from '../types/components/RefundListItem.types';
 import { SETTLEMENT_REASON_LABELS } from '../utils/billing';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { ActionButton } from './ActionButton';
+import { AppCard } from './AppCard';
 
 /**
  * Card of the pending refunds: who is owed how much and why, with the actions to write to the client on WhatsApp, record
@@ -14,7 +15,7 @@ import { ActionButton } from './ActionButton';
  */
 export function RefundListItem({ settlement, onContact, onComplete, onOpenBooking }: RefundListItemProps): ReactElement {
   return (
-    <View style={styles.card}>
+    <AppCard style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.client} numberOfLines={1}>
           {settlement.clientName}
@@ -40,17 +41,14 @@ export function RefundListItem({ settlement, onContact, onComplete, onOpenBookin
           </Pressable>
         </View>
       </View>
-    </View>
+    </AppCard>
   );
 }
 
 /** Styles of the card. */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.xs,
-    padding: spacing.md,
   },
   header: {
     alignItems: 'center',

@@ -1,39 +1,65 @@
 import { useState, type ReactElement } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { HelperText, Text, useTheme } from 'react-native-paper';
+import { spacing } from '../theme/tokens';
 import type { SelectFieldProps } from '../types/components/SelectField.types';
 
+/** Height of the field, the same as an outlined Material text field. */
+const FIELD_HEIGHT = 56;
+
 /**
- * Drop-down field: it shows the selected option and, when tapped, opens a list to pick another one. The list is a modal
- * so it looks and behaves the same on iOS and Android.
+ * Drop-down field that looks like the outlined text fields: it shows the selected option under its label and, when tapped,
+ * opens a list to pick another one. The list is a modal so it looks and behaves the same on iOS and Android.
  * @param props Component props.
  * @returns The field and its list.
  */
 export function SelectField({ label, options, value, onChange, placeholder, error }: SelectFieldProps): ReactElement {
+  const theme = useTheme();
   const [open, setOpen] = useState(false);
+  const hasError = error !== undefined;
+  const border = hasError ? theme.colors.error : theme.colors.outline;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
       <Pressable
         accessibilityRole="combobox"
         accessibilityLabel={label}
         accessibilityState={{ expanded: open }}
         accessibilityValue={{ text: value.length > 0 ? value : placeholder }}
         onPress={() => setOpen(true)}
-        style={[styles.field, error !== undefined && styles.fieldError]}
+        style={[styles.field, { backgroundColor: theme.colors.background, borderColor: border, borderRadius: theme.roundness }]}
       >
-        <Text style={[styles.value, value.length === 0 && styles.placeholder]} numberOfLines={1}>
+        <Text
+          variant="bodyLarge"
+          numberOfLines={1}
+          style={[styles.value, { color: value.length > 0 ? theme.colors.onSurface : theme.colors.onSurfaceVariant }]}
+        >
           {value.length > 0 ? value : placeholder}
         </Text>
-        <Text style={styles.chevron}>▾</Text>
+        <Text style={[styles.chevron, { color: theme.colors.onSurfaceVariant }]}>▾</Text>
+        <Text
+          variant="bodySmall"
+          style={[styles.label, { backgroundColor: theme.colors.background, color: hasError ? theme.colors.error : theme.colors.onSurfaceVariant }]}
+        >
+          {label}
+        </Text>
       </Pressable>
-      {error !== undefined && <Text style={styles.error}>{error}</Text>}
+      {hasError && (
+        <HelperText type="error" visible>
+          {error}
+        </HelperText>
+      )}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable accessibilityLabel="Cerrar lista" style={styles.backdrop} onPress={() => setOpen(false)}>
-          <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{label}</Text>
+        <Pressable
+          accessibilityLabel="Cerrar lista"
+          style={[styles.backdrop, { backgroundColor: theme.colors.backdrop }]}
+          onPress={() => setOpen(false)}
+        >
+          <View style={[styles.sheet, { backgroundColor: theme.colors.elevation.level3 }]}>
+            <Text variant="titleMedium" style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
+              {label}
+            </Text>
             <ScrollView>
               {options.map((option) => {
                 const selected = option === value;
@@ -47,10 +73,16 @@ export function SelectField({ label, options, value, onChange, placeholder, erro
                       onChange(option);
                       setOpen(false);
                     }}
-                    style={({ pressed }) => [styles.option, selected && styles.optionSelected, pressed && styles.optionPressed]}
+                    style={({ pressed }) => [
+                      styles.option,
+                      selected && { backgroundColor: theme.colors.secondaryContainer },
+                      pressed && { backgroundColor: theme.colors.surfaceVariant },
+                    ]}
                   >
-                    <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{option}</Text>
-                    {selected && <Text style={styles.check}>✓</Text>}
+                    <Text variant="bodyLarge" style={{ color: selected ? theme.colors.onSecondaryContainer : theme.colors.onSurface }}>
+                      {option}
+                    </Text>
+                    {selected && <Text style={[styles.check, { color: theme.colors.primary }]}>✓</Text>}
                   </Pressable>
                 );
               })}
@@ -62,87 +94,54 @@ export function SelectField({ label, options, value, onChange, placeholder, erro
   );
 }
 
-/** Styles of the field and its list. */
+/** Layout of the field and its list; its colors come from the theme. */
 const styles = StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
-  label: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
   field: {
     alignItems: 'center',
-    borderColor: colors.border,
-    borderRadius: radius.sm,
     borderWidth: 1,
     flexDirection: 'row',
+    height: FIELD_HEIGHT,
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
   },
-  fieldError: {
-    borderColor: colors.danger,
+  label: {
+    left: spacing.sm + spacing.xs,
+    paddingHorizontal: spacing.xs,
+    position: 'absolute',
+    top: -10,
   },
   value: {
-    color: colors.textPrimary,
     flex: 1,
-    fontSize: 16,
-  },
-  placeholder: {
-    color: colors.muted,
   },
   chevron: {
-    color: colors.textSecondary,
     fontSize: 16,
     marginLeft: spacing.sm,
   },
-  error: {
-    color: colors.danger,
-    fontSize: 13,
-  },
   backdrop: {
-    backgroundColor: colors.overlay,
     flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
-    backgroundColor: colors.background,
-    borderRadius: radius.md,
+    borderRadius: 28,
     maxHeight: '70%',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
   sheetTitle: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '600',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   option: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  optionSelected: {
-    backgroundColor: colors.surface,
-  },
-  optionPressed: {
-    opacity: 0.7,
-  },
-  optionText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-  },
-  optionTextSelected: {
-    fontWeight: '700',
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
   },
   check: {
-    color: colors.success,
     fontSize: 16,
     fontWeight: '700',
   },

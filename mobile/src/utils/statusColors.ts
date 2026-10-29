@@ -1,12 +1,12 @@
 import type { BookingStatus } from '../types/api/booking';
-import type { ColorToken } from '../types/theme/tokens.types';
+import type { StatusColorRole } from '../types/theme/palette.types';
 
-/** Color token used for each booking status. */
-export const STATUS_COLOR_TOKENS: Readonly<Record<BookingStatus, ColorToken>> = {
+/** Role of the palette that marks each booking status. It is a role, not a color: the theme decides the color. */
+export const STATUS_COLOR_ROLES: Readonly<Record<BookingStatus, StatusColorRole>> = {
   Tentative: 'warning',
   Confirmed: 'success',
   Completed: 'info',
   Cancelled: 'muted',
   Expired: 'muted',
-  ClientAbsent: 'danger',
+  ClientAbsent: 'error',
 };

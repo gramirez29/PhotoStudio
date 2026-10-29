@@ -1,12 +1,13 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { SETTLED_BOOKING_STATUSES } from '../constants/billing';
 import { useSettlement } from '../hooks/useSettlement';
 import { openRefund } from '../navigation/appNavigation';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import type { SettlementCardProps } from '../types/components/SettlementCard.types';
 import { describeSettlement } from '../utils/billing';
 import { ActionButton } from './ActionButton';
+import { AppCard } from './AppCard';
 
 /**
  * Card of the booking detail with what happened to the money when the booking ended without delivering its session: what
@@ -25,7 +26,7 @@ export function SettlementCard({ booking }: SettlementCardProps): ReactElement |
   }
 
   return (
-    <View style={styles.card}>
+    <AppCard style={styles.card}>
       <Text style={styles.title}>Dinero de esta reserva</Text>
       {describeSettlement(settlement).map((line) => (
         <Text key={line} style={styles.body}>
@@ -35,18 +36,15 @@ export function SettlementCard({ booking }: SettlementCardProps): ReactElement |
       {settlement.refundStatus === 'Pending' && (
         <ActionButton label="Marcar reembolso como devuelto" onPress={() => openRefund(booking.id)} />
       )}
-    </View>
+    </AppCard>
   );
 }
 
 /** Styles of the card. */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.sm,
     marginTop: spacing.md,
-    padding: spacing.md,
   },
   title: {
     color: colors.textPrimary,

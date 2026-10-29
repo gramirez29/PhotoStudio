@@ -68,3 +68,6 @@ export interface Palette {
   /** The silver of the logo, for borders. */
   readonly silver: string;
 }
+
+/** The roles of the palette that mark a state (a booking status, a result): each one is a color of the theme. */
+export type StatusColorRole = 'success' | 'warning' | 'info' | 'muted' | 'error';

@@ -1,8 +1,8 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { SERVICES } from '../constants/services';
 import { useEditBookingForm } from '../hooks/useEditBookingForm';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import type { EditBookingFormProps } from '../types/components/EditBookingForm.types';
 import { formatMoney } from '../utils/format';
 import { packageLabel } from '../utils/pricing';
@@ -13,6 +13,7 @@ import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { PackageFields } from './PackageFields';
 import { SelectField } from './SelectField';
 import { TotalToPay } from './TotalToPay';
+import { AppCard } from './AppCard';
 
 /**
  * Screen content that corrects a booking: the data of the client, and the type of session, package, price, extras and discount
@@ -89,7 +90,7 @@ export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement
           <TotalToPay total={form.totals.total} />
         </>
       ) : (
-        <View style={styles.locked}>
+        <AppCard style={styles.locked}>
           <Text style={styles.lockedTitle}>Paquete, extras y precio</Text>
           <Text style={styles.lockedValue}>
             {[booking.packageName, packageLabel(booking.packageTier)].filter((part) => part.length > 0).join(' · ')}
@@ -104,7 +105,7 @@ export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement
           <Text style={styles.hint}>
             No se pueden cambiar porque el contrato ya está firmado o hay pagos registrados: el contrato y el anticipo salen de ellos.
           </Text>
-        </View>
+        </AppCard>
       )}
 
       {form.submitError !== null && <Text style={styles.submitError}>{form.submitError}</Text>}
@@ -121,10 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   locked: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.xs,
-    padding: spacing.md,
   },
   lockedTitle: {
     color: colors.textPrimary,
