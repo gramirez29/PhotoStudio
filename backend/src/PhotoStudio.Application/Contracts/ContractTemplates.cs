@@ -5,12 +5,13 @@ namespace PhotoStudio.Application.Contracts;
 /// <summary>
 /// The contract templates that ship with the application. Each version is a Markdown-like text file embedded in the assembly
 /// (<c>Contracts/Templates/contract-v1.md</c>) with <c>{{name}}</c> variables that <see cref="ContractRenderer"/> fills in.
-/// A version is immutable once a client has signed it: a change to the wording is a new file and a new version.
+/// A version is immutable once a client has signed it: a change to the wording is a new file and a new version. <c>v1</c> stays
+/// in the assembly so a contract signed with it can still be read; <c>v2</c> adds the package, the extras and the discount.
 /// </summary>
 public static class ContractTemplates
 {
     /// <summary>The version of the template new signatures use.</summary>
-    public const string CurrentVersion = "v1";
+    public const string CurrentVersion = "v2";
 
     /// <summary>
     /// Reads a template by version.

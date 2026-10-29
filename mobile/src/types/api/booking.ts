@@ -280,8 +280,14 @@ export interface EditBookingDetailsRequest {
   readonly clientEmail?: string;
   /** Name of the package. */
   readonly packageName: string;
-  /** Price of the package alone, in the currency of the booking. The extras and the discount do not change. */
+  /** Price of the package alone, in the currency of the booking. */
   readonly packagePrice: number;
+  /** Package the client booked; omitted leaves it as it is. */
+  readonly packageTier?: PackageTier;
+  /** Extras as they should be now (an empty list removes them); omitted leaves them as they are. */
+  readonly extras?: readonly BookingExtraRequest[];
+  /** Discount in colones as it should be now (zero removes it); omitted leaves it as it is. */
+  readonly discount?: number;
 }
 
 /** Body to record a payment received in person (backend `RecordInPersonPaymentRequest`). */

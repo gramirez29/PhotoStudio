@@ -52,8 +52,19 @@ public sealed record CreateBookingRequest(
 /// <param name="ClientPhone">Phone of the client.</param>
 /// <param name="ClientEmail">Email of the client, or empty for none.</param>
 /// <param name="PackageName">Name of the package.</param>
-/// <param name="PackagePrice">Price of the package alone, in the currency of the booking. The extras and the discount do not change.</param>
-public sealed record EditBookingDetailsRequest(string ClientName, string ClientPhone, string? ClientEmail, string PackageName, decimal PackagePrice);
+/// <param name="PackagePrice">Price of the package alone, in the currency of the booking.</param>
+/// <param name="PackageTier">Package the client booked; omitted leaves it as it is.</param>
+/// <param name="Extras">Extras as they should be now (an empty list removes them); omitted leaves them as they are.</param>
+/// <param name="Discount">Discount as it should be now; omitted leaves it as it is.</param>
+public sealed record EditBookingDetailsRequest(
+    string ClientName,
+    string ClientPhone,
+    string? ClientEmail,
+    string PackageName,
+    decimal PackagePrice,
+    PackageTier? PackageTier = null,
+    IReadOnlyList<BookingExtraRequest>? Extras = null,
+    decimal? Discount = null);
 
 /// <summary>
 /// What the client declared when signing the contract on the photographer's phone.
@@ -147,7 +158,10 @@ public static class BookingRequestMappings
             request.ClientPhone,
             request.ClientEmail,
             request.PackageName,
-            request.PackagePrice);
+            request.PackagePrice,
+            request.PackageTier,
+            request.Extras?.Select(extra => new BookingExtraInput(extra.Code, extra.Name, extra.UnitPrice, extra.Quantity)).ToList(),
+            request.Discount);
     }
 
     /// <summary>

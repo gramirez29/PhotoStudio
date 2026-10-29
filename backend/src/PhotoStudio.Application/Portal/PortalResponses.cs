@@ -15,7 +15,7 @@ public sealed record PortalPaymentResponse(MoneyResponse Amount, PaymentStatus S
 /// Booking as the client sees it through the link. It leaves out everything the client does not need and the link must not
 /// expose: identifiers, the client's own phone and email, the policy and the history.
 /// </summary>
-/// <param name="PhotographerName">Name of the photographer, to show whose booking it is.</param>
+/// <param name="PhotographerName">Name of the studio, to show whose booking it is (never the name of the account).</param>
 /// <param name="ClientName">Name of the client.</param>
 /// <param name="PackageName">Package name.</param>
 /// <param name="Status">Current status.</param>

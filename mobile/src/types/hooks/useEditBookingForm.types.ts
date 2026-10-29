@@ -1,4 +1,5 @@
 import type { EditBookingFormErrors, EditBookingFormValues, EditBookingTextField } from '../forms/editBookingForm.types';
+import type { BookingTotals, SelectedExtra } from '../utils/pricing.types';
 
 /** What `useEditBookingForm` gives the screen that corrects a booking. */
 export interface EditBookingFormState {
@@ -16,8 +17,14 @@ export interface EditBookingFormState {
   readonly setText: (field: EditBookingTextField, text: string) => void;
   /** Sets the phone, written as it is typed (`7018-9220`). */
   readonly setPhone: (text: string) => void;
-  /** Sets the package chosen from the list. */
+  /** What the booking costs with the package, extras and discount as they are in the form. */
+  readonly totals: BookingTotals;
+  /** Sets the type of session chosen from the list. */
   readonly setPackage: (packageName: string) => void;
+  /** Sets the package by its name in the drop-down; fills in its price when it has one. */
+  readonly setPackageTier: (label: string) => void;
+  /** Replaces the extras chosen. */
+  readonly setExtras: (extras: readonly SelectedExtra[]) => void;
   /** Validates the form and saves the changes. */
   readonly submit: () => void;
 }

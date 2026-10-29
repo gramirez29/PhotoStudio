@@ -83,7 +83,30 @@ describe('useEditBookingForm', () => {
       clientEmail: 'nuevo@example.com',
       packageName: 'Pre-Boda',
       packagePrice: 150000,
+      packageTier: 'Standard',
+      extras: [],
+      discount: 0,
     });
+  });
+
+  it('fills in the price of the package chosen and works out the total with the extras and the discount', () => {
+    const { result } = renderHook(() => useEditBookingForm(editable), { wrapper: Wrapper });
+
+    act(() => result.current.setPackageTier('Premium'));
+    act(() => result.current.setExtras([{ code: 'makeup', name: 'Maquillaje', unitPrice: 20000, quantity: 1 }]));
+    act(() => result.current.setText('discount', '10000'));
+
+    expect(result.current.values.packageTier).toBe('Premium');
+    expect(result.current.values.price).toBe('110000');
+    expect(result.current.totals).toEqual({ packagePrice: 110000, extrasTotal: 20000, discount: 10000, total: 120000 });
+  });
+
+  it('ignores a package name that is not in the configuration', () => {
+    const { result } = renderHook(() => useEditBookingForm(editable), { wrapper: Wrapper });
+
+    act(() => result.current.setPackageTier('No existe'));
+
+    expect(result.current.values.packageTier).toBe('Standard');
   });
 
   it('sends the package of the booking, not the form, when it is locked', async () => {

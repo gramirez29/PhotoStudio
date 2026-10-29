@@ -1,8 +1,9 @@
-import type { BookingResponse } from '../types/api/booking';
+import type { BookingResponse, EditBookingDetailsRequest } from '../types/api/booking';
 import type { EditBookingFormErrors, EditBookingFormResult, EditBookingFormValues } from '../types/forms/editBookingForm.types';
 import { normalizeEmail } from '../utils/email';
 import { formatStoredPhone, normalizePhone } from '../utils/phone';
-import { parsePrice } from '../utils/price';
+import { parseOptionalAmount, parsePrice } from '../utils/price';
+import { extrasTotal } from '../utils/pricing';
 
 /**
  * Builds the form with what the booking has now, so the photographer only changes what is wrong.
@@ -15,7 +16,15 @@ export function initialEditValues(booking: BookingResponse): EditBookingFormValu
     clientPhone: formatStoredPhone(booking.clientPhone),
     clientEmail: booking.clientEmail ?? '',
     packageName: booking.packageName,
+    packageTier: booking.packageTier,
     price: String(Math.round(booking.basePrice.amount)),
+    extras: booking.extras.map((extra) => ({
+      code: extra.code,
+      name: extra.name,
+      unitPrice: extra.unitPrice.amount,
+      quantity: extra.quantity,
+    })),
+    discount: booking.discount.amount > 0 ? String(Math.round(booking.discount.amount)) : '',
   };
 }
 
@@ -50,6 +59,7 @@ export function validateEditBookingForm(values: EditBookingFormValues, booking: 
 
   let packageName = booking.packageName;
   let packagePrice = booking.basePrice.amount;
+  let pricing: Pick<EditBookingDetailsRequest, 'packageTier' | 'extras' | 'discount'> = {};
   if (packageEditable) {
     packageName = values.packageName.trim();
     if (packageName.length === 0) {
@@ -61,6 +71,21 @@ export function validateEditBookingForm(values: EditBookingFormValues, booking: 
       errors.price = 'Escribe un precio mayor a cero.';
     } else {
       packagePrice = typedPrice;
+    }
+
+    // The discount is optional, but it cannot be more than the client would pay without it.
+    const discount = parseOptionalAmount(values.discount);
+    if (discount === null) {
+      errors.discount = 'Escribe un descuento válido o déjalo vacío.';
+    } else if (typedPrice !== null && discount > typedPrice + extrasTotal(values.extras)) {
+      errors.discount = 'El descuento no puede ser mayor al precio del paquete y los extras.';
+    } else {
+      // Every editable value goes, so removing the extras or the discount is a change like any other.
+      pricing = {
+        ...(values.packageTier === null ? {} : { packageTier: values.packageTier }),
+        extras: values.extras.map((extra) => ({ code: extra.code, name: extra.name, unitPrice: extra.unitPrice, quantity: extra.quantity })),
+        discount,
+      };
     }
   }
 
@@ -77,6 +102,7 @@ export function validateEditBookingForm(values: EditBookingFormValues, booking: 
       ...(clientEmail === null ? {} : { clientEmail }),
       packageName,
       packagePrice,
+      ...pricing,
     },
   };
 }

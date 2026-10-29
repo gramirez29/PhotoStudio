@@ -66,9 +66,8 @@ internal static class PortalLinkExtensions
     /// Maps a booking to what its client sees in the portal.
     /// </summary>
     /// <param name="booking">Booking to map.</param>
-    /// <param name="photographerName">Name of the photographer.</param>
     /// <returns>The portal view.</returns>
-    public static PortalBookingResponse ToPortalResponse(this Booking booking, string photographerName)
+    public static PortalBookingResponse ToPortalResponse(this Booking booking)
     {
         ArgumentNullException.ThrowIfNull(booking);
 
@@ -76,7 +75,7 @@ internal static class PortalLinkExtensions
             && booking.Balance.Amount > 0;
 
         return new PortalBookingResponse(
-            photographerName,
+            StudioBrand.Name,
             booking.Client.Name,
             booking.PackageName,
             booking.Status,

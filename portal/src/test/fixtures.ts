@@ -2,7 +2,7 @@ import type { PortalBooking } from '../types/api/portal';
 
 /** A valid portal booking as the backend sends it (JSON, before parsing). */
 export const portalBookingPayload = {
-  photographerName: 'Ana Pérez',
+  photographerName: 'PhotoSense Studio',
   clientName: 'María Pérez',
   packageName: 'Retrato Familiar',
   status: 'Tentative',

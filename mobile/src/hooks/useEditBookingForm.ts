@@ -6,6 +6,7 @@ import type { EditBookingField, EditBookingFormErrors, EditBookingFormValues } f
 import type { EditBookingFormState } from '../types/hooks/useEditBookingForm.types';
 import { editBookingErrorMessage } from '../utils/apiErrors';
 import { formatPhoneInput } from '../utils/phone';
+import { computeTotals, findPackageByLabel, priceAfterPackageChange } from '../utils/pricing';
 import { useBookingCommand } from './useBookingCommand';
 
 /**
@@ -38,6 +39,7 @@ export function useEditBookingForm(booking: BookingResponse): EditBookingFormSta
     isPending: command.isPending,
     submitError: command.isError ? editBookingErrorMessage(command.error) : null,
     packageEditable,
+    totals: computeTotals(values.price, values.extras, values.discount),
     setText: (field, text) => {
       setValues((previous) => ({ ...previous, [field]: text }));
       clearError(field);
@@ -49,6 +51,24 @@ export function useEditBookingForm(booking: BookingResponse): EditBookingFormSta
     setPackage: (packageName) => {
       setValues((previous) => ({ ...previous, packageName }));
       clearError('packageName');
+    },
+    setPackageTier: (label) => {
+      const option = findPackageByLabel(label);
+      if (option === undefined) {
+        return;
+      }
+
+      setValues((previous) => ({
+        ...previous,
+        packageTier: option.tier,
+        price: priceAfterPackageChange(previous.price, previous.packageTier, option),
+      }));
+      clearError('packageTier');
+      clearError('price');
+    },
+    setExtras: (extras) => {
+      setValues((previous) => ({ ...previous, extras }));
+      clearError('discount');
     },
     submit: () => {
       const result = validateEditBookingForm(values, booking, packageEditable);

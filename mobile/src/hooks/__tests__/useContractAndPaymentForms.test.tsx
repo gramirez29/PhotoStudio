@@ -120,7 +120,7 @@ describe('useContractForm', () => {
     expect(result.current.showsContract).toBe(false);
     expect(bookingsApi.signContractInPerson).toHaveBeenCalledWith(booking.id, {
       signerName: booking.clientName,
-      templateVersion: 'v1',
+      templateVersion: 'v2',
       isPaperContract: true,
     });
   });

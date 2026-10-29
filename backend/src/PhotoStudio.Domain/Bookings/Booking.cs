@@ -92,11 +92,11 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <summary>Gets the price of the package alone, before extras and discount. It is fixed once the contract is signed or a payment is recorded (see <see cref="CanEditPackage"/>).</summary>
     public Money BasePrice { get; private set; }
 
-    /// <summary>Gets the extras sold with the booking. They are fixed when the booking is created.</summary>
+    /// <summary>Gets the extras sold with the booking. They can change together with the package (see <see cref="CanEditPackage"/>).</summary>
     public IReadOnlyList<BookingExtra> Extras => _extras.AsReadOnly();
 
     /// <summary>Gets the discount given to the client; zero when there is none.</summary>
-    public Money Discount { get; }
+    public Money Discount { get; private set; }
 
     /// <summary>Gets the sum of every extra.</summary>
     public Money ExtrasTotal => _extras.Aggregate(Money.Zero(BasePrice.Currency), (total, extra) => total.Add(extra.Total));
@@ -379,8 +379,18 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="packageName">Name of the package, as it should be now.</param>
     /// <param name="packagePrice">Price of the package alone, as it should be now, in the currency of the booking. The extras and the discount stay as they were.</param>
     /// <param name="now">Current instant.</param>
-    /// <exception cref="DomainException">When the status does not allow editing, the package or the price changed when they cannot, or a value is not valid.</exception>
-    public void EditDetails(ClientContact client, string packageName, Money packagePrice, DateTimeOffset now)
+    /// <param name="packageTier">Package the client booked; <see langword="null"/> leaves it as it is.</param>
+    /// <param name="extras">Extras sold with the booking, as they should be now (an empty list removes them all); <see langword="null"/> leaves them as they are.</param>
+    /// <param name="discount">Discount given to the client, as it should be now; <see langword="null"/> leaves it as it is.</param>
+    /// <exception cref="DomainException">When the status does not allow editing, the package, the price, the extras or the discount changed when they cannot, or a value is not valid.</exception>
+    public void EditDetails(
+        ClientContact client,
+        string packageName,
+        Money packagePrice,
+        DateTimeOffset now,
+        PackageTier? packageTier = null,
+        IEnumerable<BookingExtra>? extras = null,
+        Money? discount = null)
     {
         EnsureStatus(nameof(EditDetails), BookingStatus.Tentative, BookingStatus.Confirmed, BookingStatus.Completed);
         ArgumentNullException.ThrowIfNull(client);
@@ -397,7 +407,14 @@ public sealed class Booking : AggregateRoot<Guid>
         }
 
         var name = packageName.Trim();
-        var packageChanged = !string.Equals(name, PackageName, StringComparison.Ordinal) || packagePrice != BasePrice;
+        List<BookingExtra> newExtras = extras is null ? [.. _extras] : [.. extras];
+        var newDiscount = discount ?? Discount;
+        var newTier = packageTier ?? PackageTier;
+        var packageChanged = !string.Equals(name, PackageName, StringComparison.Ordinal)
+            || packagePrice != BasePrice
+            || newTier != PackageTier
+            || newDiscount != Discount
+            || !newExtras.SequenceEqual(_extras);
         if (packageChanged && !CanEditPackage)
         {
             throw new DomainException(
@@ -407,7 +424,7 @@ public sealed class Booking : AggregateRoot<Guid>
 
         if (packageChanged)
         {
-            EnsurePricing(packagePrice, _extras, Discount);
+            EnsurePricing(packagePrice, newExtras, newDiscount);
         }
 
         if (client != Client)
@@ -420,6 +437,10 @@ public sealed class Booking : AggregateRoot<Guid>
         {
             PackageName = name;
             BasePrice = packagePrice;
+            PackageTier = newTier;
+            _extras.Clear();
+            _extras.AddRange(newExtras);
+            Discount = newDiscount;
             _history.Add(new StatusTransition(Status, Status, Actor.Photographer, Channel.PhotographerApp, "PackageEdited", now));
         }
     }

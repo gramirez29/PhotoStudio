@@ -81,6 +81,9 @@ public static partial class ContractRenderer
             ["idNumber"] = declaration?.IdNumber ?? Blank,
             ["phone"] = FormatPhone(booking.Client.Phone),
             ["service"] = booking.PackageName,
+            ["packageText"] = FormatPackage(booking),
+            ["extrasText"] = FormatExtras(booking),
+            ["priceBreakdown"] = FormatPriceBreakdown(booking),
             ["sessionDate"] = FormatLongDate(start),
             ["sessionTime"] = FormatTime(start),
             ["location"] = declaration is null ? Blank : declaration.SessionLocation ?? "un lugar que se definirá con el Fotógrafo",
@@ -100,6 +103,57 @@ public static partial class ContractRenderer
             ["signedDate"] = signedAt is { } instant ? FormatLongDate(instant.ToOffset(CostaRicaOffset)) + ", " + FormatTime(instant.ToOffset(CostaRicaOffset)) : Blank,
             ["signerName"] = string.IsNullOrWhiteSpace(signerName) ? Blank : signerName.Trim(),
         };
+    }
+
+    /// <summary>
+    /// Writes the package the client booked, to follow the type of session.
+    /// </summary>
+    /// <param name="booking">Booking the contract is for.</param>
+    /// <returns>For example <c>, con el paquete Estándar</c>; empty when the booking has no package.</returns>
+    private static string FormatPackage(Booking booking) => booking.PackageTier switch
+    {
+        PackageTier.Basic => ", con el paquete Básico",
+        PackageTier.Standard => ", con el paquete Estándar",
+        PackageTier.Premium => ", con el paquete Premium",
+        PackageTier.Custom => ", con un paquete personalizado acordado con el Cliente",
+        PackageTier.Other => ", con las condiciones acordadas con el Cliente",
+        _ => string.Empty,
+    };
+
+    /// <summary>
+    /// Lists the extras sold with the booking.
+    /// </summary>
+    /// <param name="booking">Booking the contract is for.</param>
+    /// <returns>For example <c> Extras contratados: Hora adicional × 2 (₡60 000).</c>; empty when there are none.</returns>
+    private static string FormatExtras(Booking booking) => booking.Extras.Count == 0
+        ? string.Empty
+        : " Extras contratados: " + string.Join(", ", booking.Extras.Select(extra =>
+            $"{extra.Name} × {extra.Quantity.ToString(CultureInfo.InvariantCulture)} ({NotificationPushText.FormatMoney(extra.Total)})")) + ".";
+
+    /// <summary>
+    /// Shows how the total is made up when it is not just the package.
+    /// </summary>
+    /// <param name="booking">Booking the contract is for.</param>
+    /// <returns>For example <c> (paquete ₡65 000, extras ₡60 000, descuento ₡5 000)</c>; empty when the total is the package alone.</returns>
+    private static string FormatPriceBreakdown(Booking booking)
+    {
+        if (booking.Extras.Count == 0 && booking.Discount.Amount == 0m)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string> { $"paquete {NotificationPushText.FormatMoney(booking.BasePrice)}" };
+        if (booking.Extras.Count > 0)
+        {
+            parts.Add($"extras {NotificationPushText.FormatMoney(booking.ExtrasTotal)}");
+        }
+
+        if (booking.Discount.Amount > 0m)
+        {
+            parts.Add($"descuento -{NotificationPushText.FormatMoney(booking.Discount)}");
+        }
+
+        return $" ({string.Join(", ", parts)})";
     }
 
     /// <summary>

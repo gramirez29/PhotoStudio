@@ -5,15 +5,19 @@ import { useEditBookingForm } from '../hooks/useEditBookingForm';
 import { colors, radius, spacing } from '../theme/tokens';
 import type { EditBookingFormProps } from '../types/components/EditBookingForm.types';
 import { formatMoney } from '../utils/format';
+import { packageLabel } from '../utils/pricing';
 import { ActionButton } from './ActionButton';
+import { ExtrasFields } from './ExtrasFields';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
+import { PackageFields } from './PackageFields';
 import { SelectField } from './SelectField';
+import { TotalToPay } from './TotalToPay';
 
 /**
- * Screen content that corrects a booking: the data of the client, and the package and its price while the backend still allows
- * it. Once the contract is signed or a payment is recorded the package and the price are shown but cannot change, because the
- * contract text and the deposit are worked out from them.
+ * Screen content that corrects a booking: the data of the client, and the type of session, package, price, extras and discount
+ * while the backend still allows it. Once the contract is signed or a payment is recorded they are shown but cannot change,
+ * because the contract text and the deposit are worked out from them.
  * @param props Component props.
  * @returns The form.
  */
@@ -59,28 +63,44 @@ export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement
       {form.packageEditable ? (
         <>
           <SelectField
-            label="Paquete"
+            label="Tipo de sesión"
             options={SERVICES}
             value={form.values.packageName}
             onChange={form.setPackage}
-            placeholder="Selecciona un paquete"
+            placeholder="Selecciona un tipo de sesión"
             error={form.errors.packageName}
           />
-          <FormInput
-            label="Precio del paquete (₡)"
-            value={form.values.price}
-            onChangeText={(text) => form.setText('price', text)}
-            error={form.errors.price}
-            keyboardType="number-pad"
-            placeholder="80000"
+          <PackageFields
+            packageTier={form.values.packageTier}
+            price={form.values.price}
+            packageError={form.errors.packageTier}
+            priceError={form.errors.price}
+            onPackageChange={form.setPackageTier}
+            onPriceChange={(text) => form.setText('price', text)}
           />
+          <ExtrasFields
+            extras={form.values.extras}
+            extrasTotal={form.totals.extrasTotal}
+            discount={form.values.discount}
+            discountError={form.errors.discount}
+            onExtrasChange={form.setExtras}
+            onDiscountChange={(text) => form.setText('discount', text)}
+          />
+          <TotalToPay total={form.totals.total} />
         </>
       ) : (
         <View style={styles.locked}>
-          <Text style={styles.lockedTitle}>Paquete y precio</Text>
+          <Text style={styles.lockedTitle}>Paquete, extras y precio</Text>
           <Text style={styles.lockedValue}>
-            {booking.packageName} · {formatMoney(booking.basePrice)}
+            {[booking.packageName, packageLabel(booking.packageTier)].filter((part) => part.length > 0).join(' · ')}
           </Text>
+          {booking.extras.map((extra) => (
+            <Text key={extra.code} style={styles.lockedValue}>
+              {extra.name} × {extra.quantity} · {formatMoney(extra.total)}
+            </Text>
+          ))}
+          {booking.discount.amount > 0 && <Text style={styles.lockedValue}>Descuento · {formatMoney(booking.discount)}</Text>}
+          <Text style={styles.lockedValue}>Total · {formatMoney(booking.packagePrice)}</Text>
           <Text style={styles.hint}>
             No se pueden cambiar porque el contrato ya está firmado o hay pagos registrados: el contrato y el anticipo salen de ellos.
           </Text>

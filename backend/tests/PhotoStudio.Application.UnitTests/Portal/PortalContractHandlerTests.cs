@@ -111,15 +111,24 @@ public sealed class PortalContractHandlerTests
     }
 
     /// <summary>
+    /// The portal shows the name of the studio, never the name of the account that created the booking.
+    /// </summary>
+    [Fact]
+    public void Get_Booking_SpeaksInTheNameOfTheStudioNotOfTheAccount()
+    {
+        _fixture.Booking.ToPortalResponse().PhotographerName.ShouldBe("PhotoSense Studio");
+    }
+
+    /// <summary>
     /// The portal offers to sign only while the contract is unsigned.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
     public async Task Get_Booking_OffersToSignOnlyWhileUnsigned()
     {
-        var before = _fixture.Booking.ToPortalResponse("Ana");
+        var before = _fixture.Booking.ToPortalResponse();
         await NewSignHandler().HandleAsync(Command(), TestContext.Current.CancellationToken);
-        var after = _fixture.Booking.ToPortalResponse("Ana");
+        var after = _fixture.Booking.ToPortalResponse();
 
         before.CanSignContract.ShouldBeTrue();
         after.CanSignContract.ShouldBeFalse();
@@ -264,5 +273,5 @@ public sealed class PortalContractHandlerTests
     /// Builds the handler that signs the contract.
     /// </summary>
     /// <returns>The handler.</returns>
-    private SignPortalContractHandler NewSignHandler() => new(_fixture.Bookings, _fixture.Links, _fixture.Users, _fixture.Tokens, _fixture.Clock);
+    private SignPortalContractHandler NewSignHandler() => new(_fixture.Bookings, _fixture.Links, _fixture.Tokens, _fixture.Clock);
 }

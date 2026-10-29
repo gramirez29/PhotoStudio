@@ -133,5 +133,5 @@ public sealed class SubmitPortalPaymentProofHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private SubmitPortalPaymentProofHandler NewHandler() =>
-        new(_fixture.Bookings, _fixture.Links, _fixture.Users, _fixture.Tokens, _fixture.Clock);
+        new(_fixture.Bookings, _fixture.Links, _fixture.Tokens, _fixture.Clock);
 }

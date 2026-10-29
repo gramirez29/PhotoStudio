@@ -1,3 +1,6 @@
+using PhotoStudio.Application.Bookings.CreateBooking;
+using PhotoStudio.Domain.Bookings;
+
 namespace PhotoStudio.Application.Bookings.EditBookingDetails;
 
 /// <summary>
@@ -10,7 +13,10 @@ namespace PhotoStudio.Application.Bookings.EditBookingDetails;
 /// <param name="ClientPhone">Phone of the client.</param>
 /// <param name="ClientEmail">Email of the client, or <see langword="null"/> or blank for none. The client portal sends its codes there.</param>
 /// <param name="PackageName">Name of the package.</param>
-/// <param name="PackagePrice">Price of the package alone, in the currency of the booking. The extras and the discount of the booking do not change.</param>
+/// <param name="PackagePrice">Price of the package alone, in the currency of the booking.</param>
+/// <param name="PackageTier">Package the client booked; <see langword="null"/> leaves it as it is.</param>
+/// <param name="Extras">Extras sold with the booking as they should be now (an empty list removes them); <see langword="null"/> leaves them as they are.</param>
+/// <param name="Discount">Discount given to the client as it should be now; <see langword="null"/> leaves it as it is.</param>
 public sealed record EditBookingDetailsCommand(
     Guid PhotographerId,
     Guid BookingId,
@@ -18,4 +24,7 @@ public sealed record EditBookingDetailsCommand(
     string ClientPhone,
     string? ClientEmail,
     string PackageName,
-    decimal PackagePrice);
+    decimal PackagePrice,
+    PackageTier? PackageTier = null,
+    IReadOnlyList<BookingExtraInput>? Extras = null,
+    decimal? Discount = null);
