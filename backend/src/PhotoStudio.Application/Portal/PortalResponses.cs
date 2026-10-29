@@ -12,6 +12,14 @@ namespace PhotoStudio.Application.Portal;
 public sealed record PortalPaymentResponse(MoneyResponse Amount, PaymentStatus Status, DateTimeOffset RecordedAt);
 
 /// <summary>
+/// Extra sold with the booking as the client sees it: what it is, how many and what they cost together.
+/// </summary>
+/// <param name="Name">Name of the extra.</param>
+/// <param name="Quantity">Number of units.</param>
+/// <param name="Total">Price of every unit together.</param>
+public sealed record PortalExtraResponse(string Name, int Quantity, MoneyResponse Total);
+
+/// <summary>
 /// Booking as the client sees it through the link. It leaves out everything the client does not need and the link must not
 /// expose: identifiers, the client's own phone and email, the policy and the history.
 /// </summary>
@@ -22,7 +30,7 @@ public sealed record PortalPaymentResponse(MoneyResponse Amount, PaymentStatus S
 /// <param name="SessionStart">Session start (UTC).</param>
 /// <param name="SessionEnd">Session end (UTC).</param>
 /// <param name="ExpiresAt">End of the tentative hold, if any (UTC).</param>
-/// <param name="PackagePrice">Package price.</param>
+/// <param name="PackagePrice">What the client pays: the package plus the extras minus the discount.</param>
 /// <param name="DepositRequired">Deposit required to confirm.</param>
 /// <param name="TotalPaid">Sum of verified payments.</param>
 /// <param name="Balance">Outstanding balance.</param>
@@ -31,6 +39,9 @@ public sealed record PortalPaymentResponse(MoneyResponse Amount, PaymentStatus S
 /// <param name="CanSubmitProof">Whether the client can submit a payment proof now.</param>
 /// <param name="CanReceiveCode">Whether the booking has an email to send verification codes to; without it the client cannot act through the link.</param>
 /// <param name="CanSignContract">Whether the client can sign the contract now: it is still unsigned, the booking is waiting for confirmation and the client can receive a code.</param>
+/// <param name="BasePrice">Price of the package alone, before extras and discount.</param>
+/// <param name="Extras">Extras sold with the booking; empty when there are none.</param>
+/// <param name="Discount">Discount given to the client; zero when there is none.</param>
 public sealed record PortalBookingResponse(
     string PhotographerName,
     string ClientName,
@@ -47,7 +58,10 @@ public sealed record PortalBookingResponse(
     IReadOnlyList<PortalPaymentResponse> Payments,
     bool CanSubmitProof,
     bool CanReceiveCode,
-    bool CanSignContract);
+    bool CanSignContract,
+    MoneyResponse BasePrice,
+    IReadOnlyList<PortalExtraResponse> Extras,
+    MoneyResponse Discount);
 
 /// <summary>
 /// Contract of a booking as the client reads it through the link.

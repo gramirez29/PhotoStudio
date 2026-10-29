@@ -61,8 +61,9 @@ app del fotógrafo, y la declaración del contrato ya se muestra ahí.
 
 ## 7. Marca aplicada (entrega 2)
 
-Paleta del cliente en dos variaciones (la página sigue `prefers-color-scheme`) y tipografías **Josefin Sans** (títulos) y
-**DM Sans** (texto), alojadas en el sitio con `@fontsource-variable` (sin pedidos a Google Fonts).
+Paleta de la marca en dos variaciones; la página sigue `prefers-color-scheme`. **Claro: crema y terracota. Oscuro: azul noche y
+cobre**, los colores del logo. Son los dos temas que usará también la app móvil cuando se trabaje su UI (ver abajo). Tipografías
+**Josefin Sans** (títulos) y **DM Sans** (texto), alojadas en el sitio con `@fontsource-variable` (sin pedidos a Google Fonts).
 
 | Rol | Claro | Oscuro |
 |---|---|---|
@@ -72,13 +73,34 @@ Paleta del cliente en dos variaciones (la página sigue `prefers-color-scheme`) 
 | Texto secundario | `#3A4466` | `#C9CDD6` |
 | Acento (botón, bordes) | `#C4552E` | `#E3A97F` |
 | Texto sobre el acento | `#FBF3EA` | `#020D2C` |
+| Títulos y aro de foco | `#3A4466` | `#E3A97F` |
+| **Banda del logo** | `#3A4466` | `#3A4466` |
+| Borde plateado del logo | `#C9CDD6` | `#C9CDD6` |
+| Estados: éxito, aviso, error | `#2E7D4F`, `#A8681A`, `#B3261E` | `#6FCF97`, `#E3A97F`, `#F2766B` |
 
-Fuera de la paleta, solo los puntos de estado (éxito, aviso, error), siempre junto a un texto.
+El azul pizarra del logo, `#3A4466`, es la **banda superior** con el logo y el nombre (texto blanco), igual en las dos variaciones,
+y el color de los **títulos** (h1 y h2), del **aro de foco** del teclado y de la línea de "Qué sigue" en el tema claro. En el oscuro
+esos tres usan el cobre, porque `#3A4466` casi no se lee sobre el azul noche. El logo lleva un **borde plateado** (`#C9CDD6`, la plata
+de la marca) para despegarlo de la banda.
 
 **Hallazgo de contraste:** el terracota claro sobre el crema da **4,08:1**, menos que el 4,5:1 de WCAG AA para texto normal. Se
 mantuvo el color de la marca y se limitó su uso: relleno de botón con texto de 19 px en negrita (texto grande, exige 3:1) y
-bordes; nunca como color de texto corrido. `src/theme/tokens.test.ts` lo hace cumplir. Si se quiere 4,5:1 también en el botón, hay
-que oscurecer ese acento (por ejemplo a `#B04A25`).
+bordes; nunca como color de texto corrido. `src/theme/tokens.test.ts` lo hace cumplir, además del contraste de cada par de texto y
+fondo (4,5:1) y del aro de foco y el borde plateado (3:1), **en las dos variaciones**. Si se quiere 4,5:1 también en el botón, hay que
+oscurecer ese acento (por ejemplo a `#B04A25`).
+
+**Pendiente: temas de la app móvil.** Cuando se trabaje el UI de la app, sus temas serán estos dos (claro crema y terracota, oscuro
+azul noche y cobre), en lugar de la paleta neutral temporal de `mobile/src/theme/tokens.ts` (`userInterfaceStyle: automatic` ya está en
+`app.json`). La app y el portal deben quedar con los mismos valores; la fuente de verdad hoy es `portal/src/theme/tokens.css`.
+
+**Logo e íconos:** `portal/src/assets/logo-mark.png` (banda de la página) y, en `portal/public/`, `favicon.ico`, `favicon-32.png`,
+`favicon-48.png`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` y `site.webmanifest` (nombre del sitio, color de la barra e íconos
+para la pantalla de inicio; `display: browser`, no es una app instalable). `src/theme/icons.test.ts` comprueba que cada enlace de
+`index.html` apunte a un archivo que existe y que el manifiesto diga el tamaño real de cada ícono; todos salen de `photosense_avatar_1080.png`, la marca sola
+sobre el azul noche `#020D2C`.
+
+**Detalle de los montos:** si la reserva tiene extras o descuento, "Montos" muestra el paquete, cada extra (nombre × cantidad), el
+descuento y el total; sin ellos, solo el total.
 
 ## 8. Flujo del comprobante (entrega 3)
 

@@ -15,6 +15,8 @@ import { StatusBadge } from './StatusBadge';
  */
 export function BookingView({ booking, action }: BookingViewProps): ReactElement {
   const steps = nextSteps(booking);
+  // The detail of what makes up the total only shows when there is something to detail: extras or a discount.
+  const hasBreakdown = booking.extras.length > 0 || booking.discount.amount > 0;
 
   return (
     <div className="stack">
@@ -47,7 +49,18 @@ export function BookingView({ booking, action }: BookingViewProps): ReactElement
       <section className="card" aria-labelledby="amounts-title">
         <h2 id="amounts-title">Montos</h2>
         <dl className="amounts">
-          <AmountRow label="Total" money={booking.packagePrice} />
+          {hasBreakdown && (
+            <>
+              <AmountRow label="Paquete" money={booking.basePrice} />
+              {booking.extras.map((extra) => (
+                <AmountRow key={extra.name} label={`${extra.name} × ${extra.quantity}`} money={extra.total} />
+              ))}
+              {booking.discount.amount > 0 && (
+                <AmountRow label="Descuento" money={{ amount: -booking.discount.amount, currency: booking.discount.currency }} />
+              )}
+            </>
+          )}
+          <AmountRow label="Total" money={booking.packagePrice} emphasized={hasBreakdown} />
           <AmountRow label="Anticipo requerido" money={booking.depositRequired} />
           <AmountRow label="Pagado" money={booking.totalPaid} />
           <AmountRow label="Saldo" money={booking.balance} emphasized />

@@ -1,10 +1,15 @@
 /*
- * Design tokens of the portal: the brand palette in its light and dark variations. Components read colors only from these
- * variables. The dark variation follows the device setting. Every text/background pair used on screen is checked for contrast
- * by src/theme/tokens.test.ts; keep that test in sync when a pair is added.
+ * Design tokens of the portal: the brand palette in its light and dark variations. Light is cream and terracotta; dark is navy
+ * and copper, the colors of the logo. These are the two themes the mobile app will use too, once its UI is worked on (the app
+ * still has a neutral light palette in mobile/src/theme/tokens.ts). Components read colors only from these variables, and the
+ * page follows the setting of the device. Every text/background pair used on screen is checked for contrast, in both
+ * variations, by src/theme/tokens.test.ts; keep that test in sync when a pair is added.
  *
- * Palette, light: #FBF3EA #F6D5BE #0B1A40 #3A4466 #C4552E
- * Palette, dark:  #020D2C #26324F #E3A97F #C9CDD6 #F4F1EC
+ * Light: #FBF3EA #F6D5BE #0B1A40 #3A4466 #C4552E
+ * Dark:  #020D2C #26324F #E3A97F #C9CDD6 #F4F1EC
+ * #3A4466 (the slate blue of the logo) is the band with the logo and its name, and the headings on the light page. Headings and
+ * the focus ring use the heading color: the slate blue on the light page and copper on the dark one (slate is too dark to read on
+ * navy). Silver (#C9CDD6) is the border of the logo, taken from the silver of the mark.
  * The status dots (success, warning, danger) are not part of the brand palette: they are small marks next to a text label,
  * never the only carrier of the meaning.
  * Light accent (#C4552E): 4.08:1 against the cream background, so it is never the color of running text. It is the fill of a
@@ -19,6 +24,10 @@
   --color-text-muted: #3a4466;
   --color-accent: #c4552e;
   --color-on-accent: #fbf3ea;
+  --color-brand: #3a4466;
+  --color-on-brand: #ffffff;
+  --color-heading: #3a4466;
+  --color-silver: #c9cdd6;
   --color-success: #2e7d4f;
   --color-warning: #a8681a;
   --color-danger: #b3261e;
@@ -45,6 +54,7 @@
     --color-text-muted: #c9cdd6;
     --color-accent: #e3a97f;
     --color-on-accent: #020d2c;
+    --color-heading: #e3a97f;
     --color-success: #6fcf97;
     --color-warning: #e3a97f;
     --color-danger: #f2766b;

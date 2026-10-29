@@ -57,12 +57,18 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ['--color-text', '--color-surface'],
   ['--color-text-muted', '--color-bg'],
   ['--color-text-muted', '--color-surface'],
+  // The headings, on the page and inside the cards.
+  ['--color-heading', '--color-bg'],
+  ['--color-heading', '--color-surface'],
+  // The name of the studio on the band of the logo.
+  ['--color-on-brand', '--color-brand'],
 ];
 
 describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
   it.each(TEXT_PAIRS)('keeps %s readable on %s (WCAG AA, 4.5:1)', (foreground, background) => {
-    const front = tokens[foreground];
-    const back = tokens[background];
+    // A variation only declares what it changes: the rest is inherited from the light one.
+    const front = tokens[foreground] ?? variations.light[foreground];
+    const back = tokens[background] ?? variations.light[background];
 
     expect(front).toBeDefined();
     expect(back).toBeDefined();
@@ -73,24 +79,55 @@ describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
   // WCAG asks for 3:1: the label of a button, which is bold and 19px (large text), and fills and borders (non-text). It is
   // never used as the color of running text. If a pair below must hold 4.5:1, the brand accent has to be darkened.
   it('keeps the label of an accent button readable as large text (3:1)', () => {
-    expect(contrast(tokens['--color-on-accent'] ?? '', tokens['--color-accent'] ?? '')).toBeGreaterThanOrEqual(3);
+    const label = tokens['--color-on-accent'] ?? variations.light['--color-on-accent'];
+    const fill = tokens['--color-accent'] ?? variations.light['--color-accent'];
+
+    expect(contrast(label ?? '', fill ?? '')).toBeGreaterThanOrEqual(3);
   });
 
   it('keeps the accent visible against the background as a fill or a border (3:1)', () => {
-    expect(contrast(tokens['--color-accent'] ?? '', tokens['--color-bg'] ?? '')).toBeGreaterThanOrEqual(3);
+    const fill = tokens['--color-accent'] ?? variations.light['--color-accent'];
+    const background = tokens['--color-bg'] ?? variations.light['--color-bg'];
+
+    expect(contrast(fill ?? '', background ?? '')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps the focus ring, which is the heading color, visible against the page (3:1)', () => {
+    const ring = tokens['--color-heading'] ?? variations.light['--color-heading'];
+
+    expect(contrast(ring ?? '', tokens['--color-bg'] ?? variations.light['--color-bg'] ?? '')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps the silver border of the logo visible against the band (3:1)', () => {
+    const silver = tokens['--color-silver'] ?? variations.light['--color-silver'];
+    const band = tokens['--color-brand'] ?? variations.light['--color-brand'];
+
+    expect(contrast(silver ?? '', band ?? '')).toBeGreaterThanOrEqual(3);
   });
 
   it.each(['--color-success', '--color-warning', '--color-danger'])('keeps the %s dot visible on the surface (3:1)', (dot) => {
-    expect(contrast(tokens[dot] ?? '', tokens['--color-surface'] ?? '')).toBeGreaterThanOrEqual(3);
+    const color = tokens[dot] ?? variations.light[dot];
+    const surface = tokens['--color-surface'] ?? variations.light['--color-surface'];
+
+    expect(contrast(color ?? '', surface ?? '')).toBeGreaterThanOrEqual(3);
   });
 });
 
 describe('brand palette', () => {
-  it('uses exactly the colors the brand defined for each variation', () => {
+  it('light is the cream and terracotta palette of the brand', () => {
     const lightBrand = ['#fbf3ea', '#f6d5be', '#0b1a40', '#3a4466', '#c4552e'];
-    const darkBrand = ['#020d2c', '#26324f', '#e3a97f', '#c9cdd6', '#f4f1ec'];
 
     expect(lightBrand.every((color) => Object.values(variations.light).includes(color))).toBe(true);
+  });
+
+  it('dark is the navy and copper palette of the brand', () => {
+    const darkBrand = ['#020d2c', '#26324f', '#e3a97f', '#c9cdd6', '#f4f1ec'];
+
     expect(darkBrand.every((color) => Object.values(variations.dark).includes(color))).toBe(true);
+  });
+
+  it('keeps the slate blue of the logo on the band in both variations', () => {
+    expect(variations.dark['--color-brand']).toBeUndefined();
+    expect(variations.light['--color-brand']).toBe('#3a4466');
   });
 });
