@@ -163,6 +163,11 @@ public sealed class ContractSignatureDocument
     [BsonElement("signedText")]
     [BsonIgnoreIfNull]
     public string? SignedText { get; set; }
+
+    /// <summary>Gets or sets the instant the copy of the contract was emailed to the client (UTC), if it was.</summary>
+    [BsonElement("copySentAt")]
+    [BsonIgnoreIfNull]
+    public DateTime? CopySentAt { get; set; }
 }
 
 /// <summary>
