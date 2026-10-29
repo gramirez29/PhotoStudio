@@ -30,6 +30,7 @@ public sealed record PortalPaymentResponse(MoneyResponse Amount, PaymentStatus S
 /// <param name="Payments">Payments recorded, with their state.</param>
 /// <param name="CanSubmitProof">Whether the client can submit a payment proof now.</param>
 /// <param name="CanReceiveCode">Whether the booking has an email to send verification codes to; without it the client cannot act through the link.</param>
+/// <param name="CanSignContract">Whether the client can sign the contract now: it is still unsigned, the booking is waiting for confirmation and the client can receive a code.</param>
 public sealed record PortalBookingResponse(
     string PhotographerName,
     string ClientName,
@@ -45,7 +46,16 @@ public sealed record PortalBookingResponse(
     bool ContractSigned,
     IReadOnlyList<PortalPaymentResponse> Payments,
     bool CanSubmitProof,
-    bool CanReceiveCode);
+    bool CanReceiveCode,
+    bool CanSignContract);
+
+/// <summary>
+/// Contract of a booking as the client reads it through the link.
+/// </summary>
+/// <param name="TemplateVersion">Version of the template; the client sends it back when signing so they sign what they read.</param>
+/// <param name="Text">Text of the contract with the booking data filled in. Before signing, what the client still has to declare is shown as blanks; after signing it is the exact text that was signed.</param>
+/// <param name="Signed">Whether the contract is already signed.</param>
+public sealed record PortalContractResponse(string TemplateVersion, string Text, bool Signed);
 
 /// <summary>
 /// A booking link just created. The token is shown only here: the server keeps its hash, so it cannot be recovered later.

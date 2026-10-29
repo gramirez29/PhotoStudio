@@ -89,6 +89,13 @@ public static class BookingResponseMappings
     public static ContractResponse ToResponse(this ContractSignature contract)
     {
         ArgumentNullException.ThrowIfNull(contract);
-        return new ContractResponse(contract.SignerName, contract.TemplateVersion, contract.Channel, contract.SignedAt);
+        var declaration = contract.Declaration is null
+            ? null
+            : new ClientDeclarationResponse(
+                contract.Declaration.IdNumber,
+                contract.Declaration.ParticipantCount,
+                contract.Declaration.SessionLocation,
+                contract.Declaration.ImageUse);
+        return new ContractResponse(contract.SignerName, contract.TemplateVersion, contract.Channel, contract.SignedAt, declaration);
     }
 }

@@ -605,6 +605,42 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// A contract signed by the client keeps its declaration and the signed text after a round trip through MongoDB, and a contract
+    /// signed in person keeps neither.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateAsync_KeepsTheDeclarationAndTheSignedTextOfAPortalContract()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = NewRepository();
+        var portal = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
+        var inPerson = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
+        await repository.AddAsync(portal, TestContext.Current.CancellationToken);
+        await repository.AddAsync(inPerson, TestContext.Current.CancellationToken);
+
+        // Bookings are loaded again before changing them, as the handlers do, so the version they carry is the stored one.
+        var loadedPortal = (await repository.GetByIdAsync(portal.Id, TestContext.Current.CancellationToken))!;
+        var loadedInPerson = (await repository.GetByIdAsync(inPerson.Id, TestContext.Current.CancellationToken))!;
+        var declaration = ClientDeclaration.Create("1-1234-5678", 4, "Parque La Sabana", ImageUse.NotAuthorized);
+        loadedPortal.SignContract("María Pérez", "v1", Actor.Client, Channel.Portal, Now, declaration, "texto firmado");
+        loadedInPerson.SignContract("María Pérez", "v1", Actor.Photographer, Channel.InPerson, Now);
+        await repository.UpdateAsync(loadedPortal, TestContext.Current.CancellationToken);
+        await repository.UpdateAsync(loadedInPerson, TestContext.Current.CancellationToken);
+
+        var storedPortal = await repository.GetByIdAsync(portal.Id, TestContext.Current.CancellationToken);
+        var storedInPerson = await repository.GetByIdAsync(inPerson.Id, TestContext.Current.CancellationToken);
+        var contract = storedPortal!.Contract.ShouldNotBeNull();
+        contract.SignedText.ShouldBe("texto firmado");
+        contract.Declaration.ShouldNotBeNull().IdNumber.ShouldBe("112345678");
+        contract.Declaration.ParticipantCount.ShouldBe(4);
+        contract.Declaration.SessionLocation.ShouldBe("Parque La Sabana");
+        contract.Declaration.ImageUse.ShouldBe(ImageUse.NotAuthorized);
+        storedInPerson!.Contract.ShouldNotBeNull().Declaration.ShouldBeNull();
+        storedInPerson.Contract.SignedText.ShouldBeNull();
+    }
+
+    /// <summary>
     /// Creates a tentative booking for the slot.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>

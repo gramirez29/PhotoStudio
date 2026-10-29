@@ -90,7 +90,8 @@ internal static class PortalLinkExtensions
             booking.Contract is not null,
             [.. booking.Payments.Select(payment => new PortalPaymentResponse(payment.Amount.ToResponse(), payment.Status, payment.RecordedAt))],
             canPay,
-            booking.Client.Email is not null);
+            booking.Client.Email is not null,
+            booking.Status == BookingStatus.Tentative && booking.Contract is null && booking.Client.Email is not null);
     }
 
     /// <summary>
