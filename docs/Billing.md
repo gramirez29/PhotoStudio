@@ -43,7 +43,7 @@ Todas exigen sesión y se acotan al fotógrafo del token (la liquidación de otr
 | GET | `/api/billing/settlements/{bookingId}` | Liquidación de una reserva; 404 si no tiene (no terminó, o terminó sin pagos) |
 | POST | `/api/billing/settlements/{bookingId}/refund/complete` | Marca el reembolso como devuelto: `{ "method": "Cash" \| "SinpeMovil", "note": "..." }` (nota opcional, máx. 200). 422 `payment.invalid_method` con otro método; 409 `booking.invalid_transition` si no está pendiente |
 
-Una liquidación aparece cuando el outbox entrega el evento: con el worker siempre encendido en segundos; con cron `*/15` hasta 15 minutos; o al instante con el botón "Liberar reservas vencidas" de la app (que ejecuta una pasada de mantenimiento).
+Una liquidación aparece cuando el outbox entrega el evento: normalmente en segundos, porque la API despierta una pasada tras cada cambio de reserva (`Outbox-Worker Functionality.md` §19); si eso falla, con el worker siempre encendido en segundos o con cron `*/15` hasta 15 minutos; o al instante con el botón "Liberar reservas vencidas" de la app (que ejecuta una pasada de mantenimiento).
 
 ## 4. Colección `settlements`
 

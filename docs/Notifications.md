@@ -23,7 +23,7 @@ Los avisos de hoy son para el **fotógrafo**: es él quien escribe al cliente. N
 - **La relevancia se vuelve a evaluar al entregar** (`DeliverDueNotificationsHandler`): si la reserva se canceló, se movió o ya se pagó, el aviso se cancela en vez de entregarse. Una captura (`NotificationDetails`) congela lo que decía en ese momento.
 - **Retención:** índice TTL `ix_notification_retention` sobre `retainUntil` (= `dueAt` + 90 días).
 - **Aviso de comprobante:** `PaymentNotificationsHandler` consume `PaymentSubmitted` y el planificador programa el aviso con vencimiento "ahora"; la clave es `PaymentProofSubmitted:{paymentId}` (una por pago, así dos comprobantes son dos avisos y el mismo evento entregado dos veces es uno). Al entregar se reevalúa: si el fotógrafo ya verificó o rechazó el comprobante, el aviso se descarta. El snapshot lleva `proofAmount` (lo que declaró el cliente). Como el outbox se despacha antes de entregar avisos en la misma pasada, no suma espera: llega con la frecuencia del worker (hasta 15 min con el cron de Railway) o al instante con el botón de mantenimiento.
-- **Push:** ver la sección 10. Es un complemento de la bandeja: la bandeja es la fuente de verdad y el push solo avisa.
+- **Push:** ver la sección 10 y [`PushNotifications.md`](PushNotifications.md). Es un complemento de la bandeja: la bandeja es la fuente de verdad y el push solo avisa.
 
 ## 3. Flujo
 
@@ -92,28 +92,19 @@ Cambio respecto a la configuración diaria: solo cambia el **Cron Schedule** del
 ## 9. Límites conocidos
 
 - El push depende de que el teléfono tenga permiso de notificaciones y un token registrado; sin eso el aviso solo está en la bandeja (se actualiza cada 60 s con la app abierta).
+- Los textos del push están fijos en español y en hora de Costa Rica (UTC-6); no hay preferencias por tipo ni horas silenciosas (ver el TODO de `PushNotifications.md`).
 - Los recordatorios usan 24 h fijas (`NotificationPolicy`); a futuro configurables por fotógrafo.
-- La API despierta una pasada de mantenimiento tras cada cambio de reserva (sección 10.3), pero es un atajo: si esa pasada falla, el worker lo entrega con su frecuencia (hasta 15 min).
+- La API despierta una pasada de mantenimiento tras cada cambio de reserva (`PushNotifications.md` §6, decisión 10; `Outbox-Worker Functionality.md` §19), pero es un atajo: si esa pasada falla, el worker lo entrega con su frecuencia (hasta 15 min).
 - No hay aviso de plazo de entrega de galería (depende de Gallery).
 - La app no valida que WhatsApp esté instalado: `wa.me` cae al navegador si no lo está.
 
 ## 10. Push
 
-### 10.1 Qué hace
-Cuando un aviso llega a la bandeja, además se envía una notificación del sistema a los teléfonos registrados del fotógrafo (`NotificationPusher`, llamado por `DeliverDueNotificationsHandler` solo para lo que **esa** pasada entregó: lo que ganó otra pasada lo envía esa). Al tocarla, la app abre la reserva (`data.bookingId`).
+Cuando un aviso llega a la bandeja, además se envía una notificación del sistema a los teléfonos registrados del fotógrafo, y la API despierta la entrega tras cada cambio de reserva para que no espere al cron del worker. El push es un **complemento**: la bandeja sigue siendo la fuente de la verdad y un fallo del push nunca rompe la entrega.
 
-- **Es un complemento, nunca un requisito.** Un fallo (Mongo, Expo, sin teléfonos) se registra y el aviso sigue entregado; no rompe la pasada.
-- **Texto en el backend (excepción documentada).** La bandeja la redacta la app, pero un push lo dibuja el sistema con la app cerrada, así que su texto viaja con él (`NotificationPushText`, solo español). Las horas se escriben en hora de Costa Rica (UTC-6 fijo, sin horario de verano) y a mano, sin depender de los datos de cultura del contenedor.
-- **Teléfono = token de Expo** (`ExponentPushToken[...]`), guardado en `push_devices` con el token como `_id`. Un token pertenece a un fotógrafo a la vez: si otro inicia sesión en el mismo teléfono, el registro lo mueve. Expo informa `DeviceNotRegistered` cuando la app se desinstaló y ese token se borra solo.
-- **Proveedor:** `ExpoPushSender` → `https://exp.host/--/api/v2/push/send`, hasta 100 mensajes por petición, canal Android `default`. Variable opcional `EXPO_ACCESS_TOKEN` (solo si el proyecto de Expo activó la seguridad mejorada). No se leen los recibos de entrega.
+Todo el detalle (herramientas, plataformas, flujo, decisiones, datos, API, configuración, pruebas, solución de problemas y TODO) está en [`PushNotifications.md`](PushNotifications.md). Lo que afecta a este módulo:
 
-### 10.2 App
-`PushRegistration` (en el layout raíz) usa `usePushRegistration`: al haber sesión registra el teléfono (crea el canal `default`, pide permiso, obtiene el token del proyecto de EAS y lo envía), escucha los avisos que llegan con la app abierta (recarga la bandeja) y abre la reserva al tocar una notificación, también la que abrió la app desde cerrada. Al cerrar sesión, `signOutOfDevice` pide al backend olvidar el teléfono (máximo 3 s, sin conexión se ignora) y luego cierra la sesión. Los efectos de `expo-notifications` viven solo en `src/push/pushManager.ts`.
-
-Solo funciona en un dispositivo físico con un build que incluya `expo-notifications` y las credenciales FCM (ver `docs/Deployment.md`, sección 7); no en Expo Go ni en un emulador.
-
-### 10.3 Entrega inmediata
-Antes, un aviso podía tardar hasta 15 min (el cron del worker). Ahora la API tiene un `OutboxWakeUpService` (hosted service): un middleware avisa tras cada petición exitosa que **cambia** reservas (`/api/bookings/**` y `/public/bookings/**`, no GET) y el servicio corre una pasada de mantenimiento (máximo una por segundo; las señales seguidas se funden en una). Es seguro con el worker corriendo a la vez: los mensajes del outbox se toman con *lease* y los avisos con control de versión. El worker sigue siendo la red de seguridad.
-
-### 10.4 Pruebas
-Domain `PushDeviceTests`; Application `NotificationPushTextTests`, `NotificationPusherTests` (incluye los handlers de registro) y las de entrega; Infrastructure `ExpoPushSenderTests` (Expo simulado) y `MongoPushDeviceRepositoryTests` (Mongo real); Api `PushDevicesApiTests` (de punta a punta: comprobante subido por el portal → push capturado, **sin** correr mantenimiento a mano); Mobile `pushManager`, `PushRegistration`, `pushSignOut`, `push` (utils) y `pushDevicesApi`.
+- `DeliverDueNotificationsHandler` llama a `NotificationPusher` solo con lo que **esa** pasada entregó (un aviso ganado por otra pasada lo envía esa).
+- Los textos del push los fija el backend (`NotificationPushText`), una excepción a "el backend no guarda texto" porque el sistema los dibuja con la app cerrada.
+- `NotificationDetails` gana `ProofAmount` (y `GET /api/notifications` el campo `proofAmount`).
+- Endpoints nuevos: `POST /api/push-devices` y `POST /api/push-devices/unregister` (ver §5).

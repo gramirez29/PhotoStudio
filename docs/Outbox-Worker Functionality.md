@@ -29,6 +29,7 @@ Documento de referencia del mecanismo que entrega los eventos de dominio de Phot
 16. [Garantías, límites y decisiones](#16-garantías-límites-y-decisiones)
 17. [Ejecución diaria y a demanda (modo "una pasada")](#17-ejecución-diaria-y-a-demanda-modo-una-pasada)
 18. [Auditoría de memoria y rendimiento](#18-auditoría-de-memoria-y-rendimiento)
+19. [Despertar la entrega desde la API](#19-despertar-la-entrega-desde-la-api)
 
 ---
 
@@ -799,7 +800,7 @@ Se corrió la imagen Docker (API + worker) contra el Mongo local: se creó una r
 1. **No es "exactamente una vez".** Puede haber duplicados; los consumidores deben ser idempotentes.
 2. **Orden global solo con un worker.** El reclamo sigue `occurredAt`, pero con varios workers dos mensajes distintos pueden procesarse en paralelo o en otro orden. No hay orden garantizado entre eventos de distintas reservas, ni estricto entre eventos de la misma reserva con varios workers. Hoy se despliega un solo servicio de worker.
 3. **Lease fijo de 2 minutos.** Un consumidor que tarde más puede recibir el mismo mensaje duplicado desde otro worker. No hay renovación de lease.
-4. **Sondeo, no push.** La latencia de entrega es de hasta ~5 s. Es suficiente para notificaciones y recordatorios; si algún día hace falta menos, se puede usar un change stream de Mongo.
+4. **Sondeo, no *push* de Mongo.** Con el worker siempre encendido la latencia de entrega es de hasta ~5 s; en modo una pasada, la del cron (15 min). Para que lo que importa llegue en segundos, la API despierta una pasada tras cada cambio de reserva (§19). Si algún día hace falta menos, se puede usar un change stream de Mongo. (No confundir con las notificaciones *push* al teléfono: ver `PushNotifications.md`.)
 5. **Los eventos ya procesados no se reenvían** cuando se agregue un consumidor nuevo. Un consumidor nuevo solo ve eventos futuros (y los que sigan `Pending`).
 6. **Parámetros fijos en código** (intervalos, lotes, intentos, retención).
 7. **Nombre de tipo como clave:** renombrar un evento afecta los mensajes pendientes (§6).
@@ -950,7 +951,7 @@ Mensajes que ve el usuario, por ejemplo: "2 reservas vencidas liberadas.", "No h
 ### 17.6 Consecuencias de correr una vez al día
 
 - **Un apartado vencido sigue bloqueando el horario hasta la siguiente pasada** (máximo 24 h). Para eso existe el botón: libera el horario al instante.
-- **Los eventos del outbox se entregan una vez al día** (o al pulsar el botón). Hoy no hay consumidores, así que no importa. **Ya existen recordatorios** (ver `Notifications.md`): para que lleguen a tiempo el cron debe correr cada 15 minutos (`*/15 * * * *`) en lugar de una vez al día; el cambio es solo de configuración en Railway.
+- **Los eventos del outbox se entregan en cada ejecución del cron** (o al pulsar el botón, o cuando la API los despierta tras un cambio de reserva, §19). **Ya existen consumidores** (avisos, liquidaciones; ver `Notifications.md` y `Billing.md`): para que los recordatorios lleguen a tiempo el cron debe correr cada 15 minutos (`*/15 * * * *`) en lugar de una vez al día; el cambio es solo de configuración en Railway.
 - Los recordatorios futuros (por ejemplo "mañana tienes sesión") no pueden depender de una ejecución diaria a una hora fija si deben salir a una hora precisa.
 
 ### 17.7 Configuración en Railway
@@ -963,6 +964,7 @@ Mensajes que ve el usuario, por ejemplo: "2 reservas vencidas liberadas.", "No h
    - `MONGODB_CONNECTION_STRING`: la misma que usa la API. Se puede referenciar con `${{photostudio-api.MONGODB_CONNECTION_STRING}}`.
    - `MONGODB_DATABASE_NAME`: la misma que la API (`photostudio`).
    - `WORKER_RUN_ONCE` = `true`
+   - `EXPO_ACCESS_TOKEN`: **opcional**, la misma que la API. El worker también entrega avisos y, con ellos, los pushes (ver `PushNotifications.md`).
 6. **Health check:** dejar vacío (el worker no sirve HTTP). No asignarle dominio público.
 7. **Restart policy:** un trabajo programado debe terminar y no reiniciarse; si el panel ofrece la política, elegir *Never* (o *On Failure* con pocos reintentos).
 8. **Verificar:** ejecutarlo a mano (o esperar la hora del cron) y revisar el log: debe aparecer `Maintenance pass completed: ...` y el servicio debe quedar como terminado con éxito.
@@ -1056,3 +1058,21 @@ Conclusión: la huella ya es baja y está dominada por el propio runtime de .NET
 - **Rendimiento de la expiración en modo siempre encendido:** procesa hasta 100 reservas por minuto (≈144 000 al día), muy por encima de lo necesario. El modo una pasada procesa hasta 1 000 por ejecución.
 - **Un intento de entrega interrumpido por un apagado** cuenta como intento usado (el contador sube al reclamar). Solo importaría si un mismo mensaje se interrumpiera 8 veces seguidas.
 - **Mediciones locales, no de Railway:** los números vienen de Docker Desktop (Linux). Railway puede reportar el consumo de otra forma (con o sin caché de archivos), por eso se dan tanto el RSS como los valores de cgroup.
+
+---
+
+## 19. Despertar la entrega desde la API
+
+**Problema.** Con el worker en modo una pasada y un cron de 15 minutos, un evento (por ejemplo "el cliente subió un comprobante") podía tardar hasta 15 minutos en convertirse en un aviso y en un push.
+
+**Solución.** La API tiene su propio disparador, sin cambiar el worker:
+
+- `IOutboxWakeUp` (puerto en Application) con `Signal()`. Por defecto está registrado `NullOutboxWakeUp` (no hace nada), que es lo que usa el worker.
+- `OutboxWakeUpService` (API) implementa `IOutboxWakeUp` y es un `BackgroundService`: espera una señal en un `Channel` acotado a 1 (las señales seguidas se funden en una), corre `RunMaintenanceHandler` en un scope nuevo (expirar, outbox, avisos vencidos y su push) y espera 1 s antes de aceptar otra. Un fallo se registra y no detiene el servicio.
+- Un **middleware** en `Program.cs` llama a `Signal()` cuando, ya con la respuesta final, la petición fue **no GET**, a `/api/bookings/**` o `/public/bookings/**`, y su estado es menor de 400 (una petición fallida no guardó nada). Login, registro y demás no despiertan nada.
+
+**Por qué es seguro con el worker.** Los mensajes del outbox se reclaman con `FindOneAndUpdate` y un *lease* de 2 min, y los avisos se entregan con control de versión (el segundo que llega recibe un conflicto y lo salta). Dos procesos corriendo a la vez no duplican entregas.
+
+**Qué no es.** Es un atajo, no un reemplazo: si la API está caída, o el despertador falla, el worker lo entrega en su siguiente ejecución. Tampoco cubre cambios que ocurren dentro del worker (la expiración B7), que ya corren en su propia pasada.
+
+**Pruebas.** `PushDevicesApiTests.ProofSubmittedByTheClient_PushesToThePhotographerPhoneWithoutWaitingForTheWorker` sube un comprobante por el portal y comprueba que el push llega sin ejecutar ninguna pasada a mano.

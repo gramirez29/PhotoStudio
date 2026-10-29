@@ -78,7 +78,7 @@ El portal es una página web en otro origen que el API, así que el navegador ex
 
 - ~~**App del fotógrafo**~~ Hecho: campo de correo (opcional) al crear la reserva, tarjeta "Enlace del cliente" (crea el enlace y abre WhatsApp con el mensaje) y tarjeta "Comprobantes por verificar" (verificar con confirmación, rechazar con motivo). Queda sin pantalla para **agregar el correo a una reserva que ya existe** (no hay endpoint para editarlo).
 - **Portal web** (React 19 + Vite, en el mismo sitio que la página principal; ver `docs/Deployment.md`).
-- **Aviso al fotógrafo** cuando llega un comprobante (`PaymentSubmitted`; hoy lo ve al abrir la reserva).
+- ~~**Aviso al fotógrafo** cuando llega un comprobante~~ Hecho: `PaymentSubmitted` genera un aviso en la bandeja y un push (`PushNotifications.md`); la tarjeta "Revisar comprobante" abre la reserva.
 - **Firma del contrato por el cliente** (B2, canal Portal) y la autorización de imagen.
 - **Comprobante como imagen** (necesita R2 y URLs prefirmadas).
 - Recibo por correo al verificar el pago.

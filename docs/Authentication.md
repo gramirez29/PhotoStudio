@@ -308,6 +308,8 @@ Consecuencia para el cliente: **no puede haber dos renovaciones en paralelo con 
 
 El access token vigente sigue siendo válido hasta que venza (máximo 15 min): los JWT no se pueden revocar sin consultar la base en cada petición, y el diseño prefiere la vida corta.
 
+La app, antes de llamar a `signOut()`, pide `POST /api/push-devices/unregister` (con el access token que aún vale, máximo 3 s y sin consecuencias si falla) para que el teléfono deje de recibir los pushes de esa cuenta; ver `PushNotifications.md`. Los endpoints `/api/push-devices/**` exigen sesión como todo `/api/**` y se acotan al `PhotographerId` del token.
+
 ---
 
 ## 9. Backend: validar cada petición y aislar usuarios
@@ -423,7 +425,7 @@ El refresh token es de un solo uso (§7.2), así que dos renovaciones simultáne
 
 ### 11.6 Cerrar sesión
 
-`signOut()` olvida la sesión en el dispositivo **de inmediato** y después avisa al servidor para revocar la familia, en modo "mejor esfuerzo": sin conexión igual se cierra la sesión en el teléfono, y el refresh token del servidor expira solo a los 30 días.
+El botón "Salir" llama a `signOutOfDevice()` (`push/pushSignOut.ts`), que primero pide al backend olvidar el teléfono del push (mejor esfuerzo, tope de 3 s) y luego a `signOut()`. `signOut()` olvida la sesión en el dispositivo **de inmediato** y después avisa al servidor para revocar la familia, en modo "mejor esfuerzo": sin conexión igual se cierra la sesión en el teléfono, y el refresh token del servidor expira solo a los 30 días.
 
 ### 11.7 El teclado ya no tapa los campos
 
