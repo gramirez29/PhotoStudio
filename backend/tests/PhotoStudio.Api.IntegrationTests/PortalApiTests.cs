@@ -35,7 +35,7 @@ public sealed class PortalApiTests(ApiFixture fixture)
         viewJson.GetProperty("clientName").GetString().ShouldBe("María Pérez");
         viewJson.GetProperty("canSubmitProof").GetBoolean().ShouldBeTrue();
         viewJson.GetProperty("canReceiveCode").GetBoolean().ShouldBeTrue();
-        viewJson.GetProperty("photographerName").GetString().ShouldBe("Ana Pérez");
+        viewJson.GetProperty("photographerName").GetString().ShouldBe("PhotoSense Studio");
 
         var requested = await client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/code", null);
         requested.StatusCode.ShouldBe(HttpStatusCode.Accepted);

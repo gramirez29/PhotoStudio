@@ -13,7 +13,7 @@ describe('BookingView', () => {
     render(<BookingView booking={portalBooking()} />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Hola, María Pérez' })).toBeInTheDocument();
-    expect(screen.getByText(/Tu sesión de Retrato Familiar con Ana Pérez/)).toBeInTheDocument();
+    expect(screen.getByText(/Tu sesión de Retrato Familiar con PhotoSense Studio/)).toBeInTheDocument();
     expect(screen.getByText(/sábado/i)).toBeInTheDocument();
     expect(screen.getByText('Por confirmar')).toBeInTheDocument();
     expect(screen.getByText('Saldo')).toBeInTheDocument();

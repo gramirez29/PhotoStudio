@@ -1,16 +1,17 @@
-import { useState, type ReactElement } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactElement } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { SERVICES } from '../constants/services';
 import { DURATION_OPTIONS_HOURS } from '../forms/createBookingForm';
 import { useNewBookingForm } from '../hooks/useNewBookingForm';
 import { colors, radius, spacing } from '../theme/tokens';
-import { formatColones, PACKAGE_LABELS, packageLabel } from '../utils/pricing';
 import { DateTimeField } from './DateTimeField';
 import { DurationPicker } from './DurationPicker';
-import { ExtrasModal } from './ExtrasModal';
+import { ExtrasFields } from './ExtrasFields';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
+import { PackageFields } from './PackageFields';
 import { SelectField } from './SelectField';
+import { TotalToPay } from './TotalToPay';
 
 /**
  * Form to create a booking in a few taps: client, type of session, package, price, day, time, duration, extras and discount. The
@@ -19,7 +20,6 @@ import { SelectField } from './SelectField';
  */
 export function NewBookingForm(): ReactElement {
   const form = useNewBookingForm();
-  const [extrasOpen, setExtrasOpen] = useState(false);
 
   return (
     <KeyboardAwareScreen align="top">
@@ -63,21 +63,13 @@ export function NewBookingForm(): ReactElement {
           placeholder="Selecciona un tipo de sesión"
           error={form.errors.packageName}
         />
-        <SelectField
-          label="Paquete"
-          options={PACKAGE_LABELS}
-          value={packageLabel(form.values.packageTier)}
-          onChange={form.setPackageTier}
-          placeholder="Selecciona un paquete"
-          error={form.errors.packageTier}
-        />
-        <FormInput
-          label="Precio (₡)"
-          value={form.values.price}
-          onChangeText={(text) => form.setText('price', text)}
-          error={form.errors.price}
-          keyboardType="number-pad"
-          placeholder="80000"
+        <PackageFields
+          packageTier={form.values.packageTier}
+          price={form.values.price}
+          packageError={form.errors.packageTier}
+          priceError={form.errors.price}
+          onPackageChange={form.setPackageTier}
+          onPriceChange={(text) => form.setText('price', text)}
         />
 
         <DateTimeField
@@ -94,35 +86,16 @@ export function NewBookingForm(): ReactElement {
           onChange={form.setDuration}
         />
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Agregar Extras"
-          onPress={() => setExtrasOpen(true)}
-          style={({ pressed }) => [styles.extrasButton, pressed && styles.submitPressed]}
-        >
-          <Text style={styles.extrasButtonLabel}>Agregar Extras</Text>
-        </Pressable>
-        <FormInput
-          label="Extras (₡)"
-          value={form.values.extras.length === 0 ? '' : formatColones(form.totals.extrasTotal)}
-          editable={false}
-          placeholder="Sin extras"
-        />
-        <FormInput
-          label="Descuento (₡), opcional"
-          value={form.values.discount}
-          onChangeText={(text) => form.setText('discount', text)}
-          error={form.errors.discount}
-          keyboardType="number-pad"
-          placeholder="0"
+        <ExtrasFields
+          extras={form.values.extras}
+          extrasTotal={form.totals.extrasTotal}
+          discount={form.values.discount}
+          discountError={form.errors.discount}
+          onExtrasChange={form.setExtras}
+          onDiscountChange={(text) => form.setText('discount', text)}
         />
 
-        <View style={styles.total}>
-          <Text style={styles.totalLabel}>Total a pagar</Text>
-          <Text accessibilityLabel="Total a pagar" style={styles.totalValue}>
-            {formatColones(form.totals.total)}
-          </Text>
-        </View>
+        <TotalToPay total={form.totals.total} />
 
         {form.submitError !== null && <Text style={styles.submitError}>{form.submitError}</Text>}
 
@@ -138,17 +111,6 @@ export function NewBookingForm(): ReactElement {
             <Text style={styles.submitLabel}>Crear reserva</Text>
           )}
         </Pressable>
-
-        {extrasOpen && (
-          <ExtrasModal
-            selected={form.values.extras}
-            onConfirm={(extras) => {
-              form.setExtras(extras);
-              setExtrasOpen(false);
-            }}
-            onClose={() => setExtrasOpen(false)}
-          />
-        )}
     </KeyboardAwareScreen>
   );
 }
@@ -159,34 +121,6 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     marginTop: -spacing.sm,
-  },
-  extrasButton: {
-    alignItems: 'center',
-    borderColor: colors.primary,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    paddingVertical: spacing.md,
-  },
-  extrasButtonLabel: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  total: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-  },
-  totalLabel: {
-    color: colors.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  totalValue: {
-    color: colors.textPrimary,
-    fontSize: 26,
-    fontWeight: '700',
   },
   submitError: {
     color: colors.danger,

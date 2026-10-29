@@ -47,7 +47,7 @@ export function BookingView({ booking, action }: BookingViewProps): ReactElement
       <section className="card" aria-labelledby="amounts-title">
         <h2 id="amounts-title">Montos</h2>
         <dl className="amounts">
-          <AmountRow label="Precio del paquete" money={booking.packagePrice} />
+          <AmountRow label="Total" money={booking.packagePrice} />
           <AmountRow label="Anticipo requerido" money={booking.depositRequired} />
           <AmountRow label="Pagado" money={booking.totalPaid} />
           <AmountRow label="Saldo" money={booking.balance} emphasized />

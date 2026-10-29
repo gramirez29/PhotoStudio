@@ -89,4 +89,81 @@ public sealed class BookingPricingApiTests(ApiFixture fixture)
         response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         (await response.ReadCodeAsync()).ShouldBe("booking.invalid_discount");
     }
+
+    /// <summary>
+    /// The extras, the discount and the package are corrected through the same endpoint; a request that does not mention them
+    /// keeps them, and the contract of a booking shows what it was sold with.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task EditingTheExtrasAndTheDiscount_ChangesTheTotalAndTheContract()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        var client = fixture.CreateClient();
+        var session = await client.LoginAsync(await fixture.CreateUserAsync());
+        var created = await client.CreateBookingAsync(session.AccessToken, new Dictionary<string, object>
+        {
+            ["packagePrice"] = 65000,
+            ["packageTier"] = "Standard",
+            ["extras"] = new[] { new { code = "makeup", name = "Maquillaje", unitPrice = 20000, quantity = 1 } },
+        });
+        var id = created.GetProperty("id").GetGuid();
+        var body = (object extras, decimal? discount) => new
+        {
+            clientName = "María Pérez",
+            clientPhone = "+50670189220",
+            packageName = "Retrato Familiar",
+            packagePrice = 65000,
+            packageTier = "Premium",
+            extras,
+            discount,
+        };
+
+        var edited = await client.SendAsync(
+            HttpMethod.Post,
+            $"/api/bookings/{id}/details",
+            session.AccessToken,
+            body(new[] { new { code = "extra-hour", name = "Hora adicional", unitPrice = 30000, quantity = 2 } }, 5000m));
+
+        edited.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var json = await edited.ReadJsonAsync();
+        json.GetProperty("packageTier").GetString().ShouldBe("Premium");
+        json.GetProperty("extras").EnumerateArray().Single().GetProperty("name").GetString().ShouldBe("Hora adicional");
+        json.GetProperty("discount").GetProperty("amount").GetDecimal().ShouldBe(5000m);
+        json.GetProperty("packagePrice").GetProperty("amount").GetDecimal().ShouldBe(120000m);
+        var contract = await (await client.SendAsync(HttpMethod.Get, $"/api/bookings/{id}/contract", session.AccessToken)).ReadJsonAsync();
+        contract.GetProperty("templateVersion").GetString().ShouldBe("v2");
+        var text = contract.GetProperty("text").GetString()!;
+        text.ShouldContain("con el paquete Premium");
+        text.ShouldContain("Hora adicional × 2");
+        text.ShouldContain("descuento -₡5 000");
+    }
+
+    /// <summary>
+    /// After the contract is signed the extras and the discount can no longer change.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task EditingTheExtras_AfterTheContractIsSigned_IsRefused()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        var client = fixture.CreateClient();
+        var session = await client.LoginAsync(await fixture.CreateUserAsync());
+        var created = await client.CreateBookingAsync(session.AccessToken);
+        var id = created.GetProperty("id").GetGuid();
+        (await client.SendAsync(HttpMethod.Post, $"/api/bookings/{id}/contract/in-person", session.AccessToken,
+            new { signerName = "María Pérez", templateVersion = "v2", isPaperContract = true })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var response = await client.SendAsync(HttpMethod.Post, $"/api/bookings/{id}/details", session.AccessToken, new
+        {
+            clientName = "María Pérez",
+            clientPhone = "+50670189220",
+            packageName = "Retrato Familiar",
+            packagePrice = 100000,
+            discount = 1000,
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await response.ReadCodeAsync()).ShouldBe("booking.guard_failed");
+    }
 }

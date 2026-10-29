@@ -12,13 +12,11 @@ namespace PhotoStudio.Application.Portal.SubmitProof;
 /// </summary>
 /// <param name="bookings">Booking repository.</param>
 /// <param name="links">Link repository.</param>
-/// <param name="users">User repository, to read the name of the photographer.</param>
 /// <param name="tokens">Hashes the token taken from the URL.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class SubmitPortalPaymentProofHandler(
     IBookingRepository bookings,
     IBookingLinkRepository links,
-    IUserRepository users,
     IRefreshTokenGenerator tokens,
     TimeProvider timeProvider) : ICommandHandler<SubmitPortalPaymentProofCommand, PortalBookingResponse>
 {
@@ -66,7 +64,6 @@ public sealed class SubmitPortalPaymentProofHandler(
             await bookings.UpdateAsync(booking, cancellationToken);
         }
 
-        var photographer = await users.GetByIdAsync(booking.PhotographerId, cancellationToken);
-        return booking.ToPortalResponse(photographer?.Name ?? string.Empty);
+        return booking.ToPortalResponse();
     }
 }

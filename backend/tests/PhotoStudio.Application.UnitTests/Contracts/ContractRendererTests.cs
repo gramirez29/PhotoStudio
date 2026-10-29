@@ -181,4 +181,54 @@ public sealed class ContractRendererTests
 
         text.ShouldContain(expected);
     }
+
+    /// <summary>
+    /// The contract names the package, lists the extras and shows how the total is made up, so the client signs exactly what was sold.
+    /// </summary>
+    [Fact]
+    public void Render_WithPackageExtrasAndDiscount_ShowsWhatWasSold()
+    {
+        var booking = Booking.Create(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            ClientContact.Create("María Pérez", "+506 8888-8888"),
+            "Retrato familiar",
+            Money.Create(65_000m, "CRC"),
+            TimeSlot.Create(BookingFactory.SessionStart, BookingFactory.SessionStart.AddHours(2)),
+            BookingPolicy.Default,
+            BookingFactory.CreatedAt,
+            PackageTier.Standard,
+            [BookingExtra.Create("extra-hour", "Hora adicional", Money.Create(30_000m, "CRC"), 2)],
+            Money.Create(5_000m, "CRC"));
+
+        var text = ContractRenderer.Render(ContractTemplates.GetCurrent(), booking, null, null, null);
+
+        text.ShouldContain("Sesión de Retrato familiar, con el paquete Estándar,");
+        text.ShouldContain("Extras contratados: Hora adicional × 2 (₡60 000).");
+        text.ShouldContain("Total: ₡120 000 (paquete ₡65 000, extras ₡60 000, descuento -₡5 000)");
+    }
+
+    /// <summary>
+    /// A booking sold as the package alone reads as before: no package text, no extras and no breakdown.
+    /// </summary>
+    [Fact]
+    public void Render_WithThePackageAlone_AddsNothing()
+    {
+        var text = ContractRenderer.Render(ContractTemplates.GetCurrent(), BookingFactory.Tentative(), null, null, null);
+
+        text.ShouldContain("Sesión de Retrato familiar, el ");
+        text.ShouldNotContain("Extras contratados");
+        text.ShouldContain("Total: ₡100 000, más desplazamiento si aplica.");
+    }
+
+    /// <summary>
+    /// The new wording is version 2 and version 1 stays readable for the contracts already signed with it.
+    /// </summary>
+    [Fact]
+    public void CurrentVersion_IsTwo_AndTheFirstOneIsStillThere()
+    {
+        ContractTemplates.CurrentVersion.ShouldBe("v2");
+        ContractTemplates.Find("v1").ShouldNotBeNull();
+        ContractTemplates.Find("v1")!.ShouldNotContain("{{extrasText}}");
+    }
 }

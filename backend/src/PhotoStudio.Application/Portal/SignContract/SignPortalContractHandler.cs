@@ -13,13 +13,11 @@ namespace PhotoStudio.Application.Portal.SignContract;
 /// </summary>
 /// <param name="bookings">Booking repository.</param>
 /// <param name="links">Link repository.</param>
-/// <param name="users">User repository, to read the name of the photographer.</param>
 /// <param name="tokens">Hashes the token taken from the URL.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class SignPortalContractHandler(
     IBookingRepository bookings,
     IBookingLinkRepository links,
-    IUserRepository users,
     IRefreshTokenGenerator tokens,
     TimeProvider timeProvider) : ICommandHandler<SignPortalContractCommand, PortalBookingResponse>
 {
@@ -65,7 +63,6 @@ public sealed class SignPortalContractHandler(
         booking.SignContract(command.SignerName, ContractTemplates.CurrentVersion, Actor.Client, Channel.Portal, now, declaration, text);
         await bookings.UpdateAsync(booking, cancellationToken);
 
-        var photographer = await users.GetByIdAsync(booking.PhotographerId, cancellationToken);
-        return booking.ToPortalResponse(photographer?.Name ?? string.Empty);
+        return booking.ToPortalResponse();
     }
 }

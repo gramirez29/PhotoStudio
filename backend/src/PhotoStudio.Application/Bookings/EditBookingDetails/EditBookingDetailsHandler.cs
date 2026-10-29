@@ -39,7 +39,15 @@ public sealed class EditBookingDetailsHandler(
         var price = Money.Create(command.PackagePrice, booking.PackagePrice.Currency);
         var emailChanged = !string.Equals(client.Email, booking.Client.Email, StringComparison.Ordinal);
 
-        booking.EditDetails(client, command.PackageName, price, now);
+        var currency = booking.BasePrice.Currency;
+        booking.EditDetails(
+            client,
+            command.PackageName,
+            price,
+            now,
+            command.PackageTier,
+            command.Extras?.Select(extra => BookingExtra.Create(extra.Code, extra.Name, Money.Create(extra.UnitPrice, currency), extra.Quantity)),
+            command.Discount is { } discount ? Money.Create(discount, currency) : null);
         await repository.UpdateAsync(booking, cancellationToken);
 
         if (emailChanged)

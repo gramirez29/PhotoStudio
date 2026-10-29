@@ -60,7 +60,7 @@ describe('validateContract', () => {
   it('marks a paper contract and asks for nothing but the name', () => {
     const result = validateContract({ ...COMPLETE, kind: 'Paper', idNumber: '', participantCount: '', imageUse: null, accepted: false }, '');
 
-    expect(result).toEqual({ ok: true, request: { signerName: 'María Pérez', templateVersion: 'v1', isPaperContract: true } });
+    expect(result).toEqual({ ok: true, request: { signerName: 'María Pérez', templateVersion: 'v2', isPaperContract: true } });
   });
 
   it('asks for the name when it is empty or blank', () => {

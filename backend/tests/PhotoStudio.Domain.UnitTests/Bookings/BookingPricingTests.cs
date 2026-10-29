@@ -172,4 +172,89 @@ public sealed class BookingPricingTests
         exception.Code.ShouldBe(DomainErrorCodes.InvalidDiscount);
         booking.BasePrice.Amount.ShouldBe(PackagePrice);
     }
+
+    /// <summary>
+    /// Before anything depends on the price, the package, the extras and the discount can all change, and the total follows.
+    /// </summary>
+    [Fact]
+    public void EditDetails_BeforeTheContract_ChangesTheExtrasTheDiscountAndThePackage()
+    {
+        var booking = Create([Extra("makeup", 20_000m, 1)], discount: 10_000m);
+
+        booking.EditDetails(
+            booking.Client,
+            booking.PackageName,
+            booking.BasePrice,
+            Now.AddHours(1),
+            PackageTier.Premium,
+            [Extra("extra-hour", 15_000m, 2)],
+            Money.Create(0m));
+
+        booking.PackageTier.ShouldBe(PackageTier.Premium);
+        booking.Extras.Single().Code.ShouldBe("extra-hour");
+        booking.Discount.Amount.ShouldBe(0m);
+        booking.PackagePrice.Amount.ShouldBe(130_000m);
+        booking.History.Last().Reason.ShouldBe("PackageEdited");
+    }
+
+    /// <summary>
+    /// Leaving the extras, the tier and the discount out leaves them as they were, so a request that does not know them
+    /// does not wipe them.
+    /// </summary>
+    [Fact]
+    public void EditDetails_WithoutExtrasTierOrDiscount_LeavesThemAlone()
+    {
+        var booking = Create([Extra("makeup", 20_000m, 1)], discount: 10_000m);
+
+        booking.EditDetails(ClientContact.Create("María Pérez", "+506 8888-8889"), booking.PackageName, booking.BasePrice, Now.AddHours(1));
+
+        booking.Extras.Count.ShouldBe(1);
+        booking.Discount.Amount.ShouldBe(10_000m);
+        booking.PackageTier.ShouldBe(PackageTier.Standard);
+    }
+
+    /// <summary>
+    /// An empty list removes every extra.
+    /// </summary>
+    [Fact]
+    public void EditDetails_WithAnEmptyList_RemovesTheExtras()
+    {
+        var booking = Create([Extra("makeup", 20_000m, 1)]);
+
+        booking.EditDetails(booking.Client, booking.PackageName, booking.BasePrice, Now.AddHours(1), extras: []);
+
+        booking.Extras.ShouldBeEmpty();
+        booking.PackagePrice.Amount.ShouldBe(PackagePrice);
+    }
+
+    /// <summary>
+    /// Once the contract is signed, the extras and the discount are as fixed as the package, because the contract text has them.
+    /// </summary>
+    [Fact]
+    public void EditDetails_AfterTheContractIsSigned_RefusesToChangeTheExtrasOrTheDiscount()
+    {
+        var booking = Create([Extra("makeup", 20_000m, 1)]);
+        booking.SignContract("María Pérez", "v2", Actor.Photographer, Channel.InPerson, Now);
+
+        var extras = Should.Throw<DomainException>(() => booking.EditDetails(booking.Client, booking.PackageName, booking.BasePrice, Now.AddHours(1), extras: []));
+        var discount = Should.Throw<DomainException>(() => booking.EditDetails(booking.Client, booking.PackageName, booking.BasePrice, Now.AddHours(1), discount: Money.Create(1m)));
+
+        extras.Code.ShouldBe(DomainErrorCodes.GuardFailed);
+        discount.Code.ShouldBe(DomainErrorCodes.GuardFailed);
+        booking.Extras.Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A new discount larger than the package and the extras is refused.
+    /// </summary>
+    [Fact]
+    public void EditDetails_WithADiscountLargerThanThePrice_Throws()
+    {
+        var booking = Create();
+
+        var exception = Should.Throw<DomainException>(
+            () => booking.EditDetails(booking.Client, booking.PackageName, booking.BasePrice, Now.AddHours(1), discount: Money.Create(PackagePrice + 1m)));
+
+        exception.Code.ShouldBe(DomainErrorCodes.InvalidDiscount);
+    }
 }
