@@ -55,11 +55,6 @@ export function BookingView({ booking, action }: BookingViewProps): ReactElement
       </section>
 
       <PaymentsList payments={booking.payments} />
-
-      <section className="card" aria-labelledby="contract-title">
-        <h2 id="contract-title">Contrato</h2>
-        <p>{booking.contractSigned ? 'Firmado' : 'Pendiente de firma'}</p>
-      </section>
     </div>
   );
 }

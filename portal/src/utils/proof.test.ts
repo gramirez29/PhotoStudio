@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ApiError, NetworkError } from '../api/httpClient';
 import { portalBooking } from '../test/fixtures';
 import type { PortalPayment } from '../types/api/portal';
-import { describeCodeRequestError, describeSubmitError, describeVerifyError } from './apiErrors';
+import { describeCodeRequestError, describeContractLoadError, describeSignContractError, describeSubmitError, describeVerifyError } from './apiErrors';
 import { canStartProof, reportableAmount } from './booking';
 import { currencySymbol, parseAmount } from './price';
 import { INITIAL_PROOF_FLOW, isSessionValid, proofFlowReducer, SESSION_MARGIN_MS } from './proofFlow';
@@ -83,7 +83,7 @@ describe('isSessionValid', () => {
 
 describe('proofFlowReducer', () => {
   it('starts by asking for a code', () => {
-    expect(proofFlowReducer(INITIAL_PROOF_FLOW, { type: 'open', now: NOW }).step).toBe('request');
+    expect(proofFlowReducer(INITIAL_PROOF_FLOW, { type: 'open', now: NOW, session: null }).step).toBe('request');
   });
 
   it('goes from the code sent, to the code verified, to the proof sent', () => {
@@ -96,16 +96,16 @@ describe('proofFlowReducer', () => {
     expect(sent.step).toBe('sent');
   });
 
-  it('skips the code when the client verified one a moment ago', () => {
-    const closed = proofFlowReducer({ step: 'sent', maskedEmail: null, session: FRESH }, { type: 'close' });
+  it('skips the code when the page already has a valid session', () => {
+    const state = proofFlowReducer(INITIAL_PROOF_FLOW, { type: 'open', now: NOW, session: FRESH });
 
-    expect(proofFlowReducer(closed, { type: 'open', now: NOW }).step).toBe('form');
+    expect(state).toMatchObject({ step: 'form', session: FRESH });
   });
 
-  it('asks for a new code when the stored session expired', () => {
-    const expired = { step: 'closed', maskedEmail: null, session: { ...FRESH, expiresAt: new Date(NOW - 1000).toISOString() } } as const;
+  it('asks for a new code when the session of the page expired', () => {
+    const expired = { ...FRESH, expiresAt: new Date(NOW - 1000).toISOString() };
 
-    expect(proofFlowReducer(expired, { type: 'open', now: NOW })).toMatchObject({ step: 'request', session: null });
+    expect(proofFlowReducer(INITIAL_PROOF_FLOW, { type: 'open', now: NOW, session: expired })).toMatchObject({ step: 'request', session: null });
   });
 
   it('drops the session when it expires halfway', () => {
@@ -168,5 +168,46 @@ describe('describeSubmitError', () => {
     expect(describeSubmitError(new ApiError(409, 'x', 'concurrency.conflict')).message).toContain('cambió');
     expect(describeSubmitError(new NetworkError()).message).toContain('internet');
     expect(describeSubmitError(new Error('boom')).message).toContain('No pudimos registrar');
+  });
+});
+
+describe('describeSignContractError', () => {
+  it('asks to confirm the email again when the session is refused, keeping what was typed', () => {
+    const view = describeSignContractError(new ApiError(401, 'x', null));
+
+    expect(view.sessionExpired).toBe(true);
+    expect(view.message).toMatch(/lo que escribiste se conserva/);
+  });
+
+  it.each([
+    ['contract.template_changed', /cambió mientras lo leías/],
+    ['booking.contract_already_signed', /ya está firmado/],
+    ['contract.invalid_id_number', /cédula o el DIMEX/],
+    ['contract.invalid_details', /número de personas/],
+    ['booking.invalid_transition', /ya no se puede firmar/],
+    ['concurrency.conflict', /cambió mientras firmabas/],
+  ])('explains %s', (code, message) => {
+    const view = describeSignContractError(new ApiError(409, 'x', code));
+
+    expect(view.sessionExpired).toBe(false);
+    expect(view.message).toMatch(message);
+  });
+
+  it('explains a lost connection and an error nobody planned for', () => {
+    expect(describeSignContractError(new NetworkError()).message).toMatch(/No pudimos conectarnos/);
+    expect(describeSignContractError(new ApiError(500, 'x', null)).message).toMatch(/No pudimos registrar tu firma/);
+  });
+});
+
+describe('describeContractLoadError', () => {
+  it('asks to confirm the email again when the session is refused', () => {
+    expect(describeContractLoadError(new ApiError(401, 'x', null)).sessionExpired).toBe(true);
+  });
+
+  it('explains any other failure as a contract that could not be loaded', () => {
+    const view = describeContractLoadError(new ApiError(500, 'x', null));
+
+    expect(view.sessionExpired).toBe(false);
+    expect(view.message).toMatch(/No pudimos cargar el contrato/);
   });
 });

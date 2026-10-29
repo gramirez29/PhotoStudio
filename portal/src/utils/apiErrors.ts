@@ -157,3 +157,60 @@ export function describeSubmitError(error: unknown): ActionErrorView {
 
   return commonActionError(error, 'No pudimos registrar tu comprobante. Inténtalo de nuevo.');
 }
+
+/** Message for a verification that expired while the client was on the contract. */
+const CONTRACT_SESSION_EXPIRED = 'Tu verificación venció. Confirma tu correo otra vez; lo que escribiste se conserva.';
+
+/**
+ * Explains why the contract could not be loaded.
+ * @param error Error of the request.
+ * @returns The message, and whether the verification expired.
+ */
+export function describeContractLoadError(error: unknown): ActionErrorView {
+  if (error instanceof ApiError && error.status === 401) {
+    return { message: CONTRACT_SESSION_EXPIRED, retryAfterSeconds: null, sessionExpired: true };
+  }
+
+  return commonActionError(error, 'No pudimos cargar el contrato. Inténtalo de nuevo.');
+}
+
+/**
+ * Explains why the contract was not signed.
+ * @param error Error of the request.
+ * @returns The message, and whether the verification expired.
+ */
+export function describeSignContractError(error: unknown): ActionErrorView {
+  if (error instanceof ApiError && error.status === 401) {
+    return { message: CONTRACT_SESSION_EXPIRED, retryAfterSeconds: null, sessionExpired: true };
+  }
+
+  if (error instanceof ApiError && error.code === 'contract.template_changed') {
+    return {
+      message: 'El contrato cambió mientras lo leías. Ciérralo y ábrelo otra vez para leer la versión vigente.',
+      retryAfterSeconds: null,
+      sessionExpired: false,
+    };
+  }
+
+  if (error instanceof ApiError && error.code === 'booking.contract_already_signed') {
+    return { message: 'Este contrato ya está firmado.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  if (error instanceof ApiError && error.code === 'contract.invalid_id_number') {
+    return { message: 'La cédula o el DIMEX no es válido. Revísalo y corrígelo.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  if (error instanceof ApiError && error.code === 'contract.invalid_details') {
+    return { message: 'Revisa el número de personas y el lugar de la sesión.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  if (error instanceof ApiError && (error.code === 'booking.invalid_transition' || error.code === 'booking.guard_failed')) {
+    return { message: 'Esta reserva ya no se puede firmar. Escríbele a tu fotógrafo.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  if (error instanceof ApiError && error.code === 'concurrency.conflict') {
+    return { message: 'La reserva cambió mientras firmabas. Inténtalo de nuevo.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  return commonActionError(error, 'No pudimos registrar tu firma. Inténtalo de nuevo.');
+}

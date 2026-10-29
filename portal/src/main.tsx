@@ -7,6 +7,7 @@ import './theme/tokens.css';
 import './theme/global.css';
 import './theme/booking.css';
 import './theme/forms.css';
+import './theme/contract.css';
 
 const container = document.getElementById('root');
 if (container === null) {

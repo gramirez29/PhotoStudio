@@ -18,7 +18,8 @@ export function isSessionValid(session: PortalSession | null, now: number): bool
 }
 
 /**
- * Moves the proof flow to its next state. Opening the flow skips the code when the client verified one a moment ago.
+ * Moves the proof flow to its next state. Opening the flow skips the code when the page already has a valid session: the client
+ * verified a code a moment ago, here or in the contract flow.
  * @param state Current state.
  * @param event What happened.
  * @returns The next state.
@@ -26,8 +27,8 @@ export function isSessionValid(session: PortalSession | null, now: number): bool
 export function proofFlowReducer(state: ProofFlowState, event: ProofFlowEvent): ProofFlowState {
   switch (event.type) {
     case 'open':
-      return isSessionValid(state.session, event.now)
-        ? { ...state, step: 'form' }
+      return isSessionValid(event.session, event.now)
+        ? { ...state, step: 'form', session: event.session }
         : { ...state, step: 'request', session: null };
     case 'codeSent':
       return { ...state, step: 'enter', maskedEmail: event.maskedEmail };

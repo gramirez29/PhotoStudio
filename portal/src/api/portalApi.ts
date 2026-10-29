@@ -1,6 +1,6 @@
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '../constants/booking';
 import type { HttpClient } from '../types/api/http';
-import type { Money, PortalBooking, PortalCodeSent, PortalPayment, PortalSession } from '../types/api/portal';
+import type { Money, PortalBooking, PortalCodeSent, PortalContract, PortalPayment, PortalSession } from '../types/api/portal';
 import type { PortalApi } from '../types/api/portalApi';
 import { expectRecord, readArray, readBoolean, readLiteral, readNullableString, readNumber, readString } from './guards';
 
@@ -54,6 +54,7 @@ export function parsePortalBooking(value: unknown): PortalBooking {
     payments: readArray(record, 'payments', path).map((payment, index) => parsePayment(payment, `${path}.payments[${index}]`)),
     canSubmitProof: readBoolean(record, 'canSubmitProof', path),
     canReceiveCode: readBoolean(record, 'canReceiveCode', path),
+    canSignContract: readBoolean(record, 'canSignContract', path),
   };
 }
 
@@ -80,6 +81,21 @@ export function parsePortalSession(value: unknown): PortalSession {
 }
 
 /**
+ * Parses the contract of a booking.
+ * @param value Unknown response body.
+ * @returns The typed contract.
+ */
+export function parsePortalContract(value: unknown): PortalContract {
+  const path = 'contract';
+  const record = expectRecord(value, path);
+  return {
+    templateVersion: readString(record, 'templateVersion', path),
+    text: readString(record, 'text', path),
+    signed: readBoolean(record, 'signed', path),
+  };
+}
+
+/**
  * Creates the portal API on top of an HTTP client.
  * @param client HTTP client.
  * @returns The portal API.
@@ -99,5 +115,8 @@ export function createPortalApi(client: HttpClient): PortalApi {
     verifyCode: (token, code, signal) => client.post(pathOf(token, '/code/verify'), { code }, parsePortalSession, { signal }),
     submitProof: (token, accessToken, request, signal) =>
       client.post(pathOf(token, '/payments'), request, parsePortalBooking, { accessToken, signal }),
+    getContract: (token, accessToken, signal) => client.get(pathOf(token, '/contract'), parsePortalContract, { accessToken, signal }),
+    signContract: (token, accessToken, request, signal) =>
+      client.post(pathOf(token, '/contract'), request, parsePortalBooking, { accessToken, signal }),
   };
 }

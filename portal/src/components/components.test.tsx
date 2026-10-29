@@ -17,7 +17,6 @@ describe('BookingView', () => {
     expect(screen.getByText(/sábado/i)).toBeInTheDocument();
     expect(screen.getByText('Por confirmar')).toBeInTheDocument();
     expect(screen.getByText('Saldo')).toBeInTheDocument();
-    expect(screen.getByText('Pendiente de firma')).toBeInTheDocument();
   });
 
   it('leaves out the photographer when the API sent no name', () => {
@@ -52,12 +51,6 @@ describe('BookingView', () => {
     render(<BookingView booking={portalBooking()} />);
 
     expect(screen.queryByRole('heading', { name: 'Pagos' })).not.toBeInTheDocument();
-  });
-
-  it('shows the contract as signed', () => {
-    render(<BookingView booking={portalBooking({ contractSigned: true })} />);
-
-    expect(screen.getByText('Firmado')).toBeInTheDocument();
   });
 });
 
