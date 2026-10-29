@@ -2,12 +2,14 @@
 #
 # The picture is blurred here, once, instead of on every screen: a blur at run time costs memory and looks different on Android
 # and on iOS. It is a Gaussian-like blur (three passes of a box blur, with the edges repeated so no frame appears); a bigger
-# -Radius blurs more. The wash (white in the light theme, navy in the dark one) is laid over it by the app
-# (src/theme/background.ts).
+# -Radius blurs more. The levels are then stretched, so the picture uses the whole range from dark to light: without that, a
+# dark photo under a wash is almost invisible. -Gamma below 1 brightens the middle tones. The wash (white in the light theme,
+# navy in the dark one) is laid over it by the app (src/theme/background.ts).
 #
-# Usage, from the mobile folder:  powershell -ExecutionPolicy Bypass -File scripts/blur-background.ps1 [-Radius 22]
+# Usage, from the mobile folder:  powershell -ExecutionPolicy Bypass -File scripts/blur-background.ps1 [-Radius 22] [-Gamma 0.85]
 param(
-    [int]$Radius = 22
+    [int]$Radius = 22,
+    [double]$Gamma = 0.85
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -73,7 +75,39 @@ public static class BackgroundBlur
         return horizontal ? line * stride + position * 3 + channel : position * stride + line * 3 + channel;
     }
 
-    public static void Run(string source, string target, int radius)
+    // Stretches the levels so the darkest 1% becomes black and the lightest 1% becomes white, then applies the gamma.
+    static void StretchLevels(byte[] pixels, double gamma)
+    {
+        int[] histogram = new int[256];
+        for (int i = 0; i + 2 < pixels.Length; i += 3)
+        {
+            int gray = (pixels[i] * 114 + pixels[i + 1] * 587 + pixels[i + 2] * 299) / 1000;
+            histogram[gray]++;
+        }
+        long total = 0;
+        foreach (int count in histogram) total += count;
+        int low = 0, high = 255;
+        long running = 0;
+        for (int level = 0; level < 256; level++)
+        {
+            running += histogram[level];
+            if (running >= total * 0.01) { low = level; break; }
+        }
+        running = 0;
+        for (int level = 255; level >= 0; level--)
+        {
+            running += histogram[level];
+            if (running >= total * 0.01) { high = level; break; }
+        }
+        if (high <= low) return;
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            double stretched = Math.Min(1.0, Math.Max(0.0, (pixels[i] - low) / (double)(high - low)));
+            pixels[i] = (byte)Math.Round(Math.Pow(stretched, gamma) * 255);
+        }
+    }
+
+    public static void Run(string source, string target, int radius, double gamma)
     {
         int width, height;
         byte[] a = Load(source, out width, out height);
@@ -84,6 +118,7 @@ public static class BackgroundBlur
             Pass(a, b, width, height, stride, radius, true);
             Pass(b, a, width, height, stride, radius, false);
         }
+        StretchLevels(a, gamma);
 
         using (Bitmap result = new Bitmap(width, height, PixelFormat.Format24bppRgb))
         {
@@ -106,4 +141,4 @@ public static class BackgroundBlur
 
 $source = (Resolve-Path (Join-Path $PSScriptRoot '..\assets\background-source.jpg')).Path
 $target = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\assets')).Path 'background.jpg'
-[BackgroundBlur]::Run($source, $target, $Radius)
+[BackgroundBlur]::Run($source, $target, $Radius, $Gamma)
