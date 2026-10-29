@@ -1,4 +1,4 @@
-import { isThemePreference, resolveColorScheme, themePreferenceLabel } from '../appearance';
+import { isThemePreference, resolveColorScheme, statusBarStyleFor, themePreferenceLabel } from '../appearance';
 
 describe('isThemePreference', () => {
   it.each(['system', 'light', 'dark'])('accepts %s', (value) => {
@@ -33,5 +33,17 @@ describe('themePreferenceLabel', () => {
     expect(themePreferenceLabel('system')).toBe('Sistema');
     expect(themePreferenceLabel('light')).toBe('Claro');
     expect(themePreferenceLabel('dark')).toBe('Oscuro');
+  });
+});
+
+describe('statusBarStyleFor', () => {
+  it('uses light icons over the band of the brand, in both themes, because the band is dark in both', () => {
+    expect(statusBarStyleFor(true, 'light')).toBe('light');
+    expect(statusBarStyleFor(true, 'dark')).toBe('light');
+  });
+
+  it('follows the theme where the screen itself is under the status bar', () => {
+    expect(statusBarStyleFor(false, 'light')).toBe('dark');
+    expect(statusBarStyleFor(false, 'dark')).toBe('light');
   });
 });

@@ -1,13 +1,19 @@
 import type { ReactElement } from 'react';
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { Alert, Pressable } from 'react-native';
+import { Text } from 'react-native-paper';
 import { signOutOfDevice } from '../push/pushSignOut';
-import { colors, spacing } from '../theme/tokens';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { makeStyles } from '../theme/makeStyles';
+import { spacing } from '../theme/tokens';
 
 /**
- * Header button that signs the photographer out after a confirmation. The navigator takes them to the login screen by itself.
+ * Header button that signs the photographer out after a confirmation. It sits on the band of the brand, so its text is the one
+ * for that band. The navigator takes them to the login screen by itself.
  * @returns The button.
  */
 export function SignOutButton(): ReactElement {
+  const styles = useStyles();
+
   /** Asks for confirmation before ending the session. */
   function confirmSignOut(): void {
     Alert.alert('Cerrar sesión', '¿Quieres cerrar la sesión en este dispositivo?', [
@@ -29,14 +35,14 @@ export function SignOutButton(): ReactElement {
   );
 }
 
-/** Styles of the button. */
-const styles = StyleSheet.create({
+/** Styles of the button: the colors come from the theme. */
+const useStyles = makeStyles((palette) => ({
   label: {
-    color: colors.textSecondary,
+    color: palette.onBrand,
+    fontFamily: FONT_FAMILIES.bodyMedium,
     fontSize: 16,
-    fontWeight: '600',
   },
   pressed: {
     opacity: 0.6,
   },
-});
+}));
