@@ -1,4 +1,5 @@
-import type { CreateBookingRequest } from '../api/booking';
+import type { CreateBookingRequest, PackageTier } from '../api/booking';
+import type { SelectedExtra } from '../utils/pricing.types';
 
 /** Values typed or picked in the create-booking form. */
 export interface CreateBookingFormValues {
@@ -8,10 +9,16 @@ export interface CreateBookingFormValues {
   readonly clientPhone: string;
   /** Client email as typed; optional. */
   readonly clientEmail: string;
-  /** Package name as typed. */
+  /** Type of session picked (family portrait, pre-wedding...); the backend stores it as the package name. */
   readonly packageName: string;
-  /** Price as typed, in colones. */
+  /** Package picked, or null while none is. */
+  readonly packageTier: PackageTier | null;
+  /** Price of the package as typed, in colones. */
   readonly price: string;
+  /** Extras chosen for the booking. */
+  readonly extras: readonly SelectedExtra[];
+  /** Discount as typed, in colones; empty for none. */
+  readonly discount: string;
   /** Session start, in the device time zone. */
   readonly start: Date;
   /** Session length in hours. */
@@ -19,7 +26,15 @@ export interface CreateBookingFormValues {
 }
 
 /** Form fields that can show a validation error. */
-export type CreateBookingField = 'clientName' | 'clientPhone' | 'clientEmail' | 'packageName' | 'price' | 'start';
+export type CreateBookingField =
+  | 'clientName'
+  | 'clientPhone'
+  | 'clientEmail'
+  | 'packageName'
+  | 'packageTier'
+  | 'price'
+  | 'discount'
+  | 'start';
 
 /** Validation messages by field; a missing key means the field is valid. */
 export type CreateBookingFormErrors = Partial<Record<CreateBookingField, string>>;
@@ -30,4 +45,4 @@ export type CreateBookingFormResult =
   | { readonly ok: false; readonly errors: CreateBookingFormErrors };
 
 /** Form fields edited by typing text. */
-export type CreateBookingTextField = 'clientName' | 'clientEmail' | 'price';
+export type CreateBookingTextField = 'clientName' | 'clientEmail' | 'price' | 'discount';

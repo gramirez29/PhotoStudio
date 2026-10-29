@@ -12,6 +12,7 @@ public sealed class Booking : AggregateRoot<Guid>
 {
     private readonly List<Payment> _payments;
     private readonly List<StatusTransition> _history;
+    private readonly List<BookingExtra> _extras;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Booking"/> class. Use <see cref="Create"/> or <see cref="Restore"/>.
@@ -21,7 +22,7 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>
     /// <param name="client">Client contact.</param>
     /// <param name="packageName">Name of the booked package.</param>
-    /// <param name="packagePrice">Price of the package.</param>
+    /// <param name="basePrice">Price of the package, before extras and discount.</param>
     /// <param name="slot">Session slot.</param>
     /// <param name="policy">Policy copied into the booking.</param>
     /// <param name="status">Current status.</param>
@@ -32,13 +33,16 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="clientAbsentMarkedAt">Instant the client was marked absent, if any.</param>
     /// <param name="payments">Payments recorded against the booking.</param>
     /// <param name="history">Transition audit trail.</param>
+    /// <param name="packageTier">Package the client booked, if it was recorded.</param>
+    /// <param name="extras">Extras sold with the booking.</param>
+    /// <param name="discount">Discount given to the client.</param>
     private Booking(
         Guid id,
         long version,
         Guid photographerId,
         ClientContact client,
         string packageName,
-        Money packagePrice,
+        Money basePrice,
         TimeSlot slot,
         BookingPolicy policy,
         BookingStatus status,
@@ -48,13 +52,19 @@ public sealed class Booking : AggregateRoot<Guid>
         int rescheduleCount,
         DateTimeOffset? clientAbsentMarkedAt,
         List<Payment> payments,
-        List<StatusTransition> history)
+        List<StatusTransition> history,
+        PackageTier? packageTier,
+        List<BookingExtra> extras,
+        Money discount)
         : base(id, version)
     {
         PhotographerId = photographerId;
         Client = client;
         PackageName = packageName;
-        PackagePrice = packagePrice;
+        BasePrice = basePrice;
+        PackageTier = packageTier;
+        _extras = extras;
+        Discount = discount;
         Slot = slot;
         Policy = policy;
         Status = status;
@@ -76,8 +86,26 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <summary>Gets the name of the booked package.</summary>
     public string PackageName { get; private set; }
 
-    /// <summary>Gets the price of the package. It is fixed once the contract is signed or a payment is recorded (see <see cref="CanEditPackage"/>).</summary>
-    public Money PackagePrice { get; private set; }
+    /// <summary>Gets the package the client booked (basic, standard...), or <see langword="null"/> for bookings made before it was recorded.</summary>
+    public PackageTier? PackageTier { get; private set; }
+
+    /// <summary>Gets the price of the package alone, before extras and discount. It is fixed once the contract is signed or a payment is recorded (see <see cref="CanEditPackage"/>).</summary>
+    public Money BasePrice { get; private set; }
+
+    /// <summary>Gets the extras sold with the booking. They are fixed when the booking is created.</summary>
+    public IReadOnlyList<BookingExtra> Extras => _extras.AsReadOnly();
+
+    /// <summary>Gets the discount given to the client; zero when there is none.</summary>
+    public Money Discount { get; }
+
+    /// <summary>Gets the sum of every extra.</summary>
+    public Money ExtrasTotal => _extras.Aggregate(Money.Zero(BasePrice.Currency), (total, extra) => total.Add(extra.Total));
+
+    /// <summary>
+    /// Gets what the client has to pay: the package plus the extras minus the discount. The deposit, the balance, the contract and
+    /// the portal are all worked out from this amount.
+    /// </summary>
+    public Money PackagePrice => BasePrice.Add(ExtrasTotal).Subtract(Discount);
 
     /// <summary>
     /// Gets a value indicating whether the package and its price can still change: the booking is waiting for confirmation and the
@@ -139,12 +167,15 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>
     /// <param name="client">Client contact.</param>
     /// <param name="packageName">Name of the booked package.</param>
-    /// <param name="packagePrice">Price of the package.</param>
+    /// <param name="packagePrice">Price of the package alone, before extras and discount.</param>
     /// <param name="slot">Session slot; must start in the future.</param>
     /// <param name="policy">Policy to copy into the booking.</param>
     /// <param name="now">Current instant.</param>
+    /// <param name="packageTier">Package the client booked; optional.</param>
+    /// <param name="extras">Extras sold with the booking; none by default.</param>
+    /// <param name="discount">Discount given to the client; none by default.</param>
     /// <returns>The new booking in <see cref="BookingStatus.Tentative"/>.</returns>
-    /// <exception cref="DomainException">When a value is missing or the session is not in the future.</exception>
+    /// <exception cref="DomainException">When a value is missing, an extra or the discount is not valid, or the session is not in the future.</exception>
     public static Booking Create(
         Guid id,
         Guid photographerId,
@@ -153,7 +184,10 @@ public sealed class Booking : AggregateRoot<Guid>
         Money packagePrice,
         TimeSlot slot,
         BookingPolicy policy,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        PackageTier? packageTier = null,
+        IEnumerable<BookingExtra>? extras = null,
+        Money? discount = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(packagePrice);
@@ -175,6 +209,10 @@ public sealed class Booking : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.SessionInPast, "The session must start in the future.");
         }
 
+        List<BookingExtra> extraList = [.. extras ?? []];
+        var appliedDiscount = discount ?? Money.Zero(packagePrice.Currency);
+        EnsurePricing(packagePrice, extraList, appliedDiscount);
+
         var holdEnd = now.AddHours(policy.TentativeHoldHours);
         var expiresAt = holdEnd < slot.Start ? holdEnd : slot.Start;
 
@@ -194,7 +232,10 @@ public sealed class Booking : AggregateRoot<Guid>
             0,
             null,
             [],
-            []);
+            [],
+            packageTier,
+            extraList,
+            appliedDiscount);
 
         booking._history.Add(new StatusTransition(null, BookingStatus.Tentative, Actor.Photographer, Channel.PhotographerApp, null, now));
         booking.Raise(new BookingCreated(id, photographerId, slot.Start, expiresAt, now));
@@ -209,7 +250,7 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="photographerId">Photographer identifier.</param>
     /// <param name="client">Client contact.</param>
     /// <param name="packageName">Package name.</param>
-    /// <param name="packagePrice">Package price.</param>
+    /// <param name="packagePrice">Price of the package alone, before extras and discount.</param>
     /// <param name="slot">Session slot.</param>
     /// <param name="policy">Copied policy.</param>
     /// <param name="status">Current status.</param>
@@ -220,6 +261,9 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <param name="clientAbsentMarkedAt">Instant the client was marked absent.</param>
     /// <param name="payments">Recorded payments.</param>
     /// <param name="history">Transition audit trail.</param>
+    /// <param name="packageTier">Package the client booked, if it was recorded.</param>
+    /// <param name="extras">Extras sold with the booking.</param>
+    /// <param name="discount">Discount given to the client; none when absent.</param>
     /// <returns>The restored booking.</returns>
     public static Booking Restore(
         Guid id,
@@ -237,7 +281,10 @@ public sealed class Booking : AggregateRoot<Guid>
         int rescheduleCount,
         DateTimeOffset? clientAbsentMarkedAt,
         IEnumerable<Payment> payments,
-        IEnumerable<StatusTransition> history) =>
+        IEnumerable<StatusTransition> history,
+        PackageTier? packageTier = null,
+        IEnumerable<BookingExtra>? extras = null,
+        Money? discount = null) =>
         new(
             id,
             version,
@@ -254,7 +301,10 @@ public sealed class Booking : AggregateRoot<Guid>
             rescheduleCount,
             clientAbsentMarkedAt,
             [.. payments],
-            [.. history]);
+            [.. history],
+            packageTier,
+            [.. extras ?? []],
+            discount ?? Money.Zero(packagePrice.Currency));
 
     /// <summary>
     /// B2. Registers the contract signature and confirms the booking when the deposit is already covered.
@@ -327,7 +377,7 @@ public sealed class Booking : AggregateRoot<Guid>
     /// </summary>
     /// <param name="client">Contact data of the client, as it should be now.</param>
     /// <param name="packageName">Name of the package, as it should be now.</param>
-    /// <param name="packagePrice">Price of the package, as it should be now, in the currency of the booking.</param>
+    /// <param name="packagePrice">Price of the package alone, as it should be now, in the currency of the booking. The extras and the discount stay as they were.</param>
     /// <param name="now">Current instant.</param>
     /// <exception cref="DomainException">When the status does not allow editing, the package or the price changed when they cannot, or a value is not valid.</exception>
     public void EditDetails(ClientContact client, string packageName, Money packagePrice, DateTimeOffset now)
@@ -341,18 +391,23 @@ public sealed class Booking : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.RequiredValue, "The package name is required.");
         }
 
-        if (!string.Equals(packagePrice.Currency, PackagePrice.Currency, StringComparison.Ordinal))
+        if (!string.Equals(packagePrice.Currency, BasePrice.Currency, StringComparison.Ordinal))
         {
             throw new DomainException(DomainErrorCodes.CurrencyMismatch, "The price must be in the currency of the booking.");
         }
 
         var name = packageName.Trim();
-        var packageChanged = !string.Equals(name, PackageName, StringComparison.Ordinal) || packagePrice != PackagePrice;
+        var packageChanged = !string.Equals(name, PackageName, StringComparison.Ordinal) || packagePrice != BasePrice;
         if (packageChanged && !CanEditPackage)
         {
             throw new DomainException(
                 DomainErrorCodes.GuardFailed,
                 "The package and the price can only change while the booking waits for confirmation, before the contract is signed and any payment is recorded.");
+        }
+
+        if (packageChanged)
+        {
+            EnsurePricing(packagePrice, _extras, Discount);
         }
 
         if (client != Client)
@@ -364,8 +419,40 @@ public sealed class Booking : AggregateRoot<Guid>
         if (packageChanged)
         {
             PackageName = name;
-            PackagePrice = packagePrice;
+            BasePrice = packagePrice;
             _history.Add(new StatusTransition(Status, Status, Actor.Photographer, Channel.PhotographerApp, "PackageEdited", now));
+        }
+    }
+
+    /// <summary>
+    /// Checks the pieces of the price: every amount in the currency of the package, no extra repeated and a discount that is not
+    /// larger than what the client would pay without it.
+    /// </summary>
+    /// <param name="basePrice">Price of the package alone.</param>
+    /// <param name="extras">Extras sold with the booking.</param>
+    /// <param name="discount">Discount given to the client.</param>
+    /// <exception cref="DomainException">When a piece of the price is not valid.</exception>
+    private static void EnsurePricing(Money basePrice, IReadOnlyCollection<BookingExtra> extras, Money discount)
+    {
+        if (extras.Any(extra => !string.Equals(extra.UnitPrice.Currency, basePrice.Currency, StringComparison.Ordinal)))
+        {
+            throw new DomainException(DomainErrorCodes.CurrencyMismatch, "The extras must be in the currency of the booking.");
+        }
+
+        if (extras.Select(extra => extra.Code).Distinct(StringComparer.Ordinal).Count() != extras.Count)
+        {
+            throw new DomainException(DomainErrorCodes.InvalidExtra, "An extra cannot be listed twice; use its quantity.");
+        }
+
+        if (!string.Equals(discount.Currency, basePrice.Currency, StringComparison.Ordinal))
+        {
+            throw new DomainException(DomainErrorCodes.CurrencyMismatch, "The discount must be in the currency of the booking.");
+        }
+
+        var undiscounted = extras.Aggregate(basePrice, (total, extra) => total.Add(extra.Total));
+        if (!undiscounted.IsGreaterThanOrEqualTo(discount))
+        {
+            throw new DomainException(DomainErrorCodes.InvalidDiscount, "The discount cannot be larger than the price of the package and the extras.");
         }
     }
 

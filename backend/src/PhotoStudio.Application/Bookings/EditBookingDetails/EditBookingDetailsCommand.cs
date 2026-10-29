@@ -10,7 +10,7 @@ namespace PhotoStudio.Application.Bookings.EditBookingDetails;
 /// <param name="ClientPhone">Phone of the client.</param>
 /// <param name="ClientEmail">Email of the client, or <see langword="null"/> or blank for none. The client portal sends its codes there.</param>
 /// <param name="PackageName">Name of the package.</param>
-/// <param name="PackagePrice">Price of the package, in the currency of the booking.</param>
+/// <param name="PackagePrice">Price of the package alone, in the currency of the booking. The extras and the discount of the booking do not change.</param>
 public sealed record EditBookingDetailsCommand(
     Guid PhotographerId,
     Guid BookingId,

@@ -10,6 +10,8 @@ import { replaceWithBooking } from '../navigation/appNavigation';
 import type { NewBookingFormState } from '../types/hooks/useNewBookingForm.types';
 import { createBookingErrorMessage } from '../utils/apiErrors';
 import { formatPhoneInput } from '../utils/phone';
+import { computeTotals, findPackageByLabel, priceAfterPackageChange } from '../utils/pricing';
+import type { SelectedExtra } from '../types/utils/pricing.types';
 import { useCreateBooking } from './useCreateBooking';
 
 /**
@@ -48,9 +50,29 @@ export function useNewBookingForm(): NewBookingFormState {
       setValues((previous) => ({ ...previous, clientPhone: formatPhoneInput(text) }));
       clearError('clientPhone');
     },
-    setPackage: (packageName: string) => {
+    totals: computeTotals(values.price, values.extras, values.discount),
+    setSessionType: (packageName: string) => {
       setValues((previous) => ({ ...previous, packageName }));
       clearError('packageName');
+    },
+    setPackageTier: (label: string) => {
+      const option = findPackageByLabel(label);
+      if (option === undefined) {
+        return;
+      }
+
+      setValues((previous) => ({
+        ...previous,
+        packageTier: option.tier,
+        price: priceAfterPackageChange(previous.price, previous.packageTier, option),
+        durationHours: option.durationHours ?? previous.durationHours,
+      }));
+      clearError('packageTier');
+      clearError('price');
+    },
+    setExtras: (extras: readonly SelectedExtra[]) => {
+      setValues((previous) => ({ ...previous, extras }));
+      clearError('discount');
     },
     setStart: (start: Date) => {
       setValues((previous) => ({ ...previous, start }));

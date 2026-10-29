@@ -48,7 +48,10 @@ public sealed class CreateBookingHandler(
             Money.Create(command.PackagePrice, command.Currency),
             slot,
             policy,
-            now);
+            now,
+            command.PackageTier,
+            command.Extras?.Select(extra => BookingExtra.Create(extra.Code, extra.Name, Money.Create(extra.UnitPrice, command.Currency), extra.Quantity)),
+            Money.Create(command.Discount, command.Currency));
 
         await repository.AddAsync(booking, cancellationToken);
         return booking.ToResponse(Actor.Photographer, now);

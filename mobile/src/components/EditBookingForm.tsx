@@ -67,7 +67,7 @@ export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement
             error={form.errors.packageName}
           />
           <FormInput
-            label="Precio (₡)"
+            label="Precio del paquete (₡)"
             value={form.values.price}
             onChangeText={(text) => form.setText('price', text)}
             error={form.errors.price}
@@ -79,7 +79,7 @@ export function EditBookingForm({ booking }: EditBookingFormProps): ReactElement
         <View style={styles.locked}>
           <Text style={styles.lockedTitle}>Paquete y precio</Text>
           <Text style={styles.lockedValue}>
-            {booking.packageName} · {formatMoney(booking.packagePrice)}
+            {booking.packageName} · {formatMoney(booking.basePrice)}
           </Text>
           <Text style={styles.hint}>
             No se pueden cambiar porque el contrato ya está firmado o hay pagos registrados: el contrato y el anticipo salen de ellos.

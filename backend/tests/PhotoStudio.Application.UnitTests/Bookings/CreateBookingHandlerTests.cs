@@ -43,6 +43,45 @@ public sealed class CreateBookingHandlerTests
     }
 
     /// <summary>
+    /// The package, the extras and the discount are kept, and the response shows the total the client pays next to its pieces.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WithExtrasAndDiscount_PricesTheBookingWithAllOfThem()
+    {
+        var command = ValidCommand() with
+        {
+            PackageTier = PackageTier.Premium,
+            Extras = [new BookingExtraInput("extra-hour", "Hora adicional", 15_000m, 2)],
+            Discount = 5_000m,
+        };
+
+        var response = await _handler.HandleAsync(command, TestContext.Current.CancellationToken);
+
+        response.PackageTier.ShouldBe(PackageTier.Premium);
+        response.BasePrice!.Amount.ShouldBe(100_000m);
+        response.Extras!.Single().Total.Amount.ShouldBe(30_000m);
+        response.Discount!.Amount.ShouldBe(5_000m);
+        response.PackagePrice.Amount.ShouldBe(125_000m);
+        response.DepositRequired.Amount.ShouldBe(62_500m);
+    }
+
+    /// <summary>
+    /// An invalid extra is rejected by the domain and nothing is persisted.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WithAnInvalidExtra_ThrowsAndPersistsNothing()
+    {
+        var command = ValidCommand() with { Extras = [new BookingExtraInput("makeup", "Maquillaje", 20_000m, 0)] };
+
+        var exception = await Should.ThrowAsync<DomainException>(() => _handler.HandleAsync(command, TestContext.Current.CancellationToken));
+
+        exception.Code.ShouldBe(DomainErrorCodes.InvalidExtra);
+        await _repository.DidNotReceive().AddAsync(Arg.Any<Booking>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
     /// An overlapping slot is rejected before anything is persisted.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>

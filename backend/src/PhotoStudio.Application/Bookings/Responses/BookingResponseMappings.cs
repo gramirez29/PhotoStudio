@@ -36,7 +36,11 @@ public static class BookingResponseMappings
             booking.Contract?.ToResponse(),
             [.. booking.Payments.Select(payment => payment.ToResponse())],
             booking.GetAllowedActions(actor, now),
-            booking.Client.Email);
+            booking.Client.Email,
+            booking.PackageTier,
+            booking.BasePrice.ToResponse(),
+            [.. booking.Extras.Select(extra => extra.ToResponse())],
+            booking.Discount.ToResponse());
     }
 
     /// <summary>
@@ -57,6 +61,17 @@ public static class BookingResponseMappings
             booking.Slot.End,
             booking.PackagePrice.ToResponse(),
             booking.Balance.ToResponse());
+    }
+
+    /// <summary>
+    /// Maps an extra to its response.
+    /// </summary>
+    /// <param name="extra">Extra to map.</param>
+    /// <returns>The response DTO.</returns>
+    public static BookingExtraResponse ToResponse(this BookingExtra extra)
+    {
+        ArgumentNullException.ThrowIfNull(extra);
+        return new BookingExtraResponse(extra.Code, extra.Name, extra.UnitPrice.ToResponse(), extra.Quantity, extra.Total.ToResponse());
     }
 
     /// <summary>

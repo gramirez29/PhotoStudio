@@ -11,6 +11,12 @@ public static class DomainErrorCodes
     /// <summary>A monetary amount was negative or otherwise invalid.</summary>
     public const string InvalidAmount = "money.invalid_amount";
 
+    /// <summary>An extra of a booking has a missing value, an out-of-range quantity or is repeated.</summary>
+    public const string InvalidExtra = "booking.invalid_extra";
+
+    /// <summary>The discount of a booking is negative or larger than what the client would pay.</summary>
+    public const string InvalidDiscount = "booking.invalid_discount";
+
     /// <summary>The currency code is not a valid three-letter ISO 4217 code.</summary>
     public const string InvalidCurrency = "money.invalid_currency";
 

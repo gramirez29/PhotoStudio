@@ -40,10 +40,31 @@ public sealed class BookingDocument
     [BsonElement("packageName")]
     public string PackageName { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the package price.</summary>
+    /// <summary>Gets or sets what the client pays: the package plus the extras minus the discount.</summary>
     [BsonElement("packagePrice")]
     [BsonRepresentation(BsonType.Decimal128)]
     public decimal PackagePrice { get; set; }
+
+    /// <summary>Gets or sets the package the client booked. Absent in bookings created before it existed.</summary>
+    [BsonElement("packageTier")]
+    [BsonIgnoreIfNull]
+    public string? PackageTier { get; set; }
+
+    /// <summary>Gets or sets the price of the package alone. Absent before extras and discounts existed: then <c>packagePrice</c> is it.</summary>
+    [BsonElement("basePrice")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    [BsonIgnoreIfNull]
+    public decimal? BasePrice { get; set; }
+
+    /// <summary>Gets or sets the extras sold with the booking.</summary>
+    [BsonElement("extras")]
+    public List<BookingExtraDocument> Extras { get; set; } = [];
+
+    /// <summary>Gets or sets the discount given to the client. Absent when there is none.</summary>
+    [BsonElement("discount")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    [BsonIgnoreIfNull]
+    public decimal? Discount { get; set; }
 
     /// <summary>Gets or sets the currency code of every amount in the booking.</summary>
     [BsonElement("currency")]
@@ -92,6 +113,29 @@ public sealed class BookingDocument
     /// <summary>Gets or sets the transition audit trail.</summary>
     [BsonElement("history")]
     public List<StatusTransitionDocument> History { get; set; } = [];
+}
+
+/// <summary>
+/// MongoDB data model of an extra sold with a booking.
+/// </summary>
+public sealed class BookingExtraDocument
+{
+    /// <summary>Gets or sets the stable code of the extra.</summary>
+    [BsonElement("code")]
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the name of the extra.</summary>
+    [BsonElement("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the price of one unit.</summary>
+    [BsonElement("unitPrice")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal UnitPrice { get; set; }
+
+    /// <summary>Gets or sets the number of units.</summary>
+    [BsonElement("quantity")]
+    public int Quantity { get; set; }
 }
 
 /// <summary>

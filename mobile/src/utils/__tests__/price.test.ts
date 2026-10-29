@@ -1,4 +1,4 @@
-import { parsePrice } from '../price';
+import { parseOptionalAmount, parsePrice } from '../price';
 
 describe('parsePrice', () => {
   it('accepts plain, grouped and colon-prefixed amounts', () => {
@@ -14,5 +14,24 @@ describe('parsePrice', () => {
     expect(parsePrice('-5')).toBeNull();
     expect(parsePrice('abc')).toBeNull();
     expect(parsePrice('12a')).toBeNull();
+  });
+});
+
+describe('parseOptionalAmount', () => {
+  it('reads an empty field as zero and accepts zero itself', () => {
+    expect(parseOptionalAmount('')).toBe(0);
+    expect(parseOptionalAmount('  ')).toBe(0);
+    expect(parseOptionalAmount('0')).toBe(0);
+  });
+
+  it('accepts the same grouping marks as a price', () => {
+    expect(parseOptionalAmount('5 000')).toBe(5000);
+    expect(parseOptionalAmount('₡10.000')).toBe(10000);
+  });
+
+  it('rejects what is not a whole number', () => {
+    expect(parseOptionalAmount('-5')).toBeNull();
+    expect(parseOptionalAmount('abc')).toBeNull();
+    expect(parseOptionalAmount('12a')).toBeNull();
   });
 });
