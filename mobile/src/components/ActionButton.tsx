@@ -1,52 +1,42 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { StyleSheet } from 'react-native';
+import { Button, useTheme } from 'react-native-paper';
 import type { ActionButtonProps } from '../types/components/ActionButton.types';
 
 /**
- * Full-width button for an action on a booking. Red buttons are for actions that free the slot or end the booking.
+ * Full-width button for an action on a booking: a filled Material button in the main color of the theme. Red buttons are for
+ * actions that free the slot or end the booking.
  * @param props Component props.
  * @returns The button.
  */
 export function ActionButton({ label, onPress, variant = 'primary', disabled = false }: ActionButtonProps): ReactElement {
+  const theme = useTheme();
+  const danger = variant === 'danger';
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+    <Button
+      mode="contained"
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        variant === 'danger' && styles.danger,
-        disabled && styles.disabled,
-        pressed && styles.pressed,
-      ]}
+      disabled={disabled}
+      {...(danger ? { buttonColor: theme.colors.error, textColor: theme.colors.onError } : {})}
+      style={styles.button}
+      contentStyle={styles.content}
+      labelStyle={styles.label}
     >
-      <Text style={styles.label}>{label}</Text>
-    </Pressable>
+      {label}
+    </Button>
   );
 }
 
-/** Styles of the button. */
+/** Layout of the button; its colors come from the theme. */
 const styles = StyleSheet.create({
   button: {
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.md,
+    alignSelf: 'stretch',
   },
-  danger: {
-    backgroundColor: colors.danger,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  pressed: {
-    opacity: 0.8,
+  content: {
+    minHeight: 48,
   },
   label: {
-    color: colors.textInverse,
     fontSize: 16,
-    fontWeight: '600',
   },
 });

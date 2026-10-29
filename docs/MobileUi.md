@@ -43,11 +43,28 @@ Un PR por fase, hacia `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas
 |---|---|---|
 | 0 | Red de seguridad: pruebas verdes de partida y lista de recorridos a repetir en el teléfono | Hecha |
 | 1 | Cimientos: Paper, paletas, tema, fuentes, fondo, preferencia de tema (sin selector) | **Hecha** |
-| 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | Pendiente |
+| 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | **Hecha** (ver §3.1) |
 | 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`useStyles`) | Pendiente |
 | 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | Pendiente |
 | 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | Pendiente |
 | 6 | Limpieza: quitar `tokens.ts`, regla de ESLint contra colores fijos, actualizar documentos | Pendiente |
+
+### 3.1 Fase 2: qué cambió en los componentes base
+
+Por dentro, con las mismas props y las mismas etiquetas de accesibilidad (las 715 pruebas anteriores pasan sin tocarlas):
+
+| Componente | Ahora |
+|---|---|
+| `ActionButton` | Botón relleno de Material 3 (`Button` de Paper); rojo con `error` / `onError` para las acciones que liberan el horario |
+| `FormInput` | Campo de texto con contorno (`TextInput` outlined): la etiqueta va **dentro** del campo y sube al borde con el foco o con texto; el mensaje de error va debajo (`HelperText`). **El texto de ejemplo (`placeholder`) solo se ve con el foco**, como manda Material 3 |
+| `SelectField` | Mismo aspecto que el campo de texto (contorno y etiqueta sobre el borde); la lista sigue siendo un `Modal`, con hoja redondeada y la opción elegida resaltada |
+| `DateTimeField` | Botones con contorno en Android; los selectores nativos en iOS |
+| `DurationPicker` | Botones segmentados (`SegmentedButtons`) |
+| `StatusBadge` | Píldora tonal con un **punto del color del estado** y su nombre (antes, toda la píldora iba del color del estado con letra blanca): el color nunca es lo único que dice el estado. Los colores salen de la paleta del tema (`STATUS_COLOR_ROLES`) |
+| `ScreenLoader`, `ScreenMessage`, `Placeholder`, `AmountRow` | Los de Paper (indicador, texto con la fuente del tema, botón) |
+| **`AppCard`** (nuevo) | Tarjeta tonal de Material 3 (`surfaceVariant`, esquinas de 16); la usan `BookingActions`, `BookingDetails`, `ContractCard`, `EditBookingForm` (bloqueado), `NotificationListItem`, `PendingPaymentsCard`, `RefundListItem`, `RescheduleForm`, `SettlementCard` y `ShareLinkCard` |
+
+Todos leen sus colores del tema, así que ya siguen el tema claro y el oscuro. **Quedan para la fase 3 y la 4** las tarjetas que se tocan (`BookingListItem`, `NotificationsButton`), `ContractText`, `ExtrasModal`, `ExtraRow` y `ExtrasFields`, los textos sueltos de las pantallas (que aún usan `Text` de React Native con colores de `tokens.ts`) y las cabeceras.
 
 **Recorridos a repetir en el teléfono** (antes de fusionar las fases 2 a 5): iniciar sesión y salir; crear una reserva con
 paquete, extras y descuento; editarla; firmar el contrato en el celular; registrar un pago; completar; cancelar con motivo;

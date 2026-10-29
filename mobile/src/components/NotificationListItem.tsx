@@ -5,6 +5,7 @@ import type { NotificationListItemProps } from '../types/components/Notification
 import { formatDateTime } from '../utils/format';
 import { describeNotification } from '../utils/notifications';
 import { ActionButton } from './ActionButton';
+import { AppCard } from './AppCard';
 
 /**
  * Card of the inbox: what happened, when it arrived, and the actions the photographer can take (message the client on
@@ -23,7 +24,7 @@ export function NotificationListItem({
   const isProof = notification.type === 'PaymentProofSubmitted';
 
   return (
-    <View style={[styles.card, unread && styles.unreadCard]}>
+    <AppCard style={[styles.card, unread && styles.unreadCard]}>
       <View style={styles.header}>
         <Text style={[styles.title, unread && styles.unreadTitle]}>{text.title}</Text>
         {unread && <View accessibilityLabel="Sin leer" style={styles.dot} />}
@@ -49,17 +50,14 @@ export function NotificationListItem({
           )}
         </View>
       </View>
-    </View>
+    </AppCard>
   );
 }
 
 /** Styles of the card. */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.xs,
-    padding: spacing.md,
   },
   unreadCard: {
     borderColor: colors.primary,

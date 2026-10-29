@@ -1,5 +1,6 @@
 import { configureFonts, MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
 import type { ColorScheme, Palette } from '../types/theme/palette.types';
+import { withAlpha } from '../utils/color';
 import { FONT_FAMILIES } from './fonts';
 import { getPalette } from './palettes';
 
@@ -59,7 +60,7 @@ function mapColors(base: MD3Theme, palette: Palette, scheme: ColorScheme): MD3Th
     onError: palette.onError,
     errorContainer: palette.errorContainer,
     onErrorContainer: palette.onErrorContainer,
-    backdrop: palette.scrim,
+    backdrop: withAlpha(palette.scrim, 0.45),
     shadow: '#000000',
     scrim: palette.scrim,
     elevation: ELEVATION[scheme],

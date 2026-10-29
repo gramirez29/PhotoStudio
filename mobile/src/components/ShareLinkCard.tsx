@@ -1,9 +1,10 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useShareLink } from '../hooks/useShareLink';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import type { ShareLinkCardProps } from '../types/components/ShareLinkCard.types';
 import { ActionButton } from './ActionButton';
+import { AppCard } from './AppCard';
 
 /**
  * Card to send the client the link of the booking by WhatsApp. It is shown while the booking can still receive payments
@@ -19,7 +20,7 @@ export function ShareLinkCard({ booking }: ShareLinkCardProps): ReactElement | n
   }
 
   return (
-    <View style={styles.card}>
+    <AppCard style={styles.card}>
       <Text style={styles.title}>Enlace del cliente</Text>
       <Text style={styles.body}>
         {booking.clientEmail === null
@@ -34,18 +35,15 @@ export function ShareLinkCard({ booking }: ShareLinkCardProps): ReactElement | n
       />
 
       {link.errorMessage !== null && <Text style={styles.error}>{link.errorMessage}</Text>}
-    </View>
+    </AppCard>
   );
 }
 
 /** Styles of the card. */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.sm,
     marginTop: spacing.md,
-    padding: spacing.md,
   },
   title: {
     color: colors.textPrimary,

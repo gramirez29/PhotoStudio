@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator } from 'react-native-paper';
+import { spacing } from '../theme/tokens';
 import type { ScreenLoaderProps } from '../types/components/ScreenLoader.types';
 
 /**
@@ -11,12 +12,12 @@ import type { ScreenLoaderProps } from '../types/components/ScreenLoader.types';
 export function ScreenLoader({ accessibilityLabel }: ScreenLoaderProps): ReactElement {
   return (
     <View style={styles.container}>
-      <ActivityIndicator color={colors.primary} accessibilityLabel={accessibilityLabel} />
+      <ActivityIndicator animating size="large" accessibilityLabel={accessibilityLabel} />
     </View>
   );
 }
 
-/** Styles of the centered spinner. */
+/** Layout of the centered spinner; its color comes from the theme. */
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',

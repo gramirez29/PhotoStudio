@@ -1,40 +1,50 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { useAppTheme } from '../hooks/useAppTheme';
+import { radius, spacing } from '../theme/tokens';
 import type { StatusBadgeProps } from '../types/components/StatusBadge.types';
 import { BOOKING_STATUS_LABELS } from '../utils/labels';
-import { STATUS_COLOR_TOKENS } from '../utils/statusColors';
+import { STATUS_COLOR_ROLES } from '../utils/statusColors';
 
 /**
- * Pill that shows the booking status with its color.
+ * Pill that shows the booking status: a dot in the color of the status next to its name, on a tonal background. The color is
+ * never the only carrier of the meaning: the name is always written.
  * @param props Component props.
  * @returns The badge.
  */
 export function StatusBadge({ status }: StatusBadgeProps): ReactElement {
-  const backgroundColor = colors[STATUS_COLOR_TOKENS[status]];
+  const theme = useTheme();
+  const { palette } = useAppTheme();
 
   return (
     <View
       accessibilityRole="text"
       accessibilityLabel={`Estado: ${BOOKING_STATUS_LABELS[status]}`}
-      style={[styles.badge, { backgroundColor }]}
+      style={[styles.badge, { backgroundColor: theme.colors.surfaceVariant }]}
     >
-      <Text style={styles.label}>{BOOKING_STATUS_LABELS[status]}</Text>
+      <View style={[styles.dot, { backgroundColor: palette[STATUS_COLOR_ROLES[status]] }]} />
+      <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+        {BOOKING_STATUS_LABELS[status]}
+      </Text>
     </View>
   );
 }
 
-/** Styles of the badge. */
+/** Layout of the badge; its colors come from the theme. */
 const styles = StyleSheet.create({
   badge: {
+    alignItems: 'center',
     alignSelf: 'flex-start',
     borderRadius: radius.pill,
+    flexDirection: 'row',
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-  label: {
-    color: colors.textInverse,
-    fontSize: 13,
-    fontWeight: '600',
+  dot: {
+    borderRadius: radius.pill,
+    height: 10,
+    width: 10,
   },
 });

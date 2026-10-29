@@ -34,6 +34,11 @@ describe('buildPaperTheme', () => {
     expect(theme.colors.inverseSurface).toBeDefined();
   });
 
+  it('shades what is behind a dialog with a translucent color, never an opaque one', () => {
+    expect(buildPaperTheme('light').colors.backdrop).toMatch(/^rgba\(.+, 0\.45\)$/);
+    expect(buildPaperTheme('dark').colors.backdrop).toMatch(/^rgba\(.+, 0\.45\)$/);
+  });
+
   it('does not take colors from the wallpaper of the phone: the theme is the same every time', () => {
     expect(buildPaperTheme('light').colors).toEqual(buildPaperTheme('light').colors);
   });

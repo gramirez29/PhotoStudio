@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { spacing } from '../theme/tokens';
 import type { AmountRowProps } from '../types/components/AmountRow.types';
 import { formatMoney } from '../utils/format';
 
@@ -10,31 +11,27 @@ import { formatMoney } from '../utils/format';
  * @returns The row.
  */
 export function AmountRow({ label, money, emphasized = false }: AmountRowProps): ReactElement {
+  const theme = useTheme();
+  const variant = emphasized ? 'titleSmall' : 'bodyLarge';
+  const color = emphasized ? theme.colors.onSurface : theme.colors.onSurfaceVariant;
+
   return (
     <View style={styles.row}>
-      <Text style={[styles.label, emphasized && styles.emphasized]}>{label}</Text>
-      <Text style={[styles.value, emphasized && styles.emphasized]}>{formatMoney(money)}</Text>
+      <Text variant={variant} style={{ color }}>
+        {label}
+      </Text>
+      <Text variant={variant} style={{ color: theme.colors.onSurface }}>
+        {formatMoney(money)}
+      </Text>
     </View>
   );
 }
 
-/** Styles of the row. */
+/** Layout of the row. */
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: spacing.xs,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: 15,
-  },
-  value: {
-    color: colors.textPrimary,
-    fontSize: 15,
-  },
-  emphasized: {
-    color: colors.textPrimary,
-    fontWeight: '700',
   },
 });

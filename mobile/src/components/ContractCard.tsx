@@ -1,8 +1,9 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { StyleSheet, Text } from 'react-native';
+import { colors, spacing } from '../theme/tokens';
 import type { ContractCardProps } from '../types/components/ContractCard.types';
 import { describeContract } from '../utils/contract';
+import { AppCard } from './AppCard';
 
 /**
  * Card of the booking detail with the contract: whether it is signed, by whom, how and when. When the client signed through the
@@ -15,7 +16,7 @@ export function ContractCard({ booking }: ContractCardProps): ReactElement {
   const [headline, ...details] = describeContract(booking.contract);
 
   return (
-    <View style={styles.card}>
+    <AppCard style={styles.card}>
       <Text style={styles.title}>Contrato</Text>
       <Text style={styles.body}>{headline}</Text>
       {details.map((line) => (
@@ -23,18 +24,15 @@ export function ContractCard({ booking }: ContractCardProps): ReactElement {
           {line}
         </Text>
       ))}
-    </View>
+    </AppCard>
   );
 }
 
 /** Styles of the card. */
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.xs,
     marginTop: spacing.md,
-    padding: spacing.md,
   },
   title: {
     color: colors.textPrimary,

@@ -1,18 +1,23 @@
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { ReactElement } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Button, HelperText, Text, useTheme } from 'react-native-paper';
+import { spacing } from '../theme/tokens';
 import type { DateTimeFieldProps, PickerMode } from '../types/components/DateTimeField.types';
 import { withDayOf, withTimeOf } from '../utils/date';
 import { formatDate, formatTime } from '../utils/format';
 
 /**
  * Field to pick a day and a time. On iOS it renders the native compact pickers inline; on Android it opens the system
- * dialogs from two buttons, because the Android picker is an imperative API.
+ * dialogs from two outlined buttons, because the Android picker is an imperative API.
  * @param props Component props.
  * @returns The field.
  */
 export function DateTimeField({ label, value, onChange, minimumDate, error }: DateTimeFieldProps): ReactElement {
+  const theme = useTheme();
+  const hasError = error !== undefined;
+  const errorColors = hasError ? { textColor: theme.colors.error } : {};
+
   /**
    * Applies a picked value to the part of the instant it edits.
    * @param mode Part being edited.
@@ -37,27 +42,31 @@ export function DateTimeField({ label, value, onChange, minimumDate, error }: Da
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text variant="labelLarge" style={{ color: hasError ? theme.colors.error : theme.colors.onSurfaceVariant }}>
+        {label}
+      </Text>
       {Platform.OS === 'android' ? (
         <View style={styles.row}>
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            mode="outlined"
             accessibilityLabel={`${label}: día`}
             onPress={() => openAndroidPicker('date')}
-            style={[styles.button, styles.dateButton, error !== undefined && styles.buttonError]}
+            style={[styles.dateButton, hasError && { borderColor: theme.colors.error }]}
+            contentStyle={styles.buttonContent}
+            {...errorColors}
           >
-            <Text style={styles.buttonText} numberOfLines={1}>
-              {formatDate(value)}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
+            {formatDate(value)}
+          </Button>
+          <Button
+            mode="outlined"
             accessibilityLabel={`${label}: hora`}
             onPress={() => openAndroidPicker('time')}
-            style={[styles.button, error !== undefined && styles.buttonError]}
+            style={hasError ? { borderColor: theme.colors.error } : undefined}
+            contentStyle={styles.buttonContent}
+            {...errorColors}
           >
-            <Text style={styles.buttonText}>{formatTime(value)}</Text>
-          </Pressable>
+            {formatTime(value)}
+          </Button>
         </View>
       ) : (
         <View style={styles.row}>
@@ -76,45 +85,29 @@ export function DateTimeField({ label, value, onChange, minimumDate, error }: Da
           />
         </View>
       )}
-      {error !== undefined && <Text style={styles.error}>{error}</Text>}
+      {hasError && (
+        <HelperText type="error" visible>
+          {error}
+        </HelperText>
+      )}
     </View>
   );
 }
 
-/** Styles of the field. */
+/** Layout of the field; its colors come from the theme. */
 const styles = StyleSheet.create({
   container: {
     gap: spacing.xs,
-  },
-  label: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
   },
   row: {
     alignItems: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  button: {
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
   dateButton: {
     flex: 1,
   },
-  buttonError: {
-    borderColor: colors.danger,
-  },
-  buttonText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: 13,
+  buttonContent: {
+    minHeight: 48,
   },
 });

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { spacing } from '../theme/tokens';
 import type { ScreenMessageProps } from '../types/components/ScreenMessage.types';
 
 /**
@@ -9,14 +10,18 @@ import type { ScreenMessageProps } from '../types/components/ScreenMessage.types
  * @returns The centered message.
  */
 export function ScreenMessage({ message }: ScreenMessageProps): ReactElement {
+  const theme = useTheme();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.message}>{message}</Text>
+      <Text variant="bodyLarge" style={[styles.message, { color: theme.colors.onSurfaceVariant }]}>
+        {message}
+      </Text>
     </View>
   );
 }
 
-/** Styles of the centered message. */
+/** Layout of the centered message. */
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
@@ -25,8 +30,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   message: {
-    color: colors.textSecondary,
-    fontSize: 15,
     textAlign: 'center',
   },
 });

@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { ScrollView, StyleSheet, Text } from 'react-native';
+import { colors, spacing } from '../theme/tokens';
 import type { BookingDetailsProps } from '../types/components/BookingDetails.types';
 import { formatDateTime } from '../utils/format';
 import { AmountRow } from './AmountRow';
@@ -10,6 +10,7 @@ import { PendingPaymentsCard } from './PendingPaymentsCard';
 import { SettlementCard } from './SettlementCard';
 import { ShareLinkCard } from './ShareLinkCard';
 import { StatusBadge } from './StatusBadge';
+import { AppCard } from './AppCard';
 
 /**
  * Body of the booking screen once the booking is loaded: status, client, amounts, contract and available actions.
@@ -28,7 +29,7 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
         <Text style={styles.warning}>Se libera el espacio el {formatDateTime(booking.expiresAt)}</Text>
       )}
 
-      <View style={styles.card}>
+      <AppCard style={styles.card}>
         <AmountRow label="Precio del paquete" money={booking.basePrice} />
         {booking.extras.map((extra) => (
           <AmountRow key={extra.code} label={`${extra.name} × ${extra.quantity}`} money={extra.total} />
@@ -38,7 +39,7 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
         <AmountRow label="Anticipo requerido" money={booking.depositRequired} />
         <AmountRow label="Pagado" money={booking.totalPaid} />
         <AmountRow label="Saldo" money={booking.balance} emphasized />
-      </View>
+      </AppCard>
 
       <ContractCard booking={booking} />
 
@@ -74,10 +75,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
     gap: spacing.xs,
     marginTop: spacing.md,
-    padding: spacing.md,
   },
 });
