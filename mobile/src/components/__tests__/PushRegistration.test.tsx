@@ -23,6 +23,7 @@ const session = {
   email: 'ana@example.com',
   name: 'Ana',
   isSystemOperator: false,
+  emailVerified: true,
 } as const;
 
 describe('PushRegistration', () => {

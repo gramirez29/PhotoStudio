@@ -11,7 +11,8 @@ import { NOTIFICATIONS_QUERY_PREFIX } from './useNotifications';
  * open, and opens the booking when a notification is tapped. Does nothing while signed out.
  */
 export function usePushRegistration(): void {
-  const signedIn = useSessionStore((state) => state.status === 'signedIn');
+  // A user who has not verified their email cannot use the API, push registration included.
+  const signedIn = useSessionStore((state) => state.status === 'signedIn' && state.session?.emailVerified === true);
   const queryClient = useQueryClient();
 
   useEffect(() => {

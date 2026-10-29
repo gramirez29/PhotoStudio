@@ -32,6 +32,7 @@ export async function adoptSession(session: AuthSessionResponse): Promise<void> 
     email: session.email,
     name: session.name,
     isSystemOperator: session.isSystemOperator,
+    emailVerified: session.emailVerified,
   });
 }
 

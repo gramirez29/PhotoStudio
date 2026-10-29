@@ -23,6 +23,8 @@ export interface ActiveSession {
   readonly name: string;
   /** Whether the user may run system-wide work (the maintenance pass). Decides only whether the app shows that action. */
   readonly isSystemOperator: boolean;
+  /** Whether the user may use the app. While it is false the app only shows the screen to verify the email. */
+  readonly emailVerified: boolean;
 }
 
 /** State and setters of the session store. Side effects (network, storage) live in the session manager, not here. */

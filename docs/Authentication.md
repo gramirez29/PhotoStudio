@@ -450,6 +450,7 @@ Solo la **API** las necesita; el worker no (no sirve HTTP).
 | `JWT_AUDIENCE` | No | `photostudio-app` | Claim `aud`. |
 | `JWT_ACCESS_TOKEN_MINUTES` | No | `15` | Vida del access token (1–60). |
 | `JWT_REFRESH_TOKEN_DAYS` | No | `30` | Vida del refresh token (1–365). |
+| `AUTH_EMAIL_VERIFICATION_REQUIRED` | No | `true` | `false` deja usar la app sin verificar el correo y no envía código al registrarse (§20). Mismo criterio de valores que el de arriba. |
 | `AUTH_REGISTRATION_ENABLED` | No | `true` | `false` cierra la creación de cuentas (403). Cualquier otro valor que no sea `true`/`false` hace que la API no arranque. |
 
 Un valor fuera de rango o no numérico en las `JWT_*` hace que la API **falle al arrancar** con un mensaje claro.
@@ -575,7 +576,7 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 
 ## 18. Límites conocidos y siguientes pasos
 
-1. **Sin recuperación de contraseña ni verificación del correo.** El correo y el teléfono se piden y se guardan, pero **no se verifican**: el envío de correo ya existe (`IEmailSender` con Resend, hoy solo para el código del portal del cliente), pero todavía no se usa para verificar cuentas ni para recuperar la contraseña. Así que alguien puede registrarse con el correo de otra persona y **ocupar esa dirección**. El correo está listo para ser la vía de recuperación de contraseña, pero solo será fiable cuando se verifique con un código enviado a esa dirección. Hasta entonces, cerrar el registro en producción (`AUTH_REGISTRATION_ENABLED=false`) una vez creada tu cuenta es la mitigación.
+1. **Sin recuperación de contraseña.** El correo de la cuenta ya se verifica con un código (§20), así que ya hay una dirección en la que apoyarla, pero el flujo de recuperación todavía no existe. El teléfono se pide y se guarda, pero **no se verifica**.
 2. ~~**`/api/maintenance/run` es trabajo global**~~ **Resuelto:** exige el rol de sistema (§19). Queda que el rol es un booleano en el usuario, sin gestión de roles más fina.
 3. **Un atacante que conozca tu usuario puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por usuario). Mitigación futura: bloquear por (usuario, IP) o retardos progresivos.
 4. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión). Es el precio de no consultar la base en cada petición.
@@ -612,3 +613,33 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 Límites: los access tokens de otros dispositivos siguen siendo válidos hasta 15 min (§18.4). Si la respuesta se pierde después de que el servidor cambió la contraseña, el dispositivo queda con un refresh token revocado y tendrá que entrar con la contraseña nueva.
 
 Pruebas: `ChangePasswordHandlerTests` (unitarias), `AccountApiTests` y `AccessTokenValidationApiTests` (de punta a punta, contra Mongo real).
+
+
+---
+
+## 20. Verificación del correo
+
+Una cuenta nueva tiene que **demostrar que es dueña del correo** con un código que llega a esa dirección, antes de usar la app. Antes, cualquiera podía registrarse con el correo de otra persona. El mecanismo es el del código del portal del cliente (§ de `ClientPortal.md`), aplicado a la cuenta.
+
+### Flujo
+
+1. `POST /api/auth/register` crea la cuenta (con `emailVerifiedAt` vacío) y **envía el código** de 6 dígitos al correo. Si el correo falla (Resend caído o sin configurar), la cuenta se crea igual y se registra una advertencia: el usuario pide otro código desde la app.
+2. La sesión que devuelve el registro (y la de `login` y `refresh`) trae `emailVerified: false`, y el token de acceso lleva el claim **`email_verified: "false"`**.
+3. Con ese token la API **solo** acepta dos endpoints, bajo la política `any-user`:
+   - `POST /api/account/email/verify` `{ code }` → 200 con una **sesión nueva** (`emailVerified: true`); 422 `auth.invalid_email_code` si el código es malo, venció o se gastó (la respuesta no dice cuál).
+   - `POST /api/account/email/resend` → 202 `{ maskedEmail, expiresAt }`; 429 `auth.email_code_rate_limited` (con `Retry-After`); 409 `auth.email_already_verified` o `auth.email_missing`; 503 `email.delivery_failed`.
+4. Todo lo demás responde **403** a ese token: la política por defecto y la de respaldo exigen que el token no diga `email_verified: false`, y `system-operator` también. Los endpoints anónimos (`/health`, `/api/auth/*`, `/public/*`) no cambian.
+5. Verificar cambia lo que el token puede hacer, así que la respuesta es una sesión nueva y se **cierran las demás sesiones** de la cuenta (como al cambiar la contraseña). La app la adopta y se abre.
+
+### Reglas del código (`EmailVerification`, colección `email_verifications`)
+
+Las mismas del portal: 6 dígitos, vive 10 minutos, **un solo uso**, hash HMAC con la clave de firma y el usuario (nunca el código), 5 intentos con un `$inc` atómico **antes** de comparar, un minuto entre envíos y 5 por hora. Un código nuevo reemplaza al anterior. Se borra solo una hora después de vencer (índice TTL). Es independiente de los códigos del portal: otra colección, otra excepción de límite (`auth.email_code_rate_limited`).
+
+### Decisiones y límites
+
+- **Interruptor `AUTH_EMAIL_VERIFICATION_REQUIRED`** (solo la API; por defecto `true`). Con `false` nadie queda bloqueado y el registro no envía código: es la salida si el proveedor de correo falla y nadie puede verificar. Un valor que no sea `true`/`false` detiene la API al arrancar, como `AUTH_REGISTRATION_ENABLED`.
+- **Cuentas antiguas.** Una cuenta creada antes de esto no tiene `emailVerifiedAt`, así que **se le pide verificar en su próximo inicio de sesión**. Una cuenta sin correo (de antes de que existiera el campo) no puede recibir un código y **no se bloquea**.
+- **Tokens ya emitidos.** Un token sin el claim (vive como máximo 15 minutos) se acepta, para que desplegar no corte las sesiones abiertas. Al renovarlo trae el claim.
+- **La app** decide sus pantallas con `emailVerified` de la sesión (`app/verify-email.tsx`: código, "Enviar un código nuevo" con espera de 60 s y "Salir"); mientras sea `false` solo existe esa pantalla y el registro del push no corre.
+- **Sigue sin resolverse:** quien se equivoca al escribir el correo al registrarse **no puede verificar** y no hay forma de cambiarlo desde la app; el usuario queda tomado. Hoy la salida es que un operador ponga el interruptor en `false` o corrija el correo en Mongo. Pendiente: cambiar el correo mientras no está verificado. Tampoco se resuelve que alguien ocupe el correo de otra persona sin poder usarlo (el índice único sigue protegiéndolo).
+- **Recuperación de contraseña** sigue pendiente, pero ahora ya hay un correo verificado en el que apoyarla.

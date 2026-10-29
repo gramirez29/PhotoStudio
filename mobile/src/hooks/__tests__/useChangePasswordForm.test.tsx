@@ -23,6 +23,7 @@ const renewedSession: AuthSessionResponse = {
   email: 'ana@example.com',
   name: 'Ana Pérez',
   isSystemOperator: false,
+  emailVerified: true,
 };
 
 describe('useChangePasswordForm', () => {

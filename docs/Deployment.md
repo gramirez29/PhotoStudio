@@ -87,6 +87,7 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
    | `PORTAL_BASE_URL` | `https://develop.photosensestudio.com` |
    | `EXPO_ACCESS_TOKEN` | **opcional**: solo si el proyecto de Expo activa la seguridad mejorada para push; sin ella el envío funciona |
    | `AUTH_REGISTRATION_ENABLED` | `true` hasta crear tu cuenta; luego `false` |
+   | `AUTH_EMAIL_VERIFICATION_REQUIRED` | **opcional**, `true` por defecto: las cuentas tienen que verificar su correo (`docs/Authentication.md` §20). Al activarlo **todas las cuentas existentes piden verificar** en su próximo inicio de sesión, y necesita `RESEND_API_KEY` y `EMAIL_FROM` bien puestos. Ponla en `false` si el correo falla y nadie puede entrar |
 
    No definas `ASPNETCORE_ENVIRONMENT`: por defecto es *Production*, que rechaza la clave de desarrollo y no abre CORS al servidor local de Vite. `PORT` lo pone Railway.
 

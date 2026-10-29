@@ -13,3 +13,13 @@ export function normalizeEmail(raw: string): string | null {
   const email = raw.trim().toLowerCase();
   return email.length > 0 && email.length <= MAX_EMAIL_LENGTH && EMAIL_PATTERN.test(email) ? email : null;
 }
+
+/**
+ * Hides most of an email address, keeping enough for its owner to recognize it, for example `a***@gmail.com`.
+ * @param email Email address as the backend returned it.
+ * @returns The masked address; `***` when the text has no valid shape.
+ */
+export function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  return at <= 0 ? '***' : `${email.charAt(0)}***${email.slice(at)}`;
+}

@@ -18,6 +18,22 @@ export interface AuthSessionResponse {
   readonly name: string;
   /** Whether the user may run system-wide work. Only decides what the app shows; the backend enforces it with the token. */
   readonly isSystemOperator: boolean;
+  /** Whether the user may use the app: they proved their email, or verification is not required for them. While it is false the app only shows the screen to verify the email. */
+  readonly emailVerified: boolean;
+}
+
+/** Body to prove the email with the code that was sent there (backend `VerifyEmailRequest`). */
+export interface VerifyEmailRequest {
+  /** The six digits the user typed. */
+  readonly code: string;
+}
+
+/** Confirmation that a code to verify the email was sent (backend `EmailVerificationSentResponse`). */
+export interface EmailVerificationSentResponse {
+  /** Address the code went to, partly hidden, for example `a***@gmail.com`. */
+  readonly maskedEmail: string;
+  /** Instant the code stops being accepted (ISO 8601). */
+  readonly expiresAt: string;
 }
 
 /** Body to change the password (backend `ChangePasswordRequest`). */

@@ -13,6 +13,7 @@ const sessionPayload = {
   email: 'ana@example.com',
   name: 'Ana Pérez',
   isSystemOperator: false,
+  emailVerified: true,
 } as const;
 
 describe('parseAuthSession', () => {
@@ -24,6 +25,11 @@ describe('parseAuthSession', () => {
     expect(() => parseAuthSession({ ...sessionPayload, accessToken: 7 })).toThrow(ResponseShapeError);
     expect(() => parseAuthSession({ ...sessionPayload, refreshToken: undefined })).toThrow('session.refreshToken');
     expect(() => parseAuthSession(null)).toThrow(ResponseShapeError);
+  });
+
+  it('requires to know whether the email is verified, because the app decides its screens with it', () => {
+    expect(() => parseAuthSession({ ...sessionPayload, emailVerified: undefined })).toThrow('session.emailVerified');
+    expect(parseAuthSession({ ...sessionPayload, emailVerified: false }).emailVerified).toBe(false);
   });
 });
 
