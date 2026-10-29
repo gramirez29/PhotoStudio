@@ -19,6 +19,37 @@ describe('BookingView', () => {
     expect(screen.getByText('Saldo')).toBeInTheDocument();
   });
 
+  it('shows a plain total when the booking has no extras and no discount', () => {
+    render(<BookingView booking={portalBooking()} />);
+
+    expect(screen.getByText('Total')).toBeInTheDocument();
+    expect(screen.queryByText('Paquete')).not.toBeInTheDocument();
+    expect(screen.queryByText('Descuento')).not.toBeInTheDocument();
+  });
+
+  it('details the package, every extra and the discount when the booking has extras', () => {
+    render(
+      <BookingView
+        booking={portalBooking({
+          basePrice: { amount: 65000, currency: 'CRC' },
+          extras: [
+            { name: 'Hora adicional', quantity: 2, total: { amount: 60000, currency: 'CRC' } },
+            { name: 'Maquillaje', quantity: 1, total: { amount: 20000, currency: 'CRC' } },
+          ],
+          discount: { amount: 5000, currency: 'CRC' },
+          packagePrice: { amount: 140000, currency: 'CRC' },
+        })}
+      />,
+    );
+
+    const amounts = screen.getByLabelText('Montos');
+    expect(amounts).toHaveTextContent('Paquete');
+    expect(amounts).toHaveTextContent('Hora adicional × 2');
+    expect(amounts).toHaveTextContent('Maquillaje × 1');
+    expect(amounts).toHaveTextContent('Descuento');
+    expect(amounts).toHaveTextContent('Total');
+  });
+
   it('leaves out the photographer when the API sent no name', () => {
     render(<BookingView booking={portalBooking({ photographerName: '' })} />);
 

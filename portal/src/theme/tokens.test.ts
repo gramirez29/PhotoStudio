@@ -46,10 +46,8 @@ function contrast(first: string, second: string): number {
   return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
 }
 
-const variations = {
-  light: readBlock(':root {'),
-  dark: readBlock('@media (prefers-color-scheme: dark) {\n  :root {'),
-} as const;
+/** The palette: the only variation, as in the app. */
+const palette = readBlock(':root {');
 
 /** Pairs used for text on screen, with the minimum ratio WCAG AA asks for (4.5 for text). */
 const TEXT_PAIRS: readonly (readonly [string, string])[] = [
@@ -57,40 +55,43 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ['--color-text', '--color-surface'],
   ['--color-text-muted', '--color-bg'],
   ['--color-text-muted', '--color-surface'],
+  // The headings are written in the brand color, on the page and inside the cards.
+  ['--color-brand', '--color-bg'],
+  ['--color-brand', '--color-surface'],
+  // The name of the studio on the band of the logo.
+  ['--color-on-brand', '--color-brand'],
+  // The label of an action.
+  ['--color-on-accent', '--color-accent'],
 ];
 
-describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
+describe('palette', () => {
   it.each(TEXT_PAIRS)('keeps %s readable on %s (WCAG AA, 4.5:1)', (foreground, background) => {
-    const front = tokens[foreground];
-    const back = tokens[background];
+    const front = palette[foreground];
+    const back = palette[background];
 
     expect(front).toBeDefined();
     expect(back).toBeDefined();
     expect(contrast(front ?? '', back ?? '')).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The light terracotta (#C4552E) is 4.08:1 against its cream text, under the 4.5:1 of normal text. It is only used where
-  // WCAG asks for 3:1: the label of a button, which is bold and 19px (large text), and fills and borders (non-text). It is
-  // never used as the color of running text. If a pair below must hold 4.5:1, the brand accent has to be darkened.
-  it('keeps the label of an accent button readable as large text (3:1)', () => {
-    expect(contrast(tokens['--color-on-accent'] ?? '', tokens['--color-accent'] ?? '')).toBeGreaterThanOrEqual(3);
-  });
-
-  it('keeps the accent visible against the background as a fill or a border (3:1)', () => {
-    expect(contrast(tokens['--color-accent'] ?? '', tokens['--color-bg'] ?? '')).toBeGreaterThanOrEqual(3);
+  it('keeps the focus ring, which is the brand color, visible against the page (3:1)', () => {
+    expect(contrast(palette['--color-brand'] ?? '', palette['--color-bg'] ?? '')).toBeGreaterThanOrEqual(3);
   });
 
   it.each(['--color-success', '--color-warning', '--color-danger'])('keeps the %s dot visible on the surface (3:1)', (dot) => {
-    expect(contrast(tokens[dot] ?? '', tokens['--color-surface'] ?? '')).toBeGreaterThanOrEqual(3);
+    expect(contrast(palette[dot] ?? '', palette['--color-surface'] ?? '')).toBeGreaterThanOrEqual(3);
   });
 });
 
 describe('brand palette', () => {
-  it('uses exactly the colors the brand defined for each variation', () => {
-    const lightBrand = ['#fbf3ea', '#f6d5be', '#0b1a40', '#3a4466', '#c4552e'];
-    const darkBrand = ['#020d2c', '#26324f', '#e3a97f', '#c9cdd6', '#f4f1ec'];
+  it('is the palette of the mobile app (src/theme/tokens.ts of the app) plus the brand color of the logo', () => {
+    const appPalette = ['#ffffff', '#f4f4f5', '#18181b', '#52525b', '#27272a', '#15803d', '#b45309', '#b91c1c'];
 
-    expect(lightBrand.every((color) => Object.values(variations.light).includes(color))).toBe(true);
-    expect(darkBrand.every((color) => Object.values(variations.dark).includes(color))).toBe(true);
+    expect(appPalette.every((color) => Object.values(palette).includes(color))).toBe(true);
+    expect(palette['--color-brand']).toBe('#3a4466');
+  });
+
+  it('has no dark variation: it is the same on every device, as the app is', () => {
+    expect(css).not.toContain('prefers-color-scheme');
   });
 });

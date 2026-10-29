@@ -18,6 +18,9 @@ export const portalBookingPayload = {
   canSubmitProof: true,
   canReceiveCode: true,
   canSignContract: true,
+  basePrice: { amount: 100000, currency: 'CRC' },
+  extras: [],
+  discount: { amount: 0, currency: 'CRC' },
 } as const;
 
 /**
@@ -29,6 +32,7 @@ export function portalBooking(overrides: Partial<PortalBooking> = {}): PortalBoo
   return {
     ...portalBookingPayload,
     payments: [],
+    extras: [],
     ...overrides,
   };
 }

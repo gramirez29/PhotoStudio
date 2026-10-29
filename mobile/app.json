@@ -15,18 +15,32 @@
     },
     "android": {
       "predictiveBackGestureEnabled": false,
-      "package": "com.photosensestudio.app"
+      "package": "com.photosensestudio.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#020d2c"
+      }
     },
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#020d2c"
+        }
+      ]
     ],
     "extra": {
       "eas": {
         "projectId": "6560ba0b-780b-4028-8ae8-382869e88e34"
       }
     },
-    "owner": "g.raba29-dev"
+    "owner": "g.raba29-dev",
+    "icon": "./assets/icon.png"
   }
 }

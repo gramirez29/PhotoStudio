@@ -1,5 +1,7 @@
+using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Contracts;
 using PhotoStudio.Application.Exceptions;
+using PhotoStudio.Application.UnitTests.Support;
 using PhotoStudio.Application.Portal;
 using PhotoStudio.Application.Portal.GetContract;
 using PhotoStudio.Application.Portal.SignContract;
@@ -274,4 +276,44 @@ public sealed class PortalContractHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private SignPortalContractHandler NewSignHandler() => new(_fixture.Bookings, _fixture.Links, _fixture.Tokens, _fixture.Clock);
+
+    /// <summary>
+    /// The client sees what the total is made of: the package, each extra with its units and total, and the discount.
+    /// </summary>
+    [Fact]
+    public void ToPortalResponse_ShowsThePackageTheExtrasAndTheDiscount()
+    {
+        var booking = Booking.Create(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            ClientContact.Create("María Pérez", "+506 8888-8888", "maria@example.com"),
+            "Retrato familiar",
+            Money.Create(65_000m, "CRC"),
+            TimeSlot.Create(BookingFactory.SessionStart, BookingFactory.SessionStart.AddHours(2)),
+            BookingPolicy.Default,
+            BookingFactory.CreatedAt,
+            PackageTier.Standard,
+            [BookingExtra.Create("extra-hour", "Hora adicional", Money.Create(30_000m, "CRC"), 2)],
+            Money.Create(5_000m, "CRC"));
+
+        var response = booking.ToPortalResponse();
+
+        response.BasePrice.Amount.ShouldBe(65_000m);
+        response.Extras.Single().ShouldBe(new PortalExtraResponse("Hora adicional", 2, new MoneyResponse(60_000m, "CRC")));
+        response.Discount.Amount.ShouldBe(5_000m);
+        response.PackagePrice.Amount.ShouldBe(120_000m);
+    }
+
+    /// <summary>
+    /// A booking sold as the package alone has no extras to show.
+    /// </summary>
+    [Fact]
+    public void ToPortalResponse_WithoutExtras_ListsNone()
+    {
+        var response = _fixture.Booking.ToPortalResponse();
+
+        response.Extras.ShouldBeEmpty();
+        response.Discount.Amount.ShouldBe(0m);
+        response.BasePrice.ShouldBe(response.PackagePrice);
+    }
 }

@@ -1,27 +1,29 @@
 /*
- * Design tokens of the portal: the brand palette in its light and dark variations. Components read colors only from these
- * variables. The dark variation follows the device setting. Every text/background pair used on screen is checked for contrast
- * by src/theme/tokens.test.ts; keep that test in sync when a pair is added.
+ * Design tokens of the portal. The palette is the one of the mobile app (mobile/src/theme/tokens.ts), so the photographer and the
+ * client see the same colors, plus one brand color taken from the logo: #3A4466. Components read colors only from these
+ * variables. Every text/background pair used on screen is checked for contrast by src/theme/tokens.test.ts; keep that test in
+ * sync when a pair is added.
  *
- * Palette, light: #FBF3EA #F6D5BE #0B1A40 #3A4466 #C4552E
- * Palette, dark:  #020D2C #26324F #E3A97F #C9CDD6 #F4F1EC
- * The status dots (success, warning, danger) are not part of the brand palette: they are small marks next to a text label,
- * never the only carrier of the meaning.
- * Light accent (#C4552E): 4.08:1 against the cream background, so it is never the color of running text. It is the fill of a
- * button (whose label is bold and 19px, large text) and a border or mark; the contrast test enforces these limits.
+ * Palette of the app: #FFFFFF #F4F4F5 #18181B #52525B #27272A #15803D #B45309 #B91C1C
+ * Brand (logo): #3A4466. It marks what belongs to the studio: the band with the logo, the headings, the focus ring and the
+ * line of the notices. The actions keep the primary color of the app.
+ * The status dots (success, warning, danger) are small marks next to a text label, never the only carrier of the meaning.
+ * There is one variation, as in the app: it does not follow the dark mode of the device.
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
-  --color-bg: #fbf3ea;
-  --color-surface: #f6d5be;
-  --color-text: #0b1a40;
-  --color-text-muted: #3a4466;
-  --color-accent: #c4552e;
-  --color-on-accent: #fbf3ea;
-  --color-success: #2e7d4f;
-  --color-warning: #a8681a;
-  --color-danger: #b3261e;
+  --color-bg: #ffffff;
+  --color-surface: #f4f4f5;
+  --color-text: #18181b;
+  --color-text-muted: #52525b;
+  --color-accent: #27272a;
+  --color-on-accent: #ffffff;
+  --color-brand: #3a4466;
+  --color-on-brand: #ffffff;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
 
   --font-title: 'Josefin Sans Variable', 'Josefin Sans', system-ui, sans-serif;
   --font-body: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
@@ -35,18 +37,4 @@
   --radius-md: 14px;
   --radius-pill: 999px;
   --content-width: 36rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #020d2c;
-    --color-surface: #26324f;
-    --color-text: #f4f1ec;
-    --color-text-muted: #c9cdd6;
-    --color-accent: #e3a97f;
-    --color-on-accent: #020d2c;
-    --color-success: #6fcf97;
-    --color-warning: #e3a97f;
-    --color-danger: #f2766b;
-  }
 }

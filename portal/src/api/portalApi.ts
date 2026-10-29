@@ -1,6 +1,6 @@
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '../constants/booking';
 import type { HttpClient } from '../types/api/http';
-import type { Money, PortalBooking, PortalCodeSent, PortalContract, PortalPayment, PortalSession } from '../types/api/portal';
+import type { Money, PortalBooking, PortalCodeSent, PortalContract, PortalExtra, PortalPayment, PortalSession } from '../types/api/portal';
 import type { PortalApi } from '../types/api/portalApi';
 import { expectRecord, readArray, readBoolean, readLiteral, readNullableString, readNumber, readString } from './guards';
 
@@ -31,6 +31,21 @@ export function parsePayment(value: unknown, path: string): PortalPayment {
 }
 
 /**
+ * Parses an extra sold with the booking.
+ * @param value Unknown value from the response.
+ * @param path Location of the value, for error messages.
+ * @returns The typed extra.
+ */
+export function parseExtra(value: unknown, path: string): PortalExtra {
+  const record = expectRecord(value, path);
+  return {
+    name: readString(record, 'name', path),
+    quantity: readNumber(record, 'quantity', path),
+    total: parseMoney(record.total, `${path}.total`),
+  };
+}
+
+/**
  * Parses the booking a link opens, validating every field against the backend contract.
  * @param value Unknown response body.
  * @returns The typed booking.
@@ -55,6 +70,9 @@ export function parsePortalBooking(value: unknown): PortalBooking {
     canSubmitProof: readBoolean(record, 'canSubmitProof', path),
     canReceiveCode: readBoolean(record, 'canReceiveCode', path),
     canSignContract: readBoolean(record, 'canSignContract', path),
+    basePrice: parseMoney(record.basePrice, `${path}.basePrice`),
+    extras: readArray(record, 'extras', path).map((extra, index) => parseExtra(extra, `${path}.extras[${index}]`)),
+    discount: parseMoney(record.discount, `${path}.discount`),
   };
 }
 

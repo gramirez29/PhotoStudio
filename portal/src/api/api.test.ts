@@ -6,6 +6,18 @@ import { createPortalApi, parsePortalBooking } from './portalApi';
 import { MAX_RETRIES, shouldRetry } from './queryClient';
 
 describe('parsePortalBooking', () => {
+  it('reads the extras and the discount that make up the total', () => {
+    const booking = parsePortalBooking({
+      ...portalBookingPayload,
+      extras: [{ name: 'Maquillaje', quantity: 2, total: { amount: 40000, currency: 'CRC' } }],
+      discount: { amount: 5000, currency: 'CRC' },
+    });
+
+    expect(booking.extras).toEqual([{ name: 'Maquillaje', quantity: 2, total: { amount: 40000, currency: 'CRC' } }]);
+    expect(booking.discount.amount).toBe(5000);
+    expect(booking.basePrice.amount).toBe(100000);
+  });
+
   it('parses a valid backend payload', () => {
     const booking = parsePortalBooking(portalBookingPayload);
 

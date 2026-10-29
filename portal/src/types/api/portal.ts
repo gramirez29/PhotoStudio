@@ -31,6 +31,16 @@ export interface PortalPayment {
   readonly recordedAt: string;
 }
 
+/** Extra sold with the booking, as the client sees it (backend `PortalExtraResponse`). */
+export interface PortalExtra {
+  /** Name of the extra. */
+  readonly name: string;
+  /** Number of units. */
+  readonly quantity: number;
+  /** Price of every unit together. */
+  readonly total: Money;
+}
+
 /** Confirmation that a verification code was sent (backend `PortalCodeSentResponse`). */
 export interface PortalCodeSent {
   /** Address the code went to, partly hidden, for example `m***@gmail.com`. */
@@ -73,7 +83,7 @@ export interface PortalBooking {
   readonly sessionEnd: string;
   /** End of the tentative hold (ISO 8601), or null. */
   readonly expiresAt: string | null;
-  /** Package price. */
+  /** What the client pays: the package plus the extras minus the discount. */
   readonly packagePrice: Money;
   /** Deposit required to confirm. */
   readonly depositRequired: Money;
@@ -91,6 +101,12 @@ export interface PortalBooking {
   readonly canReceiveCode: boolean;
   /** Whether the client can sign the contract now: it is unsigned, the booking waits for confirmation and there is an email for the code. */
   readonly canSignContract: boolean;
+  /** Price of the package alone, before extras and discount. */
+  readonly basePrice: Money;
+  /** Extras sold with the booking; empty when there are none. */
+  readonly extras: readonly PortalExtra[];
+  /** Discount given to the client; zero when there is none. */
+  readonly discount: Money;
 }
 
 /** Contract of a booking as the client reads it (backend `PortalContractResponse`). */
