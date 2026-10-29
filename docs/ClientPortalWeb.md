@@ -56,8 +56,8 @@ Ver `docs/Deployment.md`: un solo sitio (página principal en `/` y portal en `/
 | 3.1 | Contrato: leer y firmar desde el enlace (cédula, personas, lugar, uso de imagen, nombre escrito como firma). Comparte la sesión del código con el comprobante | **Hecho** (§8) |
 | 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
 
-Después, fuera de este plan: un endpoint para agregar el correo a reservas existentes y mostrar la declaración del
-contrato en la app del fotógrafo.
+Después, fuera de este plan: nada pendiente aquí. El correo de una reserva existente se corrige con **Editar reserva** en la
+app del fotógrafo, y la declaración del contrato ya se muestra ahí.
 
 ## 7. Marca aplicada (entrega 2)
 

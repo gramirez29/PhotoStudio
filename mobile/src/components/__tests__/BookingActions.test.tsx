@@ -26,6 +26,7 @@ function actionsState(overrides: Partial<BookingActionsState> = {}): BookingActi
     complete: jest.fn(),
     markClientAbsent: jest.fn(),
     revertClientAbsent: jest.fn(),
+    editDetails: jest.fn(),
     ...overrides,
   };
 }
@@ -62,6 +63,18 @@ describe('BookingActions', () => {
     expect(state.complete).toHaveBeenCalledTimes(1);
     expect(state.markClientAbsent).toHaveBeenCalledTimes(1);
     expect(state.cancel).not.toHaveBeenCalled();
+  });
+
+  it('offers to edit the booking, and does not list the package edit as pending: the edit screen handles it', () => {
+    const state = actionsState();
+    mockedUseBookingActions.mockReturnValue(state);
+    render(<BookingActions booking={bookingWith(['EditDetails', 'EditPackage', 'Cancel'])} />);
+
+    fireEvent.press(screen.getByText('Editar reserva'));
+
+    expect(state.editDetails).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Próximamente/)).toBeNull();
+    expect(screen.queryByText('Editar paquete y precio')).toBeNull();
   });
 
   it('lists the allowed actions the app cannot perform yet instead of showing dead buttons', () => {

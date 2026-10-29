@@ -240,6 +240,17 @@ describe('createBookingsApi', () => {
       expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
     });
 
+    it('posts the corrected data to the details endpoint', async () => {
+      const { api, requests } = recordingApi();
+      const request = { clientName: 'María Pérez', clientPhone: '+50670189220', clientEmail: 'maria@example.com', packageName: 'Pre-Boda', packagePrice: 150000 };
+
+      await api.editBookingDetails(bookingPayload.id, request);
+
+      expect(requests[0]?.url).toBe(`${base}/details`);
+      expect(requests[0]?.init?.method).toBe('POST');
+      expect(JSON.parse(String(requests[0]?.init?.body))).toEqual(request);
+    });
+
     it('sends what the client declared when they sign on the phone', async () => {
       const { api, requests } = recordingApi();
       const request = {

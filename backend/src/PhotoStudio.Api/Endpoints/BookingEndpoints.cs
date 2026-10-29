@@ -10,6 +10,7 @@ using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
 using PhotoStudio.Application.Bookings.RescheduleBooking;
+using PhotoStudio.Application.Bookings.EditBookingDetails;
 using PhotoStudio.Application.Bookings.GetContract;
 using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.RevertClientAbsent;
@@ -37,6 +38,7 @@ public static class BookingEndpoints
         group.MapPost("/", CreateAsync).WithName("CreateBooking");
         group.MapGet("/", ListAsync).WithName("ListBookings");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
+        group.MapPost("/{id:guid}/details", EditDetailsAsync).WithName("EditBookingDetails");
         group.MapGet("/{id:guid}/contract", GetContractAsync).WithName("GetBookingContract");
         group.MapPost("/{id:guid}/contract/in-person", SignContractInPersonAsync).WithName("SignContractInPerson");
         group.MapPost("/{id:guid}/payments/in-person", RecordInPersonPaymentAsync).WithName("RecordInPersonPayment");
@@ -94,6 +96,23 @@ public static class BookingEndpoints
         IQueryHandler<GetBookingQuery, BookingResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new GetBookingQuery(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Corrects the contact data of the client of a booking and, while it is still possible, its package and price.
+    /// </summary>
+    /// <param name="id">Booking identifier.</param>
+    /// <param name="user">Authenticated photographer; the booking must belong to them, otherwise the answer is 404.</param>
+    /// <param name="request">Every editable value.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the updated booking; 409 <c>booking.invalid_transition</c> when the booking can no longer be edited, or <c>booking.guard_failed</c> when the package or the price changed after the contract was signed or a payment was recorded; 422 for invalid values.</returns>
+    private static async Task<Ok<BookingResponse>> EditDetailsAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        EditBookingDetailsRequest request,
+        ICommandHandler<EditBookingDetailsCommand, BookingResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(request.ToCommand(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Reads the contract of a booking, with the booking data filled in, so the client can read it on the phone before signing.

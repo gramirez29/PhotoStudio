@@ -226,6 +226,20 @@ export interface BookingContractResponse {
   readonly signed: boolean;
 }
 
+/** Body to correct the data of a booking (backend `EditBookingDetailsRequest`). It carries every editable value; what did not change is the same as before. */
+export interface EditBookingDetailsRequest {
+  /** Name of the client. */
+  readonly clientName: string;
+  /** Phone of the client, normalized (`+50670189220`). */
+  readonly clientPhone: string;
+  /** Email of the client; omitted when the booking has none. */
+  readonly clientEmail?: string;
+  /** Name of the package. */
+  readonly packageName: string;
+  /** Price of the package, in the currency of the booking. */
+  readonly packagePrice: number;
+}
+
 /** Body to record a payment received in person (backend `RecordInPersonPaymentRequest`). */
 export interface RecordInPersonPaymentRequest {
   /** Amount received. */

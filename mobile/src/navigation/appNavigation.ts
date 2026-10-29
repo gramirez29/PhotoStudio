@@ -26,6 +26,18 @@ export function openReschedule(bookingId: string): void {
  * Opens the form to record the signature of the contract of a booking.
  * @param bookingId Booking identifier.
  */
+/**
+ * Opens the screen that corrects the data of a booking.
+ * @param bookingId Booking to edit.
+ */
+export function openEditBooking(bookingId: string): void {
+  router.push({ pathname: '/bookings/edit', params: { id: bookingId } });
+}
+
+/**
+ * Opens the screen that records the signature of the contract of a booking.
+ * @param bookingId Booking whose contract is signed.
+ */
 export function openContract(bookingId: string): void {
   router.push({ pathname: '/bookings/contract', params: { id: bookingId } });
 }

@@ -5,6 +5,7 @@ import type {
   BookingSummaryResponse,
   CancelBookingRequest,
   CreateBookingRequest,
+  EditBookingDetailsRequest,
   RecordInPersonPaymentRequest,
   RejectPaymentRequest,
   RescheduleBookingRequest,
@@ -116,6 +117,15 @@ export interface BookingsApi {
    * @returns The booking summaries.
    */
   listBookings(signal?: AbortSignal): Promise<readonly BookingSummaryResponse[]>;
+
+  /**
+   * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.
+   * @param id Booking identifier.
+   * @param request Every editable value.
+   * @param signal Optional signal to cancel the request.
+   * @returns The updated booking.
+   */
+  editBookingDetails(id: string, request: EditBookingDetailsRequest, signal?: AbortSignal): Promise<BookingResponse>;
 
   /**
    * Reads a booking.

@@ -70,14 +70,20 @@ public sealed class Booking : AggregateRoot<Guid>
     /// <summary>Gets the photographer (tenant) that owns the booking.</summary>
     public Guid PhotographerId { get; }
 
-    /// <summary>Gets the client contact.</summary>
-    public ClientContact Client { get; }
+    /// <summary>Gets the client contact. The photographer can correct it while the booking is alive (see <see cref="EditDetails"/>).</summary>
+    public ClientContact Client { get; private set; }
 
     /// <summary>Gets the name of the booked package.</summary>
-    public string PackageName { get; }
+    public string PackageName { get; private set; }
 
-    /// <summary>Gets the price of the package, fixed when the booking was created.</summary>
-    public Money PackagePrice { get; }
+    /// <summary>Gets the price of the package. It is fixed once the contract is signed or a payment is recorded (see <see cref="CanEditPackage"/>).</summary>
+    public Money PackagePrice { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the package and its price can still change: the booking is waiting for confirmation and the
+    /// contract is not signed and no payment was recorded, because the contract text and the deposit are worked out from them.
+    /// </summary>
+    public bool CanEditPackage => Status == BookingStatus.Tentative && Contract is null && _payments.Count == 0;
 
     /// <summary>Gets the session slot.</summary>
     public TimeSlot Slot { get; private set; }
@@ -310,6 +316,56 @@ public sealed class Booking : AggregateRoot<Guid>
         if (Contract.CopySentAt is null)
         {
             Contract = Contract with { CopySentAt = now };
+        }
+    }
+
+    /// <summary>
+    /// Corrects the contact data of the client and, while it is still possible, the package and its price. The photographer sends
+    /// every editable value, so what did not change is simply the same. The contact data can be corrected while the booking is
+    /// waiting for confirmation, confirmed or completed; the package and the price only while <see cref="CanEditPackage"/> is true.
+    /// A change is kept in the history of the booking, and nothing else about the booking moves.
+    /// </summary>
+    /// <param name="client">Contact data of the client, as it should be now.</param>
+    /// <param name="packageName">Name of the package, as it should be now.</param>
+    /// <param name="packagePrice">Price of the package, as it should be now, in the currency of the booking.</param>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the status does not allow editing, the package or the price changed when they cannot, or a value is not valid.</exception>
+    public void EditDetails(ClientContact client, string packageName, Money packagePrice, DateTimeOffset now)
+    {
+        EnsureStatus(nameof(EditDetails), BookingStatus.Tentative, BookingStatus.Confirmed, BookingStatus.Completed);
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(packagePrice);
+
+        if (string.IsNullOrWhiteSpace(packageName))
+        {
+            throw new DomainException(DomainErrorCodes.RequiredValue, "The package name is required.");
+        }
+
+        if (!string.Equals(packagePrice.Currency, PackagePrice.Currency, StringComparison.Ordinal))
+        {
+            throw new DomainException(DomainErrorCodes.CurrencyMismatch, "The price must be in the currency of the booking.");
+        }
+
+        var name = packageName.Trim();
+        var packageChanged = !string.Equals(name, PackageName, StringComparison.Ordinal) || packagePrice != PackagePrice;
+        if (packageChanged && !CanEditPackage)
+        {
+            throw new DomainException(
+                DomainErrorCodes.GuardFailed,
+                "The package and the price can only change while the booking waits for confirmation, before the contract is signed and any payment is recorded.");
+        }
+
+        if (client != Client)
+        {
+            Client = client;
+            _history.Add(new StatusTransition(Status, Status, Actor.Photographer, Channel.PhotographerApp, "ClientDetailsEdited", now));
+        }
+
+        if (packageChanged)
+        {
+            PackageName = name;
+            PackagePrice = packagePrice;
+            _history.Add(new StatusTransition(Status, Status, Actor.Photographer, Channel.PhotographerApp, "PackageEdited", now));
         }
     }
 
@@ -582,6 +638,7 @@ public sealed class Booking : AggregateRoot<Guid>
                     actions.Add(BookingAction.Cancel);
                 }
 
+                AddEditActions(actions, actor);
                 break;
 
             case BookingStatus.Confirmed:
@@ -607,10 +664,12 @@ public sealed class Booking : AggregateRoot<Guid>
                     actions.Add(BookingAction.MarkClientAbsent);
                 }
 
+                AddEditActions(actions, actor);
                 break;
 
             case BookingStatus.Completed:
                 AddPaymentActions(actions, actor, hasBalance);
+                AddEditActions(actions, actor);
                 break;
 
             case BookingStatus.ClientAbsent:
@@ -692,6 +751,25 @@ public sealed class Booking : AggregateRoot<Guid>
         if (actor == Actor.Photographer && hasBalance)
         {
             actions.Add(BookingAction.RecordInPersonPayment);
+        }
+    }
+
+    /// <summary>
+    /// Appends the actions that correct the data of the booking, which only the photographer can do.
+    /// </summary>
+    /// <param name="actions">List to append to.</param>
+    /// <param name="actor">Actor asking for the actions.</param>
+    private void AddEditActions(List<BookingAction> actions, Actor actor)
+    {
+        if (actor != Actor.Photographer)
+        {
+            return;
+        }
+
+        actions.Add(BookingAction.EditDetails);
+        if (CanEditPackage)
+        {
+            actions.Add(BookingAction.EditPackage);
         }
     }
 

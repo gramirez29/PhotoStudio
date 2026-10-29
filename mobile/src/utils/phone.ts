@@ -59,3 +59,13 @@ export function formatPhoneInput(raw: string): string {
 
   return `${digits.slice(0, LOCAL_PHONE_GROUP)}-${digits.slice(LOCAL_PHONE_GROUP)}`;
 }
+
+/**
+ * Writes a stored phone the way it is typed in the field: a Costa Rican number as `7018-9220`. Any other number is shown as it was saved.
+ * @param stored Phone as the backend returns it, for example `+50670189220`.
+ * @returns The text for the field.
+ */
+export function formatStoredPhone(stored: string): string {
+  const match = /^\+506(\d{4})(\d{4})$/.exec(stored);
+  return match === null ? stored : `${match[1]}-${match[2]}`;
+}

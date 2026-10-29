@@ -16,6 +16,7 @@ export const ACTION_VARIANTS: Readonly<Record<SupportedAction, ActionVariant>> =
   Reschedule: 'primary',
   Complete: 'primary',
   RevertClientAbsent: 'primary',
+  EditDetails: 'primary',
   MarkClientAbsent: 'danger',
   Cancel: 'danger',
 };

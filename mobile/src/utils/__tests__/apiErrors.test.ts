@@ -4,6 +4,7 @@ import {
   bookingCommandErrorMessage,
   bookingLoadErrorMessage,
   createBookingErrorMessage,
+  editBookingErrorMessage,
   loginErrorMessage,
   maintenanceErrorMessage,
   registerErrorMessage,
@@ -199,5 +200,22 @@ describe('resendEmailCodeErrorMessage', () => {
   it('explains a lost connection and an error nobody planned for', () => {
     expect(resendEmailCodeErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
     expect(resendEmailCodeErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo enviar el código/);
+  });
+});
+
+describe('editBookingErrorMessage', () => {
+  it.each([
+    ['booking.guard_failed', /El paquete y el precio ya no se pueden cambiar/],
+    ['booking.invalid_transition', /ya no se puede editar/],
+    ['user.invalid_email', /El correo no es válido/],
+    ['domain.required_value', /Faltan datos obligatorios/],
+    ['money.invalid_amount', /El precio no es válido/],
+  ])('explains %s in the words of this action', (code, message) => {
+    expect(editBookingErrorMessage(new ApiError(409, 'x', code))).toMatch(message);
+  });
+
+  it('falls back to the common messages of the booking actions, and explains a lost connection', () => {
+    expect(editBookingErrorMessage(new ApiError(409, 'x', 'concurrency.conflict'))).toMatch(/La reserva cambió mientras la editabas/);
+    expect(editBookingErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
   });
 });
