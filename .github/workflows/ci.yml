@@ -27,10 +27,26 @@ jobs:
           global-json-file: backend/global.json
 
       # The integration tests need a MongoDB replica set (transactions), exactly like production. The compose file starts one
-      # on 127.0.0.1:27019, the address the tests use by default, and --wait returns once it is healthy.
+      # on 127.0.0.1:27019, the address the tests use by default. It does not rely on `--wait`: a runner image update made Compose
+      # report the container as unhealthy half a second after starting it. Instead the step initiates the replica set itself and
+      # polls until a primary is elected (up to 2 minutes), failing early if the container stops.
       - name: Start MongoDB
         working-directory: backend
-        run: docker compose up -d --wait mongo
+        run: |
+          docker compose up -d mongo
+          for attempt in $(seq 1 60); do
+            if [ "$(docker inspect --format '{{.State.Running}}' photostudio-mongo)" != "true" ]; then
+              echo "The MongoDB container stopped."
+              exit 1
+            fi
+            if docker exec photostudio-mongo mongosh --quiet --eval "try { rs.status().myState === 1 ? quit(0) : quit(1) } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }); quit(1) }"; then
+              echo "MongoDB primary elected after $attempt attempt(s)."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MongoDB did not elect a primary in time."
+          exit 1
 
       - name: Restore
         working-directory: backend
@@ -43,6 +59,15 @@ jobs:
       - name: Test
         working-directory: backend
         run: dotnet test --no-build --configuration Release
+
+      # Shows why MongoDB did not start, or what it logged during a failed run; it does not run when the job succeeds.
+      - name: MongoDB diagnostics
+        if: failure()
+        working-directory: backend
+        run: |
+          docker compose ps --all
+          docker inspect --format '{{json .State}}' photostudio-mongo || true
+          docker logs --tail 100 photostudio-mongo || true
 
   image:
     name: Backend (production image builds)
