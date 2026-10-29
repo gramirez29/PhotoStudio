@@ -18,4 +18,6 @@ export interface BookingActionsState {
   readonly markClientAbsent: () => void;
   /** Opens the form to type the reason for reverting the absence. */
   readonly revertClientAbsent: () => void;
+  /** Opens the screen that corrects the data of the booking. */
+  readonly editDetails: () => void;
 }

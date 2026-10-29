@@ -19,6 +19,8 @@ export function executeBookingCommand(
       return api.signContractInPerson(bookingId, command.request);
     case 'recordPayment':
       return api.recordInPersonPayment(bookingId, command.request);
+    case 'editDetails':
+      return api.editBookingDetails(bookingId, command.request);
     case 'cancel':
       return api.cancelBooking(bookingId, command.reason === null ? {} : { reason: command.reason });
     case 'complete':

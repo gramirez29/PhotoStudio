@@ -8,6 +8,7 @@ using PhotoStudio.Application.Billing.ListRefunds;
 using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
+using PhotoStudio.Application.Bookings.EditBookingDetails;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetContract;
 using PhotoStudio.Application.Bookings.GetBooking;
@@ -109,6 +110,7 @@ public static class DependencyInjection
         // Contracts: the client gets an email copy of the contract they signed through the portal.
         services.AddScoped<IDomainEventHandler<ContractSigned>, ContractCopyHandler>();
 
+        services.AddScoped<ICommandHandler<EditBookingDetailsCommand, BookingResponse>, EditBookingDetailsHandler>();
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<GetBookingContractQuery, BookingContractResponse>, GetBookingContractHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();

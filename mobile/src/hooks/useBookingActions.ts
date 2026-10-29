@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { openContract, openPayment, openReason, openReschedule } from '../navigation/appNavigation';
+import { openContract, openEditBooking, openPayment, openReason, openReschedule } from '../navigation/appNavigation';
 import type { BookingResponse } from '../types/api/booking';
 import type { BookingActionsState } from '../types/hooks/useBookingActions.types';
 import type { BookingCommand } from '../types/hooks/useBookingCommand.types';
@@ -43,5 +43,6 @@ export function useBookingActions(booking: BookingResponse): BookingActionsState
     complete: () => confirmAndSend('Complete', { kind: 'complete' }),
     markClientAbsent: () => confirmAndSend('MarkClientAbsent', { kind: 'markClientAbsent' }),
     revertClientAbsent: () => openReason(booking.id, 'RevertClientAbsent'),
+    editDetails: () => openEditBooking(booking.id),
   };
 }

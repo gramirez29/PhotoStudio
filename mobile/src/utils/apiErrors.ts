@@ -289,3 +289,30 @@ export function resendEmailCodeErrorMessage(error: Error): string {
       return 'No se pudo enviar el código. Inténtalo de nuevo.';
   }
 }
+
+/**
+ * Converts the error of a failed correction of a booking into a message for the user. It words the refusals of this action (the
+ * package or the price can no longer change, an invalid email) instead of the generic ones of the other actions.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function editBookingErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'booking.guard_failed':
+      return 'El paquete y el precio ya no se pueden cambiar: el contrato está firmado o hay pagos registrados.';
+    case 'booking.invalid_transition':
+      return 'Esta reserva ya no se puede editar. Vuelve a abrirla para ver su estado actual.';
+    case 'user.invalid_email':
+      return 'El correo no es válido. Escríbelo como nombre@correo.com o déjalo vacío.';
+    case 'domain.required_value':
+      return 'Faltan datos obligatorios. Revísalos e inténtalo de nuevo.';
+    case 'money.invalid_amount':
+      return 'El precio no es válido.';
+    default:
+      return bookingCommandErrorMessage(error);
+  }
+}

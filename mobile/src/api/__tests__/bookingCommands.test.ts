@@ -20,6 +20,7 @@ function stubApi(booking: BookingResponse): BookingsApi {
     signContractInPerson: jest.fn().mockResolvedValue(booking),
     recordInPersonPayment: jest.fn().mockResolvedValue(booking),
     createBookingLink: jest.fn(),
+    editBookingDetails: jest.fn().mockResolvedValue(booking),
     verifyPayment: jest.fn().mockResolvedValue(booking),
     rejectPayment: jest.fn().mockResolvedValue(booking),
     listBookings: jest.fn().mockResolvedValue([]),
@@ -31,6 +32,15 @@ function stubApi(booking: BookingResponse): BookingsApi {
 describe('executeBookingCommand', () => {
   const booking = parseBooking(bookingPayload);
   const id = booking.id;
+
+  it('sends the corrected data of the booking', async () => {
+    const api = stubApi(booking);
+    const request = { clientName: 'María Pérez', clientPhone: '+50670189220', packageName: 'Retrato familiar', packagePrice: 100000 };
+
+    await executeBookingCommand(api, booking.id, { kind: 'editDetails', request });
+
+    expect(api.editBookingDetails).toHaveBeenCalledWith(booking.id, request);
+  });
 
   it('cancels with the reason, or with an empty request when there is none', async () => {
     const api = stubApi(booking);

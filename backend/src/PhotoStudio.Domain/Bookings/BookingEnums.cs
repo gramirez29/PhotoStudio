@@ -118,6 +118,12 @@ public enum BookingAction
 
     /// <summary>Undo a client-absent mark made by mistake.</summary>
     RevertClientAbsent,
+
+    /// <summary>Correct the contact data of the client of the booking.</summary>
+    EditDetails,
+
+    /// <summary>Correct the package and its price, which is only possible before the contract is signed and any payment is recorded.</summary>
+    EditPackage,
 }
 
 /// <summary>

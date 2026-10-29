@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
+using PhotoStudio.Application.Bookings.EditBookingDetails;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
 using PhotoStudio.Application.Bookings.RescheduleBooking;
 using PhotoStudio.Application.Bookings.RevertClientAbsent;
@@ -28,6 +29,16 @@ public sealed record CreateBookingRequest(
     DateTimeOffset SessionStart,
     DateTimeOffset SessionEnd,
     string? ClientEmail = null);
+
+/// <summary>
+/// HTTP body to correct the data of a booking. It carries every editable value; what did not change is the same as before.
+/// </summary>
+/// <param name="ClientName">Name of the client.</param>
+/// <param name="ClientPhone">Phone of the client.</param>
+/// <param name="ClientEmail">Email of the client, or empty for none.</param>
+/// <param name="PackageName">Name of the package.</param>
+/// <param name="PackagePrice">Price of the package, in the currency of the booking.</param>
+public sealed record EditBookingDetailsRequest(string ClientName, string ClientPhone, string? ClientEmail, string PackageName, decimal PackagePrice);
 
 /// <summary>
 /// What the client declared when signing the contract on the photographer's phone.
@@ -102,11 +113,31 @@ public static class BookingRequestMappings
     }
 
     /// <summary>
-    /// Maps the sign-contract request to its command.
+    /// Maps the edit-booking request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
     /// <param name="photographerId">Authenticated photographer, from the access token.</param>
     /// <param name="bookingId">Booking identifier from the route.</param>
+    /// <returns>The command.</returns>
+    public static EditBookingDetailsCommand ToCommand(this EditBookingDetailsRequest request, Guid photographerId, Guid bookingId)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return new EditBookingDetailsCommand(
+            photographerId,
+            bookingId,
+            request.ClientName,
+            request.ClientPhone,
+            request.ClientEmail,
+            request.PackageName,
+            request.PackagePrice);
+    }
+
+    /// <summary>
+    /// Maps the sign-contract request to its command.
+    /// </summary>
+    /// <param name="request">HTTP body.</param>
+    /// <param name="photographerId">Photographer taken from the access token.</param>
+    /// <param name="bookingId">Booking taken from the route.</param>
     /// <returns>The command.</returns>
     public static SignContractInPersonCommand ToCommand(this SignContractInPersonRequest request, Guid photographerId, Guid bookingId)
     {

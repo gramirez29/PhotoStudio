@@ -30,4 +30,6 @@ export const BOOKING_ACTIONS = [
   'Complete',
   'MarkClientAbsent',
   'RevertClientAbsent',
+  'EditDetails',
+  'EditPackage',
 ] as const;

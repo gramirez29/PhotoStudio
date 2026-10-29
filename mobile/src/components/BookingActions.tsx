@@ -25,6 +25,7 @@ export function BookingActions({ booking }: BookingActionsProps): ReactElement {
     Complete: actions.complete,
     MarkClientAbsent: actions.markClientAbsent,
     RevertClientAbsent: actions.revertClientAbsent,
+    EditDetails: actions.editDetails,
     Cancel: actions.cancel,
   };
 

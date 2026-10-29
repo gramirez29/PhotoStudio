@@ -1,4 +1,4 @@
-import { DEFAULT_COUNTRY_CODE, formatPhoneInput, normalizePhone } from '../phone';
+import { DEFAULT_COUNTRY_CODE, formatPhoneInput, normalizePhone, formatStoredPhone } from '../phone';
 
 describe('normalizePhone', () => {
   it('adds the country code to eight local digits, ignoring separators', () => {
@@ -79,5 +79,17 @@ describe('formatPhoneInput', () => {
   it('produces a value that normalizePhone turns into the stored number', () => {
     expect(normalizePhone(formatPhoneInput('506 7018 9220'))).toBe('+50670189220');
     expect(normalizePhone(formatPhoneInput('70189220'))).toBe('+50670189220');
+  });
+});
+
+describe('formatStoredPhone', () => {
+  it('writes a stored Costa Rican number as it is typed in the field', () => {
+    expect(formatStoredPhone('+50670189220')).toBe('7018-9220');
+  });
+
+  it('leaves any other number as it was saved', () => {
+    expect(formatStoredPhone('+12025550123')).toBe('+12025550123');
+    expect(formatStoredPhone('70189220')).toBe('70189220');
+    expect(formatStoredPhone('')).toBe('');
   });
 });
