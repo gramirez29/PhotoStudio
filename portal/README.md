@@ -38,9 +38,9 @@ Las mismas reglas que `mobile/`: sin `any`, nada de tipos dentro de componentes/
 
 ## Tema
 
-La paleta es la de la app del fotógrafo más un color de marca del logo (`#3A4466`: banda superior, títulos y aro de foco). Es una
-sola variación: no sigue el modo oscuro del dispositivo. Los colores viven solo en `src/theme/tokens.css`; `tokens.test.ts` comprueba
-el contraste de cada par de texto y fondo (WCAG AA) y que la paleta siga siendo la de la app.
+Claro: la paleta de la app del fotógrafo más un color de marca del logo (`#3A4466`, la banda superior). Oscuro: la paleta azul noche
+y cobre que tuvo la web, que también será la del modo oscuro de la app. La página sigue `prefers-color-scheme`. Los colores viven solo
+en `src/theme/tokens.css`; `tokens.test.ts` comprueba el contraste de cada par de texto y fondo (WCAG AA) en las dos variaciones.
 
 ## Despliegue
 

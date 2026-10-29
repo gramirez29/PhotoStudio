@@ -36,7 +36,7 @@ h2 {
 
 h1,
 h2 {
-  color: var(--color-brand);
+  color: var(--color-heading);
 }
 
 p {
@@ -48,7 +48,7 @@ button {
 }
 
 :focus-visible {
-  outline: 3px solid var(--color-brand);
+  outline: 3px solid var(--color-heading);
   outline-offset: 2px;
 }
 
@@ -74,7 +74,9 @@ button {
   padding: var(--space-sm) var(--space-md);
 }
 
+/* The logo has its own dark background: a silver border, like the silver of the mark, sets it apart from the band. */
 .site-header__logo {
+  border: 2px solid var(--color-silver);
   border-radius: var(--radius-sm);
   display: block;
   height: 44px;

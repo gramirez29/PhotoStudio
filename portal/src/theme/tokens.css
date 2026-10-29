@@ -1,17 +1,19 @@
 /*
- * Design tokens of the portal. The palette is the one of the mobile app (mobile/src/theme/tokens.ts), so the photographer and the
- * client see the same colors, plus one brand color taken from the logo: #3A4466. Components read colors only from these
- * variables. Every text/background pair used on screen is checked for contrast by src/theme/tokens.test.ts; keep that test in
- * sync when a pair is added.
+ * Design tokens of the portal. Light: the palette of the mobile app (mobile/src/theme/tokens.ts), plus one brand color taken
+ * from the logo, #3A4466. Dark: the palette the web had before it adopted the one of the app (navy and copper, the colors of the
+ * logo); it is also the palette the app will use for its own dark mode. Components read colors only from these variables, and
+ * the page follows the setting of the device. Every text/background pair used on screen is checked for contrast, in both
+ * variations, by src/theme/tokens.test.ts; keep that test in sync when a pair is added.
  *
- * Palette of the app: #FFFFFF #F4F4F5 #18181B #52525B #27272A #15803D #B45309 #B91C1C
- * Brand (logo): #3A4466. It marks what belongs to the studio: the band with the logo, the headings, the focus ring and the
- * line of the notices. The actions keep the primary color of the app.
+ * Light: #FFFFFF #F4F4F5 #18181B #52525B #27272A #15803D #B45309 #B91C1C, brand #3A4466
+ * Dark:  #020D2C #26324F #F4F1EC #C9CDD6 #E3A97F #6FCF97 #F2766B, brand #3A4466
+ * Brand (logo): #3A4466 is the band with the logo and its name. Headings and the focus ring use the heading color, which is the
+ * brand color on the light page and copper on the dark one (the brand color is too dark to read on navy).
+ * Silver (#C9CDD6) is the border of the logo, taken from the silver of the mark.
  * The status dots (success, warning, danger) are small marks next to a text label, never the only carrier of the meaning.
- * There is one variation, as in the app: it does not follow the dark mode of the device.
  */
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 
   --color-bg: #ffffff;
   --color-surface: #f4f4f5;
@@ -21,6 +23,8 @@
   --color-on-accent: #ffffff;
   --color-brand: #3a4466;
   --color-on-brand: #ffffff;
+  --color-heading: #3a4466;
+  --color-silver: #c9cdd6;
   --color-success: #15803d;
   --color-warning: #b45309;
   --color-danger: #b91c1c;
@@ -37,4 +41,19 @@
   --radius-md: 14px;
   --radius-pill: 999px;
   --content-width: 36rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #020d2c;
+    --color-surface: #26324f;
+    --color-text: #f4f1ec;
+    --color-text-muted: #c9cdd6;
+    --color-accent: #e3a97f;
+    --color-on-accent: #020d2c;
+    --color-heading: #e3a97f;
+    --color-success: #6fcf97;
+    --color-warning: #e3a97f;
+    --color-danger: #f2766b;
+  }
 }

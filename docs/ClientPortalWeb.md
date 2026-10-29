@@ -61,26 +61,38 @@ app del fotógrafo, y la declaración del contrato ya se muestra ahí.
 
 ## 7. Marca aplicada (entrega 2)
 
-Paleta **de la app del fotógrafo** (`mobile/src/theme/tokens.ts`), para que fotógrafo y cliente vean los mismos colores, más un
-color de marca tomado del logo. Una sola variación, como la app: la página **no** sigue el modo oscuro del dispositivo. Tipografías
+Dos variaciones; la página sigue `prefers-color-scheme`. El **claro** es la paleta **de la app del fotógrafo**
+(`mobile/src/theme/tokens.ts`), para que fotógrafo y cliente vean los mismos colores, más un color de marca tomado del logo. El
+**oscuro** es la paleta que tuvo la web antes de adoptar la de la app (azul noche y cobre, los colores del logo). Tipografías
 **Josefin Sans** (títulos) y **DM Sans** (texto), alojadas en el sitio con `@fontsource-variable` (sin pedidos a Google Fonts).
 
-| Rol | Color |
-|---|---|
-| Fondo | `#FFFFFF` |
-| Superficie (tarjetas) | `#F4F4F5` |
-| Texto | `#18181B` |
-| Texto secundario | `#52525B` |
-| Acción (botón) y texto sobre ella | `#27272A` / `#FFFFFF` |
-| **Marca (logo)** | `#3A4466` |
-| Estados: éxito, aviso, error | `#15803D`, `#B45309`, `#B91C1C` |
+| Rol | Claro | Oscuro |
+|---|---|---|
+| Fondo | `#FFFFFF` | `#020D2C` |
+| Superficie (tarjetas) | `#F4F4F5` | `#26324F` |
+| Texto | `#18181B` | `#F4F1EC` |
+| Texto secundario | `#52525B` | `#C9CDD6` |
+| Acción (botón) | `#27272A` | `#E3A97F` |
+| Texto sobre la acción | `#FFFFFF` | `#020D2C` |
+| Títulos y aro de foco | `#3A4466` | `#E3A97F` |
+| **Banda del logo** (marca) | `#3A4466` | `#3A4466` |
+| Borde plateado del logo | `#C9CDD6` | `#C9CDD6` |
+| Estados: éxito, aviso, error | `#15803D`, `#B45309`, `#B91C1C` | `#6FCF97`, `#E3A97F`, `#F2766B` |
 
-El color de marca `#3A4466` marca lo que es del estudio: la **banda superior con el logo** y el nombre (texto blanco), los
-**títulos** (h1 y h2), el **aro de foco** del teclado, la línea de los avisos "Qué sigue" y el color de la barra del navegador
-(`theme-color`). Las acciones conservan el color primario de la app. Los puntos de estado van siempre junto a un texto.
+El color de marca `#3A4466` es la **banda superior con el logo** y el nombre (texto blanco), igual en las dos variaciones. Los
+**títulos** (h1 y h2), el **aro de foco** del teclado y la línea de los avisos "Qué sigue" usan el color de título: la marca en el
+claro y el cobre en el oscuro, porque `#3A4466` casi no se lee sobre el azul noche. El logo lleva un **borde plateado** (`#C9CDD6`, la
+plata de la marca) para despegarlo de la banda. Las acciones conservan el color primario de cada variación. Los puntos de estado van
+siempre junto a un texto.
 
-`src/theme/tokens.test.ts` comprueba el contraste de cada par de texto y fondo (WCAG AA, 4,5:1), el del aro de foco (3:1) y que la
-paleta sea la de la app más el color de marca. Si cambia `tokens.ts` de la app, hay que cambiar `tokens.css` y esa prueba.
+**Modo oscuro de la app (pendiente, para cuando se trabaje la parte gráfica):** la paleta oscura de la tabla es la que usará la app
+móvil en su modo oscuro (`userInterfaceStyle: automatic` ya está en `app.json`; hoy `tokens.ts` solo tiene la variación clara). Los
+valores de la variación clara anterior de la web (crema `#FBF3EA`, durazno `#F6D5BE`, azul `#0B1A40`, terracota `#C4552E`) quedan
+anotados aquí por si se quiere una paleta cálida para la marca.
+
+`src/theme/tokens.test.ts` comprueba, **en las dos variaciones**, el contraste de cada par de texto y fondo (WCAG AA, 4,5:1), el del
+aro de foco y del borde plateado (3:1) y que la paleta clara sea la de la app más el color de marca. Si cambia `tokens.ts` de la app,
+hay que cambiar `tokens.css` y esa prueba.
 
 **Logo e íconos:** `portal/src/assets/logo-mark.png` (banda de la página) y, en `portal/public/`, `favicon.ico`, `favicon-32.png`,
 `favicon-48.png`, `icon-192.png`, `icon-512.png` y `apple-touch-icon.png`; todos salen de `photosense_avatar_1080.png`, la marca sola

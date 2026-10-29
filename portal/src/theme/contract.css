@@ -14,7 +14,7 @@
 }
 
 .contract:focus-visible {
-  outline: 3px solid var(--color-brand);
+  outline: 3px solid var(--color-heading);
   outline-offset: 2px;
 }
 

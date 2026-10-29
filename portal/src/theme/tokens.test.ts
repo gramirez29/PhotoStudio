@@ -46,8 +46,10 @@ function contrast(first: string, second: string): number {
   return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
 }
 
-/** The palette: the only variation, as in the app. */
-const palette = readBlock(':root {');
+const variations = {
+  light: readBlock(':root {'),
+  dark: readBlock('@media (prefers-color-scheme: dark) {\n  :root {'),
+} as const;
 
 /** Pairs used for text on screen, with the minimum ratio WCAG AA asks for (4.5 for text). */
 const TEXT_PAIRS: readonly (readonly [string, string])[] = [
@@ -55,43 +57,63 @@ const TEXT_PAIRS: readonly (readonly [string, string])[] = [
   ['--color-text', '--color-surface'],
   ['--color-text-muted', '--color-bg'],
   ['--color-text-muted', '--color-surface'],
-  // The headings are written in the brand color, on the page and inside the cards.
-  ['--color-brand', '--color-bg'],
-  ['--color-brand', '--color-surface'],
+  // The headings, on the page and inside the cards.
+  ['--color-heading', '--color-bg'],
+  ['--color-heading', '--color-surface'],
   // The name of the studio on the band of the logo.
   ['--color-on-brand', '--color-brand'],
   // The label of an action.
   ['--color-on-accent', '--color-accent'],
 ];
 
-describe('palette', () => {
+describe.each(Object.entries(variations))('%s palette', (_name, tokens) => {
   it.each(TEXT_PAIRS)('keeps %s readable on %s (WCAG AA, 4.5:1)', (foreground, background) => {
-    const front = palette[foreground];
-    const back = palette[background];
+    // A variation only declares what it changes: the rest is inherited from the light one.
+    const front = tokens[foreground] ?? variations.light[foreground];
+    const back = tokens[background] ?? variations.light[background];
 
     expect(front).toBeDefined();
     expect(back).toBeDefined();
     expect(contrast(front ?? '', back ?? '')).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('keeps the focus ring, which is the brand color, visible against the page (3:1)', () => {
-    expect(contrast(palette['--color-brand'] ?? '', palette['--color-bg'] ?? '')).toBeGreaterThanOrEqual(3);
+  it('keeps the focus ring, which is the heading color, visible against the page (3:1)', () => {
+    const ring = tokens['--color-heading'] ?? variations.light['--color-heading'];
+
+    expect(contrast(ring ?? '', tokens['--color-bg'] ?? variations.light['--color-bg'] ?? '')).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps the silver border of the logo visible against the band (3:1)', () => {
+    const silver = tokens['--color-silver'] ?? variations.light['--color-silver'];
+    const band = tokens['--color-brand'] ?? variations.light['--color-brand'];
+
+    expect(contrast(silver ?? '', band ?? '')).toBeGreaterThanOrEqual(3);
   });
 
   it.each(['--color-success', '--color-warning', '--color-danger'])('keeps the %s dot visible on the surface (3:1)', (dot) => {
-    expect(contrast(palette[dot] ?? '', palette['--color-surface'] ?? '')).toBeGreaterThanOrEqual(3);
+    const color = tokens[dot] ?? variations.light[dot];
+    const surface = tokens['--color-surface'] ?? variations.light['--color-surface'];
+
+    expect(contrast(color ?? '', surface ?? '')).toBeGreaterThanOrEqual(3);
   });
 });
 
 describe('brand palette', () => {
-  it('is the palette of the mobile app (src/theme/tokens.ts of the app) plus the brand color of the logo', () => {
+  it('light is the palette of the mobile app (its tokens.ts) plus the brand color of the logo', () => {
     const appPalette = ['#ffffff', '#f4f4f5', '#18181b', '#52525b', '#27272a', '#15803d', '#b45309', '#b91c1c'];
 
-    expect(appPalette.every((color) => Object.values(palette).includes(color))).toBe(true);
-    expect(palette['--color-brand']).toBe('#3a4466');
+    expect(appPalette.every((color) => Object.values(variations.light).includes(color))).toBe(true);
+    expect(variations.light['--color-brand']).toBe('#3a4466');
   });
 
-  it('has no dark variation: it is the same on every device, as the app is', () => {
-    expect(css).not.toContain('prefers-color-scheme');
+  it('dark is the navy and copper palette the web had before, which the app will use for its own dark mode', () => {
+    const darkBrand = ['#020d2c', '#26324f', '#e3a97f', '#c9cdd6', '#f4f1ec'];
+
+    expect(darkBrand.every((color) => Object.values(variations.dark).includes(color))).toBe(true);
+  });
+
+  it('keeps the brand color on the band in both variations', () => {
+    expect(variations.dark['--color-brand']).toBeUndefined();
+    expect(variations.light['--color-brand']).toBe('#3a4466');
   });
 });
