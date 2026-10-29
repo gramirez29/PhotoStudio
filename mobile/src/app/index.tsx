@@ -5,6 +5,7 @@ import { BookingListItem } from '../components/BookingListItem';
 import { ChangePasswordButton } from '../components/ChangePasswordButton';
 import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
+import { NewBookingFab } from '../components/NewBookingFab';
 import { NotificationsButton } from '../components/NotificationsButton';
 import { Placeholder } from '../components/Placeholder';
 import { RefundsButton } from '../components/RefundsButton';
@@ -14,8 +15,11 @@ import { useSessionStore } from '../session/sessionStore';
 import { colors, spacing } from '../theme/tokens';
 import type { BookingSummaryResponse } from '../types/api/booking';
 
+/** Room left at the end of the list so the floating button never hides the last booking. */
+const LIST_END_SPACE = 96;
+
 /**
- * Home screen: server status and the photographer's bookings, ordered by session date.
+ * Home screen: server status and the photographer's bookings, ordered by session date, with the floating button to create one.
  * @returns The screen.
  */
 export default function HomeScreen(): ReactElement {
@@ -39,33 +43,40 @@ export default function HomeScreen(): ReactElement {
   }
 
   return (
-    <FlatList
-      data={bookings}
-      keyExtractor={(booking) => booking.id}
-      renderItem={({ item }) => <BookingListItem booking={item} onPress={openBooking} />}
-      ItemSeparatorComponent={ListSeparator}
-      ListHeaderComponent={
-        <View>
-          <ApiStatus />
-          <NotificationsButton />
-          <RefundsButton />
-          {isSystemOperator && <MaintenanceButton />}
-          <ChangePasswordButton />
-          <Text style={styles.sectionTitle}>Mis reservas</Text>
-        </View>
-      }
-      ListEmptyComponent={empty}
-      refreshing={query.isRefetching}
-      onRefresh={() => void query.refetch()}
-      contentContainerStyle={styles.container}
-    />
+    <View style={styles.screen}>
+      <FlatList
+        data={bookings}
+        keyExtractor={(booking) => booking.id}
+        renderItem={({ item }) => <BookingListItem booking={item} onPress={openBooking} />}
+        ItemSeparatorComponent={ListSeparator}
+        ListHeaderComponent={
+          <View>
+            <ApiStatus />
+            <NotificationsButton />
+            <RefundsButton />
+            {isSystemOperator && <MaintenanceButton />}
+            <ChangePasswordButton />
+            <Text style={styles.sectionTitle}>Mis reservas</Text>
+          </View>
+        }
+        ListEmptyComponent={empty}
+        refreshing={query.isRefetching}
+        onRefresh={() => void query.refetch()}
+        contentContainerStyle={styles.container}
+      />
+      <NewBookingFab />
+    </View>
   );
 }
 
 /** Styles of the home screen. */
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     padding: spacing.md,
+    paddingBottom: LIST_END_SPACE,
   },
   sectionTitle: {
     color: colors.textPrimary,

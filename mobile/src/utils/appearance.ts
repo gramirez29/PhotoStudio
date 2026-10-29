@@ -26,6 +26,17 @@ export function resolveColorScheme(preference: ThemePreference, system: string |
 }
 
 /**
+ * Tells which icons the status bar of the phone must use so they can be seen. Where the band of the brand is under it, the icons
+ * are light whatever the theme, because the band is dark in both. Without the band (the screen is under it) they follow the theme.
+ * @param underBand Whether the band of the brand is under the status bar.
+ * @param scheme Color scheme being shown.
+ * @returns `light` for white icons, `dark` for black ones.
+ */
+export function statusBarStyleFor(underBand: boolean, scheme: ColorScheme): 'light' | 'dark' {
+  return underBand || scheme === 'dark' ? 'light' : 'dark';
+}
+
+/**
  * Names a theme preference for the selector.
  * @param preference Choice to name.
  * @returns Its label in Spanish.

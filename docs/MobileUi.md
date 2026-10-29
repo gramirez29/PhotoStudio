@@ -44,7 +44,7 @@ Un PR por fase, hacia `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas
 | 0 | Red de seguridad: pruebas verdes de partida y lista de recorridos a repetir en el teléfono | Hecha |
 | 1 | Cimientos: Paper, paletas, tema, fuentes, fondo, preferencia de tema (sin selector) | **Hecha** |
 | 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | **Hecha** (ver §3.1) |
-| 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`useStyles`) | Pendiente |
+| 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`makeStyles`) | **Hecha** (ver §3.2) |
 | 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | Pendiente |
 | 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | Pendiente |
 | 6 | Limpieza: quitar `tokens.ts`, regla de ESLint contra colores fijos, actualizar documentos | Pendiente |
@@ -65,6 +65,14 @@ Por dentro, con las mismas props y las mismas etiquetas de accesibilidad (las 71
 | **`AppCard`** (nuevo) | Tarjeta tonal de Material 3 (`surfaceVariant`, esquinas de 16); la usan `BookingActions`, `BookingDetails`, `ContractCard`, `EditBookingForm` (bloqueado), `NotificationListItem`, `PendingPaymentsCard`, `RefundListItem`, `RescheduleForm`, `SettlementCard` y `ShareLinkCard` |
 
 Todos leen sus colores del tema, así que ya siguen el tema claro y el oscuro. **Quedan para la fase 3 y la 4** las tarjetas que se tocan (`BookingListItem`, `NotificationsButton`), `ContractText`, `ExtrasModal`, `ExtraRow` y `ExtrasFields`, los textos sueltos de las pantallas (que aún usan `Text` de React Native con colores de `tokens.ts`) y las cabeceras.
+
+### 3.2 Fase 3: qué cambió en la estructura
+
+- **Cabecera de la app** (`src/navigation/headerOptions.ts`): la banda azul pizarra `#3A4466` del logo, con el título en blanco y Josefin Sans, **igual en los dos temas** (como la banda de la web). Sin línea debajo. La flecha de volver y los botones del encabezado van en blanco.
+- **Inicio** (`HeaderBrand`): en la banda va el logo con su borde plateado y "PHOTOSENSE STUDIO" en mayúsculas con espacio entre letras, igual que en la web. "Salir" queda a la izquierda, en blanco.
+- **Botón flotante "Nueva reserva"** (`NewBookingFab`, el `FAB` extendido de Material 3 en el color principal) en la esquina de abajo a la derecha, sobre la barra de navegación del sistema; reemplaza el "+ Nueva" que estaba en la cabecera (`NewBookingButton`, eliminado). La lista deja espacio al final para que no tape la última reserva.
+- **Barra de estado** (`statusBarStyleFor`): íconos claros sobre la banda, en cualquier tema; sin banda (acceso, cargando, sin conexión) siguen el tema.
+- **`makeStyles`** (`src/theme/makeStyles.ts`): la forma de escribir estilos que dependen del tema. `const useStyles = makeStyles((palette, scheme) => ({ title: { color: palette.onSurface } }))` y, dentro del componente, `const styles = useStyles();`. Se recalculan solo cuando cambia el tema. Lo usan `HeaderBrand` y `SignOutButton`; las fases 4 y 5 lo usan en las pantallas.
 
 **Recorridos a repetir en el teléfono** (antes de fusionar las fases 2 a 5): iniciar sesión y salir; crear una reserva con
 paquete, extras y descuento; editarla; firmar el contrato en el celular; registrar un pago; completar; cancelar con motivo;

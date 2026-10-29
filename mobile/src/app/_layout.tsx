@@ -6,7 +6,7 @@ import { createQueryClient } from '../api/queryClient';
 import { restoreAppearance } from '../appearance/appearanceManager';
 import { AppBackground } from '../components/AppBackground';
 import { AppThemeProvider } from '../components/AppThemeProvider';
-import { NewBookingButton } from '../components/NewBookingButton';
+import { HeaderBrand } from '../components/HeaderBrand';
 import { Placeholder } from '../components/Placeholder';
 import { PushRegistration } from '../components/PushRegistration';
 import { ScreenLoader } from '../components/ScreenLoader';
@@ -14,9 +14,10 @@ import { SignOutButton } from '../components/SignOutButton';
 import { useAppFonts } from '../hooks/useAppFonts';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { appScreenLayout } from '../navigation/appScreenLayout';
+import { buildHeaderOptions } from '../navigation/headerOptions';
 import { restoreSession } from '../session/sessionManager';
 import { useSessionStore } from '../session/sessionStore';
-import { FONT_FAMILIES } from '../theme/fonts';
+import { statusBarStyleFor } from '../utils/appearance';
 
 /**
  * Root layout: provides the query client and the theme (colors, fonts and the background picture) and decides what the
@@ -64,17 +65,14 @@ export default function RootLayout(): ReactElement {
       <Stack
         screenLayout={appScreenLayout}
         screenOptions={{
-          headerTitleAlign: 'center',
-          headerTintColor: palette.onBackground,
-          headerStyle: { backgroundColor: palette.background },
-          headerTitleStyle: { fontFamily: FONT_FAMILIES.title, color: palette.onBackground },
+          ...buildHeaderOptions(palette),
           contentStyle: { backgroundColor: palette.background },
         }}
       >
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
           <Stack.Screen
             name="index"
-            options={{ title: 'PhotoSense Studio', headerLeft: SignOutButton, headerRight: NewBookingButton }}
+            options={{ title: 'PhotoSense Studio', headerTitle: HeaderBrand, headerLeft: SignOutButton }}
           />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
           <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />
@@ -102,7 +100,7 @@ export default function RootLayout(): ReactElement {
   return (
     <QueryClientProvider client={queryClient}>
       <AppThemeProvider>
-        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <StatusBar style={statusBarStyleFor(status === 'signedIn', scheme)} />
         <PushRegistration />
         {content}
       </AppThemeProvider>
