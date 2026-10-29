@@ -1,9 +1,10 @@
-import { BOOKING_ACTIONS, BOOKING_STATUSES, CHANNELS, PAYMENT_METHODS, PAYMENT_STATUSES } from '../constants/booking';
+import { BOOKING_ACTIONS, BOOKING_STATUSES, CHANNELS, IMAGE_USES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../constants/booking';
 import type {
   BookingAction,
   BookingLinkResponse,
   BookingResponse,
   BookingSummaryResponse,
+  ClientDeclarationResponse,
   ContractResponse,
   MoneyResponse,
   PaymentResponse,
@@ -69,6 +70,27 @@ export function parseBookingLink(value: unknown): BookingLinkResponse {
 }
 
 /**
+ * Parses an optional declaration of the client. A backend that does not send the field, or sends null, means the photographer
+ * registered the signature.
+ * @param value Unknown value from the response.
+ * @param path Location of the value, for error messages.
+ * @returns The typed declaration, or null.
+ */
+export function parseDeclaration(value: unknown, path: string): ClientDeclarationResponse | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const record = expectRecord(value, path);
+  return {
+    idNumber: readString(record, 'idNumber', path),
+    participantCount: readNumber(record, 'participantCount', path),
+    sessionLocation: readNullableString(record, 'sessionLocation', path),
+    imageUse: readLiteral(record, 'imageUse', IMAGE_USES, path),
+  };
+}
+
+/**
  * Parses an optional contract signature.
  * @param value Unknown value from the response.
  * @param path Location of the value, for error messages.
@@ -85,6 +107,7 @@ export function parseContract(value: unknown, path: string): ContractResponse | 
     templateVersion: readString(record, 'templateVersion', path),
     channel: readLiteral(record, 'channel', CHANNELS, path),
     signedAt: readString(record, 'signedAt', path),
+    declaration: parseDeclaration(record.declaration, `${path}.declaration`),
   };
 }
 

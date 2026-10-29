@@ -44,6 +44,7 @@ El texto del contrato vive en `backend/src/PhotoStudio.Application/Contracts/Tem
 - **Lo que declara el cliente al firmar:** cédula (9 dígitos) o DIMEX (11 o 12), número de personas (1–100), lugar (opcional; en blanco dice que se definirá con el fotógrafo) y el uso de imagen (cláusula 12, dos opciones excluyentes: `Authorized` / `NotAuthorized`). Se guardan en `bookings.contract.declaration`; el fotógrafo las ve en `contract.declaration` de la reserva. La cédula no se escribe en logs ni se expone por el enlace.
 - **Evidencia:** la firma guarda el texto exacto que el cliente firmó (`contract.signedText`), la versión, el nombre escrito, el canal (`Portal`) y la fecha. El cliente manda la `templateVersion` que leyó; si ya no es la vigente, 409 y debe volver a leer. Las firmas del fotógrafo (presencial o en papel) no llevan declaración ni texto.
 - **Firma:** por ahora se escribe el nombre y se acepta con una casilla; no se dibuja.
+- **En la app del fotógrafo** (`ContractCard`, detalle de la reserva): si el cliente firmó por el enlace se ven la cédula (`1-1234-5678`), las personas, el lugar (o "por definir con el cliente") y el uso de las fotos, además de quién firmó, cómo (`desde el enlace`, `en persona`, `en papel`) y cuándo. Una firma registrada por el fotógrafo solo muestra eso último. La app no pide ni edita estos datos: son del cliente.
 - Firmar con el anticipo ya cubierto confirma la reserva sola (B6). El contrato solo se puede firmar mientras la reserva está `Tentative`.
 
 ## 3. Seguridad

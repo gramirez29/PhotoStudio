@@ -28,6 +28,39 @@ describe('parseBooking', () => {
     expect(withNeither.payments[0]?.reference).toBeNull();
   });
 
+  it('reads what the client declared when they signed through the link', () => {
+    const contract = {
+      ...bookingPayload.contract,
+      channel: 'Portal',
+      declaration: { idNumber: '112345678', participantCount: 3, sessionLocation: 'Parque La Sabana', imageUse: 'Authorized' },
+    };
+
+    const booking = parseBooking({ ...bookingPayload, contract });
+
+    expect(booking.contract?.declaration).toEqual({
+      idNumber: '112345678',
+      participantCount: 3,
+      sessionLocation: 'Parque La Sabana',
+      imageUse: 'Authorized',
+    });
+  });
+
+  it('treats a missing or null declaration, and a missing location, as nothing declared', () => {
+    const { declaration: omitted, ...withoutField } = bookingPayload.contract;
+    const declaration = { idNumber: '112345678', participantCount: 1, sessionLocation: null, imageUse: 'NotAuthorized' };
+
+    expect(omitted).toBeNull();
+    expect(parseBooking({ ...bookingPayload, contract: withoutField }).contract?.declaration).toBeNull();
+    expect(parseBooking({ ...bookingPayload, contract: { ...withoutField, declaration: null } }).contract?.declaration).toBeNull();
+    expect(parseBooking({ ...bookingPayload, contract: { ...withoutField, declaration } }).contract?.declaration?.sessionLocation).toBeNull();
+  });
+
+  it('rejects a declaration with an image use the app does not know', () => {
+    const declaration = { idNumber: '112345678', participantCount: 1, sessionLocation: null, imageUse: 'Maybe' };
+
+    expect(() => parseBooking({ ...bookingPayload, contract: { ...bookingPayload.contract, declaration } })).toThrow(ResponseShapeError);
+  });
+
   it('accepts a booking without contract', () => {
     const booking = parseBooking({ ...bookingPayload, contract: null });
 
