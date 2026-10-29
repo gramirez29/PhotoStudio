@@ -159,7 +159,7 @@ Haz un push (o *Run workflow* en Actions → *Deploy develop*) y comprueba:
 - Que `--ci` haga fallar el job cuando la construcción falla (solo lo vimos con construcciones que terminaron bien).
 - Que Pages ofrezca el dominio personalizado sin pasos extra cuando el proyecto se crea con `wrangler`.
 - La primera pasada del cron del worker en Railway.
-- **Un push real a un teléfono** (Expo → FCM → Android). El build de desarrollo existe y las credenciales están subidas a EAS, pero ningún mensaje se ha enviado todavía a un dispositivo (ver `docs/PushNotifications.md` §11 y §14).
+- ~~Un push real a un teléfono (Expo → FCM → Android)~~ Probado el 2026-10-28 en Android. Pendiente iOS (ver `docs/PushNotifications.md` §14).
 - Que el despertador de la API (`OutboxWakeUpService`) corra bien en Railway tras el primer despliegue que lo incluya.
 
 Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arranca la API por defecto; los workflows pasan `actionlint`; el sitio compila con `npm run build`.

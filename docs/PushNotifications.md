@@ -2,7 +2,7 @@
 
 Guía completa del push del fotógrafo: qué es, con qué herramientas se hace, en qué plataformas funciona, cómo está implementado y por qué, cómo se configura, cómo se prueba y qué falta.
 
-> **Estado (2026-10-16):** implementado y probado de forma automática (534 pruebas de backend, 436 de la app, una de punta a punta que captura el push). **Todavía no se ha enviado un push real a un teléfono.** Es lo primero de la lista de pendientes (§14).
+> **Estado (2026-10-16):** implementado y probado de forma automática (534 pruebas de backend, 436 de la app, una de punta a punta que captura el push). **Un push real a un teléfono Android se probó y funciona (2026-10-28).** Pendiente: iOS y el resto de §14.
 
 Documentos relacionados: [`Notifications.md`](Notifications.md) (la bandeja de avisos, de la que el push es un complemento), [`Outbox-Worker Functionality.md`](Outbox-Worker%20Functionality.md) (cómo llegan los eventos), [`Deployment.md`](Deployment.md) §7 (build de EAS y credenciales), [`ClientPortal.md`](ClientPortal.md) (el comprobante que dispara el aviso principal).
 
@@ -267,7 +267,7 @@ Ordenados por prioridad.
 
 **Bloqueantes**
 
-- [ ] **Probar un push real en un teléfono Android** (§11). Hasta entonces el último tramo (Expo → FCM → teléfono) está sin verificar.
+- [x] **Probar un push real en un teléfono Android** (§11). Hecho el 2026-10-28: el tramo Expo → FCM → teléfono funciona.
 - [ ] Fusionar el PR (#31) y confirmar que el despliegue en develop arranca con el despertador sin errores.
 
 **Antes de usarlo con clientes reales**
