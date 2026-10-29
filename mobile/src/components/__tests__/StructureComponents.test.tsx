@@ -67,6 +67,15 @@ describe('the structure of the app', () => {
       expect(openNewBooking).toHaveBeenCalledTimes(1);
     });
 
+    it('is the blue of the logo, not the terracotta', () => {
+      render(<NewBookingFab />);
+
+      const painted = JSON.stringify(screen.toJSON());
+      expect(painted).toContain(`"backgroundColor":"${LIGHT_PALETTE.brand}"`);
+      expect(painted).toContain(`"color":"${LIGHT_PALETTE.onBrand}"`);
+      expect(painted).not.toContain(LIGHT_PALETTE.secondary);
+    });
+
     it('floats at the right, above the system navigation bar', () => {
       render(<NewBookingFab />);
 

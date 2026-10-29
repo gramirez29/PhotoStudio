@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { LIGHT_PALETTE } from '../../theme/palettes';
+import { AppThemeProvider } from '../AppThemeProvider';
 import { SelectField } from '../SelectField';
 
 const OPTIONS = ['Compromiso', 'Pre-Boda', 'Producto'] as const;
@@ -62,6 +64,20 @@ describe('SelectField', () => {
 
     expect(screen.getAllByRole('menuitem', { selected: true })).toHaveLength(1);
     expect(screen.getByRole('menuitem', { name: 'Compromiso', selected: true })).toBeTruthy();
+  });
+
+  it('fills the option chosen with the main color of the app, and no other option', () => {
+    render(
+      <AppThemeProvider>
+        <SelectField label="Paquete" options={OPTIONS} value="Compromiso" onChange={jest.fn()} placeholder="Selecciona un paquete" />
+      </AppThemeProvider>,
+    );
+    fireEvent.press(screen.getByRole('combobox'));
+
+    const chosen = screen.getByRole('menuitem', { name: 'Compromiso' });
+    const other = screen.getByRole('menuitem', { name: 'Producto' });
+    expect(JSON.stringify(chosen.props.style)).toContain(`"backgroundColor":"${LIGHT_PALETTE.primary}"`);
+    expect(JSON.stringify(other.props.style ?? null)).not.toContain(LIGHT_PALETTE.primary);
   });
 
   it('closes the list without changing anything when the photographer taps outside it', () => {

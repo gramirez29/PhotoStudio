@@ -1,19 +1,21 @@
 import type { ColorScheme, Palette } from '../types/theme/palette.types';
 
 /**
- * The light theme of the brand: cream and terracotta, with the slate blue of the logo. It is the same palette as the web portal
- * (portal/src/theme/tokens.css), except for the main action color: the portal paints a button with #C4552E and a bold 19px
- * label, which is large text (3:1). The app has smaller labels, so its main color is the darker #B04A25 (4.96:1 with cream).
+ * The light theme of the brand: cream, the slate blue of the logo and terracotta. The main color of the app, the one of its
+ * buttons, its focus and its selected states, is the slate blue of the logo (#3A4466, 9.5:1 with white): it is the color of the
+ * header band, it never gets confused with the red of the destructive actions and it reads well on the peach cards. The
+ * terracotta is the second accent. (The web portal paints its buttons terracotta, #C4552E with a bold 19px label, which is
+ * large text; the app has smaller labels and a different job for each color.)
  */
 export const LIGHT_PALETTE: Palette = {
-  primary: '#b04a25',
-  onPrimary: '#fbf3ea',
-  primaryContainer: '#f6d5be',
-  onPrimaryContainer: '#4a1a07',
-  secondary: '#3a4466',
-  onSecondary: '#ffffff',
-  secondaryContainer: '#dadde8',
-  onSecondaryContainer: '#0b1a40',
+  primary: '#3a4466',
+  onPrimary: '#ffffff',
+  primaryContainer: '#dadde8',
+  onPrimaryContainer: '#0b1a40',
+  secondary: '#b04a25',
+  onSecondary: '#fbf3ea',
+  secondaryContainer: '#f6d5be',
+  onSecondaryContainer: '#4a1a07',
   background: '#fbf3ea',
   onBackground: '#0b1a40',
   surface: '#fbf3ea',

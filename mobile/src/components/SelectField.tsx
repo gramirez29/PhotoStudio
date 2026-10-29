@@ -9,7 +9,8 @@ const FIELD_HEIGHT = 56;
 
 /**
  * Drop-down field that looks like the outlined text fields: it shows the selected option under its label and, when tapped,
- * opens a list to pick another one. The list is a modal so it looks and behaves the same on iOS and Android.
+ * opens a list to pick another one: a sheet on the surface color, with the option chosen filled in the main color of the app.
+ * The list is a modal so it looks and behaves the same on iOS and Android.
  * @param props Component props.
  * @returns The field and its list.
  */
@@ -56,7 +57,7 @@ export function SelectField({ label, options, value, onChange, placeholder, erro
           style={[styles.backdrop, { backgroundColor: theme.colors.backdrop }]}
           onPress={() => setOpen(false)}
         >
-          <View style={[styles.sheet, { backgroundColor: theme.colors.elevation.level3 }]}>
+          <View style={[styles.sheet, { backgroundColor: theme.colors.surface, borderColor: theme.colors.outlineVariant }]}>
             <Text variant="titleMedium" style={[styles.sheetTitle, { color: theme.colors.onSurface }]}>
               {label}
             </Text>
@@ -75,14 +76,14 @@ export function SelectField({ label, options, value, onChange, placeholder, erro
                     }}
                     style={({ pressed }) => [
                       styles.option,
-                      selected && { backgroundColor: theme.colors.secondaryContainer },
                       pressed && { backgroundColor: theme.colors.surfaceVariant },
+                      selected && { backgroundColor: theme.colors.primary },
                     ]}
                   >
-                    <Text variant="bodyLarge" style={{ color: selected ? theme.colors.onSecondaryContainer : theme.colors.onSurface }}>
+                    <Text variant="bodyLarge" style={{ color: selected ? theme.colors.onPrimary : theme.colors.onSurface }}>
                       {option}
                     </Text>
-                    {selected && <Text style={[styles.check, { color: theme.colors.primary }]}>✓</Text>}
+                    {selected && <Text style={[styles.check, { color: theme.colors.onPrimary }]}>✓</Text>}
                   </Pressable>
                 );
               })}
@@ -127,6 +128,7 @@ const styles = StyleSheet.create({
   },
   sheet: {
     borderRadius: 28,
+    borderWidth: 1,
     maxHeight: '70%',
     paddingVertical: spacing.md,
   },
@@ -136,10 +138,12 @@ const styles = StyleSheet.create({
   },
   option: {
     alignItems: 'center',
+    borderRadius: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginHorizontal: spacing.sm,
     minHeight: 48,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   check: {
     fontSize: 16,

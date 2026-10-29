@@ -18,9 +18,7 @@ conservan su contrato.
 ## 2. Cómo está hecho (fase 1, ya en el código)
 
 - **Paletas** (`src/theme/palettes.ts`): `LIGHT_PALETTE` y `DARK_PALETTE`, con los roles de Material 3 (`primary`, `surface`,
-  `outline`, `error`...). Son la paleta de la web, con una excepción: el botón de la app es `#B04A25` y no `#C4552E`, porque con
-  etiquetas pequeñas el terracota de la web da 4,08:1 con texto crema y el `#B04A25` da 4,96:1 (WCAG AA exige 4,5:1). Una prueba
-  comprueba el contraste de cada par de roles en los dos temas.
+  `outline`, `error`...). Son la paleta de la web con otro reparto de colores: **el color principal de la app es el azul pizarra del logo `#3A4466`** (botones, foco, opción elegida, botón flotante; 9,5:1 con blanco) y el terracota `#B04A25` es el color secundario. Así los botones no se confunden con el rojo de las acciones destructivas ni con las tarjetas durazno. (La web pinta sus botones en terracota con una letra de 19 px en negrita; la app tiene letras más pequeñas y otro reparto.) En el tema oscuro el principal sigue siendo el cobre. Una prueba comprueba el contraste de cada par de roles en los dos temas.
 - **Tema de Paper** (`src/theme/paperTheme.ts`): `buildPaperTheme(scheme)` convierte la paleta en el tema de Material 3, con las
   dos fuentes. Sin color dinámico.
 - **Selección del tema** (`src/appearance/`, `src/storage/appearanceStorage.ts`, `src/hooks/useAppTheme.ts`): la preferencia
@@ -75,6 +73,8 @@ Todos leen sus colores del tema, así que ya siguen el tema claro y el oscuro. *
 - **`makeStyles`** (`src/theme/makeStyles.ts`): la forma de escribir estilos que dependen del tema. `const useStyles = makeStyles((palette, scheme) => ({ title: { color: palette.onSurface } }))` y, dentro del componente, `const styles = useStyles();`. Se recalculan solo cuando cambia el tema. Lo usan `HeaderBrand` y `SignOutButton`; las fases 4 y 5 lo usan en las pantallas.
 
 ### 3.3 Fase 4: qué cambió en las pantallas
+
+**Ajustes tras probar en el teléfono:** el botón flotante es azul (`brand`); el color principal pasa a ser el azul del logo, y una acción destructiva (`ActionButton` `danger`) va **con contorno rojo** en vez de rellena, para que nunca se confunda con la acción principal (terracota y rojo casi no se distinguían sobre una tarjeta durazno); el estado de una reserva (`StatusBadge`) vuelve a ser una píldora **rellena con el color del estado** y la tarjeta de la lista lleva una **franja** de ese color a la izquierda; la hoja del selector (tipo de sesión, paquete) va sobre la superficie con la opción elegida rellena en azul.
 
 Todas las pantallas y componentes con estilos propios pasaron de los colores fijos de `tokens.ts` a **la paleta del tema** (`makeStyles`), y todo el texto usa las fuentes de la marca:
 
