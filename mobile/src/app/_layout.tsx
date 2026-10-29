@@ -3,27 +3,37 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ReactElement } from 'react';
 import { createQueryClient } from '../api/queryClient';
+import { restoreAppearance } from '../appearance/appearanceManager';
+import { AppBackground } from '../components/AppBackground';
+import { AppThemeProvider } from '../components/AppThemeProvider';
 import { NewBookingButton } from '../components/NewBookingButton';
 import { Placeholder } from '../components/Placeholder';
 import { PushRegistration } from '../components/PushRegistration';
 import { ScreenLoader } from '../components/ScreenLoader';
 import { SignOutButton } from '../components/SignOutButton';
+import { useAppFonts } from '../hooks/useAppFonts';
+import { useAppTheme } from '../hooks/useAppTheme';
+import { appScreenLayout } from '../navigation/appScreenLayout';
 import { restoreSession } from '../session/sessionManager';
 import { useSessionStore } from '../session/sessionStore';
-import { colors } from '../theme/tokens';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
- * Root layout: provides the query client and decides what the photographer sees from the state of the session. Without a
- * session only the login screen exists; with one, only the app screens do, so no route can be reached while signed out.
+ * Root layout: provides the query client and the theme (colors, fonts and the background picture) and decides what the
+ * photographer sees from the state of the session. Without a session only the login screen exists; with one, only the app
+ * screens do, so no route can be reached while signed out.
  * @returns The navigation tree.
  */
 export default function RootLayout(): ReactElement {
   const [queryClient] = useState(createQueryClient);
   const status = useSessionStore((state) => state.status);
   const emailVerified = useSessionStore((state) => state.session?.emailVerified === true);
+  const fontsReady = useAppFonts();
+  const { palette, scheme } = useAppTheme();
 
   useEffect(() => {
     void restoreSession();
+    void restoreAppearance();
   }, []);
 
   // Whatever was cached belongs to the previous session: it must never be shown to whoever signs in next.
@@ -34,22 +44,31 @@ export default function RootLayout(): ReactElement {
   }, [status, queryClient]);
 
   let content: ReactElement;
-  if (status === 'restoring') {
-    content = <ScreenLoader accessibilityLabel="Abriendo tu sesión" />;
+  if (status === 'restoring' || !fontsReady) {
+    content = (
+      <AppBackground>
+        <ScreenLoader accessibilityLabel="Abriendo tu sesión" />
+      </AppBackground>
+    );
   } else if (status === 'offline') {
     content = (
-      <Placeholder
-        message="No se pudo conectar para abrir tu sesión. Revisa la conexión e inténtalo de nuevo."
-        onRetry={() => void restoreSession()}
-      />
+      <AppBackground>
+        <Placeholder
+          message="No se pudo conectar para abrir tu sesión. Revisa la conexión e inténtalo de nuevo."
+          onRetry={() => void restoreSession()}
+        />
+      </AppBackground>
     );
   } else {
     content = (
       <Stack
+        screenLayout={appScreenLayout}
         screenOptions={{
           headerTitleAlign: 'center',
-          headerTintColor: colors.textPrimary,
-          contentStyle: { backgroundColor: colors.background },
+          headerTintColor: palette.onBackground,
+          headerStyle: { backgroundColor: palette.background },
+          headerTitleStyle: { fontFamily: FONT_FAMILIES.title, color: palette.onBackground },
+          contentStyle: { backgroundColor: palette.background },
         }}
       >
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
@@ -82,9 +101,11 @@ export default function RootLayout(): ReactElement {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusBar style="dark" />
-      <PushRegistration />
-      {content}
+      <AppThemeProvider>
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <PushRegistration />
+        {content}
+      </AppThemeProvider>
     </QueryClientProvider>
   );
 }

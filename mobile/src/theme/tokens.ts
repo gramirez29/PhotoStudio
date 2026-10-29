@@ -1,21 +1,25 @@
+import { LIGHT_PALETTE } from './palettes';
+
 /**
- * Design tokens. The values are a temporary neutral palette until the brand palette is defined;
- * components read colors only from here, so replacing the palette does not touch any screen.
+ * Colors of the light theme under the names the app used before the theme existed. It is a compatibility layer, not the way to
+ * read a color: a color read here never changes with the theme. Components that read it keep working, always in light, until
+ * they move to the theme of the app (`useAppTheme`), one by one, in the phases of docs/MobileUi.md; then this file goes away.
+ * The spacing and the radius below are not colors and stay.
  */
 export const colors = {
-  background: '#FFFFFF',
-  surface: '#F4F4F5',
-  border: '#E4E4E7',
-  textPrimary: '#18181B',
-  textSecondary: '#52525B',
-  textInverse: '#FFFFFF',
-  primary: '#27272A',
-  success: '#15803D',
-  warning: '#B45309',
-  danger: '#B91C1C',
-  info: '#1D4ED8',
-  muted: '#71717A',
-  overlay: 'rgba(24, 24, 27, 0.45)',
+  background: LIGHT_PALETTE.background,
+  surface: LIGHT_PALETTE.surfaceVariant,
+  border: LIGHT_PALETTE.outlineVariant,
+  textPrimary: LIGHT_PALETTE.onBackground,
+  textSecondary: LIGHT_PALETTE.onSurfaceVariant,
+  textInverse: LIGHT_PALETTE.onPrimary,
+  primary: LIGHT_PALETTE.primary,
+  success: LIGHT_PALETTE.success,
+  warning: LIGHT_PALETTE.warning,
+  danger: LIGHT_PALETTE.error,
+  info: LIGHT_PALETTE.info,
+  muted: LIGHT_PALETTE.muted,
+  overlay: 'rgba(11, 26, 64, 0.45)',
 } as const;
 
 /** Spacing scale in density-independent pixels. */
