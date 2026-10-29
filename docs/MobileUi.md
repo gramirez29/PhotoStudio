@@ -13,7 +13,7 @@ conservan su contrato.
 | Temas | **Claro** (crema y terracota) y **oscuro** (azul noche y cobre), los de la marca (`portal/src/theme/tokens.css`). Con un **selector** en la app: Sistema / Claro / Oscuro, que se recuerda. |
 | Tipografía | **Josefin Sans** (títulos) y **DM Sans** (texto), las mismas de la web, dentro de la app (`@expo-google-fonts`). |
 | Color dinámico de Android (Material You) | **No.** Pisaría la paleta de la marca. |
-| Fondo | La foto `camera-background.jpg` **difuminada y lavada en blanco (93 % de lavado en claro, 92 % en oscuro)** en todas las pantallas (en el tema oscuro, lavada en azul noche). |
+| Fondo | La foto `camera-background.jpg` **difuminada y lavada en blanco (78 % de lavado en los dos temas, con la foto ya con los niveles estirados)** en todas las pantallas (en el tema oscuro, lavada en azul noche). |
 
 ## 2. Cómo está hecho (fase 1, ya en el código)
 
