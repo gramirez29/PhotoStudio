@@ -17,7 +17,9 @@ concurrency:
 jobs:
   backend:
     name: Backend (build and tests)
-    runs-on: ubuntu-latest
+    # Pinned on purpose: MongoDB refuses to start on Linux kernels 6.19 through 7.0.13 (SERVER-121912, a tcmalloc incompatibility),
+    # and ubuntu-latest moved to such a kernel between runner images 20261012 and 20261025. Move back to ubuntu-latest once the runner kernel is 7.0.14+.
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -27,26 +29,10 @@ jobs:
           global-json-file: backend/global.json
 
       # The integration tests need a MongoDB replica set (transactions), exactly like production. The compose file starts one
-      # on 127.0.0.1:27019, the address the tests use by default. It does not rely on `--wait`: a runner image update made Compose
-      # report the container as unhealthy half a second after starting it. Instead the step initiates the replica set itself and
-      # polls until a primary is elected (up to 2 minutes), failing early if the container stops.
+      # on 127.0.0.1:27019, the address the tests use by default, and --wait returns once it is healthy.
       - name: Start MongoDB
         working-directory: backend
-        run: |
-          docker compose up -d mongo
-          for attempt in $(seq 1 60); do
-            if [ "$(docker inspect --format '{{.State.Running}}' photostudio-mongo)" != "true" ]; then
-              echo "The MongoDB container stopped."
-              exit 1
-            fi
-            if docker exec photostudio-mongo mongosh --quiet --eval "try { rs.status().myState === 1 ? quit(0) : quit(1) } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }); quit(1) }"; then
-              echo "MongoDB primary elected after $attempt attempt(s)."
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "MongoDB did not elect a primary in time."
-          exit 1
+        run: docker compose up -d --wait mongo
 
       - name: Restore
         working-directory: backend
