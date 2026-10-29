@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Identity;
 using PhotoStudio.Application.Identity.Register;
@@ -181,5 +182,8 @@ public sealed class RegisterUserHandlerTests
         _fixture.PasswordHasher,
         _fixture.Sessions,
         new RegistrationSettings(registrationEnabled),
-        _fixture.Clock);
+        _fixture.Verification,
+        _fixture.VerificationSender,
+        _fixture.Clock,
+        NullLogger<RegisterUserHandler>.Instance);
 }

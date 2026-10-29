@@ -26,6 +26,16 @@ public static class PhotographerAuthenticationExtensions
     public const string SystemOperatorPolicy = "system-operator";
 
     /// <summary>
+    /// Name of the variable that turns the email verification requirement on or off (on by default).
+    /// </summary>
+    public const string EmailVerificationRequiredVariable = "AUTH_EMAIL_VERIFICATION_REQUIRED";
+
+    /// <summary>
+    /// Name of the policy of the endpoints that a user who has not verified their email can still use (the ones that verify it).
+    /// </summary>
+    public const string AnyUserPolicy = "any-user";
+
+    /// <summary>
     /// Maximum difference tolerated between the clock of the API and the expiry of a token.
     /// </summary>
     public static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
@@ -45,7 +55,8 @@ public static class PhotographerAuthenticationExtensions
         var options = JwtOptions.FromEnvironment(isDevelopment);
         services.AddSingleton(options);
         services.AddSingleton(new AuthSessionSettings(options.RefreshTokenLifetime));
-        services.AddSingleton(new RegistrationSettings(ReadRegistrationEnabled()));
+        services.AddSingleton(new RegistrationSettings(ReadBoolean(RegistrationEnabledVariable)));
+        services.AddSingleton(new EmailVerificationSettings(ReadBoolean(EmailVerificationRequiredVariable)));
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 
         services
@@ -73,25 +84,41 @@ public static class PhotographerAuthenticationExtensions
                 };
             });
 
-        // Secure by default: an endpoint is public only when it says so with AllowAnonymous.
+        // Secure by default: an endpoint is public only when it says so with AllowAnonymous. Both the fallback policy (endpoints with
+        // no policy of their own) and the default one (RequireAuthorization() with no name) also keep out a user who has not verified
+        // their email; only the endpoints that verify it use AnyUserPolicy.
+        var verifiedUser = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().RequireAssertion(HasNotBeenMarkedUnverified).Build();
         services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            .SetFallbackPolicy(verifiedUser)
+            .SetDefaultPolicy(verifiedUser)
+            .AddPolicy(AnyUserPolicy, policy => policy.RequireAuthenticatedUser())
             .AddPolicy(SystemOperatorPolicy, policy => policy
                 .RequireAuthenticatedUser()
+                .RequireAssertion(HasNotBeenMarkedUnverified)
                 .RequireClaim(JwtAccessTokenIssuer.SystemRoleClaimType, JwtAccessTokenIssuer.SystemRoleValue));
 
         return services;
     }
 
     /// <summary>
-    /// Reads whether sign-up is open. A value that is neither <c>true</c> nor <c>false</c> stops the API at startup: guessing
-    /// could leave sign-up open when the operator meant to close it.
+    /// Tells whether the token of the user was issued as "email not verified". A token with no such claim (one issued before
+    /// verification existed, which lives at most fifteen minutes) is accepted, so deploying does not cut the sessions that are open.
     /// </summary>
+    /// <param name="context">Authorization context of the request.</param>
+    /// <returns><see langword="false"/> when the token says the email is not verified.</returns>
+    private static bool HasNotBeenMarkedUnverified(AuthorizationHandlerContext context) =>
+        !context.User.HasClaim(JwtAccessTokenIssuer.EmailVerifiedClaimType, "false");
+
+    /// <summary>
+    /// Reads a switch from the environment; it is on when the variable is missing. A value that is neither <c>true</c> nor <c>false</c>
+    /// stops the API at startup: guessing could leave sign-up open, or verification off, when the operator meant the opposite.
+    /// </summary>
+    /// <param name="variable">Name of the environment variable.</param>
     /// <returns><see langword="true"/> unless the variable is set to <c>false</c>.</returns>
     /// <exception cref="InvalidOperationException">When the variable holds anything other than true or false.</exception>
-    private static bool ReadRegistrationEnabled()
+    private static bool ReadBoolean(string variable)
     {
-        var value = Environment.GetEnvironmentVariable(RegistrationEnabledVariable);
+        var value = Environment.GetEnvironmentVariable(variable);
         if (string.IsNullOrWhiteSpace(value))
         {
             return true;
@@ -102,6 +129,6 @@ public static class PhotographerAuthenticationExtensions
             return enabled;
         }
 
-        throw new InvalidOperationException($"'{RegistrationEnabledVariable}' must be 'true' or 'false'.");
+        throw new InvalidOperationException($"'{variable}' must be 'true' or 'false'.");
     }
 }

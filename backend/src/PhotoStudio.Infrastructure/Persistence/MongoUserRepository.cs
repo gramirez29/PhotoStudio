@@ -105,6 +105,13 @@ public sealed class MongoUserRepository(IMongoDatabase database) : IUserReposito
     }
 
     /// <inheritdoc />
+    public Task MarkEmailVerifiedAsync(Guid id, DateTimeOffset verifiedAt, CancellationToken cancellationToken) =>
+        _collection.UpdateOneAsync(
+            user => user.Id == id && user.EmailVerifiedAt == null,
+            Builders<UserDocument>.Update.Set(user => user.EmailVerifiedAt, verifiedAt.UtcDateTime),
+            cancellationToken: cancellationToken);
+
+    /// <inheritdoc />
     public Task ResetFailedLoginsAsync(Guid id, CancellationToken cancellationToken) =>
         _collection.UpdateOneAsync(
             user => user.Id == id,

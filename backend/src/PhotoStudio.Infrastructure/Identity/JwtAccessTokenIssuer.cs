@@ -23,6 +23,11 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
     /// </summary>
     public const string SystemRoleValue = "system";
 
+    /// <summary>
+    /// Name of the claim that says whether the user may use the app: <c>true</c>, or <c>false</c> while they have not verified their email.
+    /// </summary>
+    public const string EmailVerifiedClaimType = "email_verified";
+
     private readonly JwtOptions _options;
     private readonly SigningCredentials _credentials;
     private readonly JsonWebTokenHandler _handler = new();
@@ -50,7 +55,7 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
     }
 
     /// <inheritdoc />
-    public AccessToken Issue(Guid photographerId, string username, bool isSystemOperator, DateTimeOffset now)
+    public AccessToken Issue(Guid photographerId, string username, bool isSystemOperator, bool emailVerified, DateTimeOffset now)
     {
         var expiresAt = now + _options.AccessTokenLifetime;
         var claims = new List<Claim>
@@ -58,6 +63,7 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
             new(JwtRegisteredClaimNames.Sub, photographerId.ToString()),
             new(JwtRegisteredClaimNames.PreferredUsername, username),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(EmailVerifiedClaimType, emailVerified ? "true" : "false"),
         };
         if (isSystemOperator)
         {

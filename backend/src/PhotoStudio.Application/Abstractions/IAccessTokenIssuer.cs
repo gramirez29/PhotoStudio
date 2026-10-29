@@ -18,7 +18,8 @@ public interface IAccessTokenIssuer
     /// <param name="photographerId">Photographer (tenant) identifier; becomes the subject of the token.</param>
     /// <param name="username">Username of the photographer.</param>
     /// <param name="isSystemOperator">Whether the token carries the system operator role.</param>
+    /// <param name="emailVerified">Whether the user may use the app: they proved their email, or verification is not required for them. A token with <see langword="false"/> only opens the endpoints that verify the email.</param>
     /// <param name="now">Current instant.</param>
     /// <returns>The token and its expiry.</returns>
-    AccessToken Issue(Guid photographerId, string username, bool isSystemOperator, DateTimeOffset now);
+    AccessToken Issue(Guid photographerId, string username, bool isSystemOperator, bool emailVerified, DateTimeOffset now);
 }

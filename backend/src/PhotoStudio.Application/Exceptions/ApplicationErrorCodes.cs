@@ -46,4 +46,16 @@ public static class ApplicationErrorCodes
 
     /// <summary>The verification code is wrong, expired or spent (the response never says which).</summary>
     public const string InvalidCode = "portal.invalid_code";
+
+    /// <summary>A code to verify the email of an account was requested too soon or too many times.</summary>
+    public const string EmailCodeRateLimited = "auth.email_code_rate_limited";
+
+    /// <summary>The code to verify the email of an account is wrong, expired or spent (the response never says which).</summary>
+    public const string InvalidEmailCode = "auth.invalid_email_code";
+
+    /// <summary>The email of the account was already verified, so there is nothing to send.</summary>
+    public const string EmailAlreadyVerified = "auth.email_already_verified";
+
+    /// <summary>The account has no email (it was created before the email existed), so no code can be sent.</summary>
+    public const string AccountEmailMissing = "auth.email_missing";
 }

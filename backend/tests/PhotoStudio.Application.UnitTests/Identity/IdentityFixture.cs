@@ -24,14 +24,20 @@ internal sealed class IdentityFixture
     /// <summary>
     /// Initializes a new instance of the <see cref="IdentityFixture"/> class and configures the default behavior of the ports.
     /// </summary>
-    public IdentityFixture()
+    /// <param name="verificationRequired">Whether accounts must verify their email; off by default so the tests that are not about it are unaffected.</param>
+    public IdentityFixture(bool verificationRequired = false)
     {
-        AccessTokens.Issue(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<DateTimeOffset>())
+        Verification = new EmailVerificationSettings(verificationRequired);
+        AccessTokens.Issue(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DateTimeOffset>())
             .Returns(call => new AccessToken("access-jwt", call.Arg<DateTimeOffset>().AddMinutes(15)));
+        CodeService.Generate().Returns("123456");
+        CodeService.Hash(Arg.Any<Guid>(), Arg.Any<string>()).Returns(call => "code-hash-" + call.Arg<string>());
+        CodeService.Matches(Arg.Any<string>(), Arg.Any<string>()).Returns(call => call.ArgAt<string>(0) == call.ArgAt<string>(1));
         TokenGenerator.Generate().Returns(new GeneratedRefreshToken("new-secret", "new-hash"));
         TokenGenerator.Hash(Arg.Any<string>()).Returns(call => "hash-of-" + call.Arg<string>());
         PasswordHasher.Hash(Arg.Any<string>()).Returns("hashed-password");
-        Sessions = new SessionIssuer(AccessTokens, TokenGenerator, new AuthSessionSettings(RefreshLifetime));
+        Sessions = new SessionIssuer(AccessTokens, TokenGenerator, new AuthSessionSettings(RefreshLifetime), Verification);
+        VerificationSender = new EmailVerificationSender(Codes, CodeService, Email);
     }
 
     /// <summary>Gets the substituted user repository.</summary>
@@ -48,6 +54,21 @@ internal sealed class IdentityFixture
 
     /// <summary>Gets the substituted refresh token generator.</summary>
     public IRefreshTokenGenerator TokenGenerator { get; } = Substitute.For<IRefreshTokenGenerator>();
+
+    /// <summary>Gets the substituted store of the codes that verify an email.</summary>
+    public IEmailVerificationRepository Codes { get; } = Substitute.For<IEmailVerificationRepository>();
+
+    /// <summary>Gets the substituted code service.</summary>
+    public IOtpCodeService CodeService { get; } = Substitute.For<IOtpCodeService>();
+
+    /// <summary>Gets the substituted email sender.</summary>
+    public IEmailSender Email { get; } = Substitute.For<IEmailSender>();
+
+    /// <summary>Gets whether accounts must verify their email in this fixture.</summary>
+    public EmailVerificationSettings Verification { get; }
+
+    /// <summary>Gets the real sender of the verification code, built on the substituted ports.</summary>
+    public EmailVerificationSender VerificationSender { get; }
 
     /// <summary>Gets the real session issuer built on the substituted ports.</summary>
     public SessionIssuer Sessions { get; }

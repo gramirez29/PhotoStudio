@@ -18,10 +18,12 @@ public sealed record IssuedSession(RefreshToken RefreshToken, AuthSessionRespons
 /// <param name="accessTokens">Issues the access token.</param>
 /// <param name="refreshTokens">Generates the refresh token secret and hash.</param>
 /// <param name="settings">Session lifetimes.</param>
+/// <param name="verification">Whether accounts must verify their email; it decides if the session lets the user into the app.</param>
 public sealed class SessionIssuer(
     IAccessTokenIssuer accessTokens,
     IRefreshTokenGenerator refreshTokens,
-    AuthSessionSettings settings)
+    AuthSessionSettings settings,
+    EmailVerificationSettings verification)
 {
     /// <summary>
     /// Issues the tokens of a session.
@@ -34,12 +36,13 @@ public sealed class SessionIssuer(
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        var access = accessTokens.Issue(user.Id, user.Username, user.IsSystemOperator, now);
+        var emailVerified = verification.IsSatisfiedBy(user);
+        var access = accessTokens.Issue(user.Id, user.Username, user.IsSystemOperator, emailVerified, now);
         var generated = refreshTokens.Generate();
         var refreshToken = RefreshToken.Issue(user.Id, familyId, generated.Hash, now, settings.RefreshTokenLifetime);
 
         return new IssuedSession(
             refreshToken,
-            new AuthSessionResponse(access.Value, access.ExpiresAt, generated.Secret, refreshToken.ExpiresAt, user.Id, user.Username, user.Email, user.Name, user.IsSystemOperator));
+            new AuthSessionResponse(access.Value, access.ExpiresAt, generated.Secret, refreshToken.ExpiresAt, user.Id, user.Username, user.Email, user.Name, user.IsSystemOperator, emailVerified));
     }
 }

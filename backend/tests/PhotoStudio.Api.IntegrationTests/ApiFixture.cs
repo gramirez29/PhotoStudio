@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Application.Identity;
 using PhotoStudio.Domain.Identity;
 using PhotoStudio.Infrastructure.Persistence;
 
@@ -113,6 +114,10 @@ public sealed class ApiFixture : IAsyncLifetime
 
                 // Pushes are captured instead of sent to Expo.
                 services.AddSingleton<IPushSender>(Pushes);
+
+                // Most tests are not about verifying the email, so an account can use the app as soon as it exists. The tests that are
+                // about it build a factory with CreateFactoryRequiringEmailVerification.
+                services.AddSingleton(new EmailVerificationSettings(false));
             });
         });
         _ = _factory.Server;
@@ -140,9 +145,24 @@ public sealed class ApiFixture : IAsyncLifetime
     /// the per-address rate limit of one test never affects another.
     /// </summary>
     /// <returns>The client.</returns>
-    public HttpClient CreateClient()
+    public HttpClient CreateClient() => CreateClient(_factory ?? throw new InvalidOperationException("MongoDB is not available."));
+
+    /// <summary>
+    /// Builds a copy of the API in which an account must verify its email before using the app, as in production. The caller disposes it.
+    /// </summary>
+    /// <returns>The factory.</returns>
+    public WebApplicationFactory<Program> CreateFactoryRequiringEmailVerification() =>
+        (_factory ?? throw new InvalidOperationException("MongoDB is not available.")).WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSingleton(new EmailVerificationSettings(true))));
+
+    /// <summary>
+    /// Creates a client of a factory, with its own client address so the rate limits of one test do not affect another.
+    /// </summary>
+    /// <param name="factory">Factory to create the client from.</param>
+    /// <returns>The client.</returns>
+    public HttpClient CreateClient(WebApplicationFactory<Program> factory)
     {
-        var client = (_factory ?? throw new InvalidOperationException("MongoDB is not available.")).CreateClient();
+        var client = factory.CreateClient();
         var number = Interlocked.Increment(ref _clientCounter);
         client.DefaultRequestHeaders.Add("X-Forwarded-For", $"10.{(number >> 16) & 255}.{(number >> 8) & 255}.{number & 255}");
         return client;

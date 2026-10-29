@@ -29,6 +29,7 @@ public static class IdentityDocumentMappings
             FailedLoginAttempts = user.FailedLoginAttempts,
             LockedUntil = user.LockedUntil?.UtcDateTime,
             IsSystemOperator = user.IsSystemOperator,
+            EmailVerifiedAt = user.EmailVerifiedAt?.UtcDateTime,
         };
     }
 
@@ -51,7 +52,46 @@ public static class IdentityDocumentMappings
             ToOffset(document.CreatedAt),
             document.FailedLoginAttempts,
             document.LockedUntil is null ? null : ToOffset(document.LockedUntil.Value),
-            document.IsSystemOperator);
+            document.IsSystemOperator,
+            document.EmailVerifiedAt is null ? null : ToOffset(document.EmailVerifiedAt.Value));
+    }
+
+    /// <summary>
+    /// Maps the code that verifies an email to its document.
+    /// </summary>
+    /// <param name="verification">Record to map.</param>
+    /// <returns>The document.</returns>
+    public static EmailVerificationDocument ToDocument(this EmailVerification verification)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        return new EmailVerificationDocument
+        {
+            UserId = verification.UserId,
+            CodeHash = verification.CodeHash,
+            ExpiresAt = verification.ExpiresAt.UtcDateTime,
+            SentAt = verification.SentAt.UtcDateTime,
+            FailedAttempts = verification.FailedAttempts,
+            SendCount = verification.SendCount,
+            WindowStartedAt = verification.WindowStartedAt.UtcDateTime,
+        };
+    }
+
+    /// <summary>
+    /// Maps a code document to the domain record.
+    /// </summary>
+    /// <param name="document">Document to map.</param>
+    /// <returns>The record.</returns>
+    public static EmailVerification ToDomain(this EmailVerificationDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return new EmailVerification(
+            document.UserId,
+            document.CodeHash,
+            ToOffset(document.ExpiresAt),
+            ToOffset(document.SentAt),
+            document.FailedAttempts,
+            document.SendCount,
+            ToOffset(document.WindowStartedAt));
     }
 
     /// <summary>
