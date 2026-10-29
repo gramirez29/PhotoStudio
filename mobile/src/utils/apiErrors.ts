@@ -61,6 +61,12 @@ export function bookingCommandErrorMessage(error: Error): string {
       return 'Ese comprobante ya no existe. Vuelve a abrir la reserva.';
     case 'booking.contract_already_signed':
       return 'El contrato de esta reserva ya está firmado.';
+    case 'contract.template_changed':
+      return 'El contrato cambió mientras se leía. Cierra esta pantalla y ábrela otra vez para leer la versión vigente.';
+    case 'contract.invalid_id_number':
+      return 'La cédula o el DIMEX no es válido. Revísalo y corrígelo.';
+    case 'contract.invalid_details':
+      return 'Revisa el número de personas y el lugar de la sesión.';
     case 'money.invalid_amount':
     case 'money.invalid_currency':
     case 'money.currency_mismatch':

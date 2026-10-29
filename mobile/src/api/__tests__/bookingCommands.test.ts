@@ -24,6 +24,7 @@ function stubApi(booking: BookingResponse): BookingsApi {
     rejectPayment: jest.fn().mockResolvedValue(booking),
     listBookings: jest.fn().mockResolvedValue([]),
     getBooking: jest.fn().mockResolvedValue(booking),
+    getContract: jest.fn(),
   };
 }
 

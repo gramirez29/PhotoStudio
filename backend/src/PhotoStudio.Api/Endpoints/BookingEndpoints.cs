@@ -10,6 +10,7 @@ using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
 using PhotoStudio.Application.Bookings.RescheduleBooking;
+using PhotoStudio.Application.Bookings.GetContract;
 using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.RevertClientAbsent;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
@@ -36,6 +37,7 @@ public static class BookingEndpoints
         group.MapPost("/", CreateAsync).WithName("CreateBooking");
         group.MapGet("/", ListAsync).WithName("ListBookings");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
+        group.MapGet("/{id:guid}/contract", GetContractAsync).WithName("GetBookingContract");
         group.MapPost("/{id:guid}/contract/in-person", SignContractInPersonAsync).WithName("SignContractInPerson");
         group.MapPost("/{id:guid}/payments/in-person", RecordInPersonPaymentAsync).WithName("RecordInPersonPayment");
         group.MapPost("/{id:guid}/reschedule", RescheduleAsync).WithName("RescheduleBooking");
@@ -92,6 +94,21 @@ public static class BookingEndpoints
         IQueryHandler<GetBookingQuery, BookingResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new GetBookingQuery(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Reads the contract of a booking, with the booking data filled in, so the client can read it on the phone before signing.
+    /// </summary>
+    /// <param name="id">Booking identifier.</param>
+    /// <param name="user">Authenticated photographer; the booking must belong to them, otherwise the answer is 404.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the contract text and whether it is signed.</returns>
+    private static async Task<Ok<BookingContractResponse>> GetContractAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IQueryHandler<GetBookingContractQuery, BookingContractResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetBookingContractQuery(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Registers a contract signed in person or on paper.

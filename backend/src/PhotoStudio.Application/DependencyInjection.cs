@@ -9,6 +9,7 @@ using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
+using PhotoStudio.Application.Bookings.GetContract;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Contracts;
@@ -109,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<IDomainEventHandler<ContractSigned>, ContractCopyHandler>();
 
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
+        services.AddScoped<IQueryHandler<GetBookingContractQuery, BookingContractResponse>, GetBookingContractHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();
 
         return services;

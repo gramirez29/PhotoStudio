@@ -53,6 +53,14 @@ public sealed record ContractResponse(
 public sealed record ClientDeclarationResponse(string IdNumber, int ParticipantCount, string? SessionLocation, ImageUse ImageUse);
 
 /// <summary>
+/// Contract of a booking as the photographer reads it.
+/// </summary>
+/// <param name="TemplateVersion">Version of the template; the app sends it back when the client signs, so they sign what they read.</param>
+/// <param name="Text">Text of the contract with the booking data filled in. Before signing, what the client still has to declare is shown as blanks; after signing it is the exact text that was signed, or empty for a contract registered on paper.</param>
+/// <param name="Signed">Whether the contract is already signed.</param>
+public sealed record BookingContractResponse(string TemplateVersion, string Text, bool Signed);
+
+/// <summary>
 /// Booking as exposed by the API. The mobile app mirrors this shape in TypeScript.
 /// </summary>
 /// <param name="Id">Booking identifier.</param>

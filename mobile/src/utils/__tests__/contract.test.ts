@@ -1,5 +1,5 @@
 import type { ClientDeclarationResponse, ContractResponse } from '../../types/api/booking';
-import { describeContract, describeDeclaration, formatIdNumber } from '../contract';
+import { describeContract, describeDeclaration, formatIdNumber, IMAGE_USE_CHOICE_LABELS, imageUseFromChoice, splitContractText } from '../contract';
 
 const DECLARATION: ClientDeclarationResponse = {
   idNumber: '112345678',
@@ -77,5 +77,41 @@ describe('describeContract', () => {
 
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain(`Firmado por María Pérez ${label} el `);
+  });
+});
+
+describe('imageUseFromChoice', () => {
+  it('finds the image use of each label the user can pick', () => {
+    expect(imageUseFromChoice(IMAGE_USE_CHOICE_LABELS.Authorized)).toBe('Authorized');
+    expect(imageUseFromChoice(IMAGE_USE_CHOICE_LABELS.NotAuthorized)).toBe('NotAuthorized');
+  });
+
+  it('finds nothing for a text that is not one of the choices', () => {
+    expect(imageUseFromChoice('Quizás')).toBeNull();
+    expect(imageUseFromChoice('')).toBeNull();
+  });
+});
+
+describe('splitContractText', () => {
+  it('takes the first line as the title and the other non-blank lines as paragraphs', () => {
+    const layout = splitContractText('CONTRATO\n\nEntre las partes.\n1. Servicio. Sesión.\n');
+
+    expect(layout.title).toBe('CONTRATO');
+    expect(layout.paragraphs).toEqual([
+      { text: 'Entre las partes.', indented: false },
+      { text: '1. Servicio. Sesión.', indented: false },
+    ]);
+  });
+
+  it('marks as indented the lines that start with spaces, like the options of the image use', () => {
+    const layout = splitContractText('CONTRATO\n12. Uso de imagen.\n    [x] Autorizo\n    [ ] No autorizo');
+
+    expect(layout.paragraphs.map((paragraph) => paragraph.indented)).toEqual([false, true, true]);
+    expect(layout.paragraphs[1]?.text).toBe('[x] Autorizo');
+  });
+
+  it('has no title and no paragraphs for an empty text', () => {
+    expect(splitContractText('')).toEqual({ title: null, paragraphs: [] });
+    expect(splitContractText('  \n \n')).toEqual({ title: null, paragraphs: [] });
   });
 });

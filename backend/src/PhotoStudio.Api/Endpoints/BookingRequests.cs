@@ -30,12 +30,22 @@ public sealed record CreateBookingRequest(
     string? ClientEmail = null);
 
 /// <summary>
+/// What the client declared when signing the contract on the photographer's phone.
+/// </summary>
+/// <param name="IdNumber">Identity number of the signer (cédula or DIMEX).</param>
+/// <param name="ParticipantCount">Number of people in the session.</param>
+/// <param name="SessionLocation">Place of the session, optional.</param>
+/// <param name="ImageUse">What the client allows to do with the photos: <c>Authorized</c> or <c>NotAuthorized</c>.</param>
+public sealed record InPersonDeclarationRequest(string IdNumber, int ParticipantCount, string? SessionLocation, ImageUse ImageUse);
+
+/// <summary>
 /// HTTP body to register a contract signed in person or on paper.
 /// </summary>
 /// <param name="SignerName">Name of the client who signed.</param>
-/// <param name="TemplateVersion">Contract template version.</param>
+/// <param name="TemplateVersion">Contract template version; with a declaration it must be the current one, the version the client read.</param>
 /// <param name="IsPaperContract">Whether the contract was signed on paper and photographed.</param>
-public sealed record SignContractInPersonRequest(string SignerName, string TemplateVersion, bool IsPaperContract);
+/// <param name="Declaration">What the client declared when signing on the phone; omitted for a contract on paper.</param>
+public sealed record SignContractInPersonRequest(string SignerName, string TemplateVersion, bool IsPaperContract, InPersonDeclarationRequest? Declaration = null);
 
 /// <summary>
 /// HTTP body to record a payment received face to face.
@@ -101,7 +111,10 @@ public static class BookingRequestMappings
     public static SignContractInPersonCommand ToCommand(this SignContractInPersonRequest request, Guid photographerId, Guid bookingId)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new SignContractInPersonCommand(photographerId, bookingId, request.SignerName, request.TemplateVersion, request.IsPaperContract);
+        var declaration = request.Declaration is { } input
+            ? new InPersonDeclaration(input.IdNumber, input.ParticipantCount, input.SessionLocation, input.ImageUse)
+            : null;
+        return new SignContractInPersonCommand(photographerId, bookingId, request.SignerName, request.TemplateVersion, request.IsPaperContract, declaration);
     }
 
     /// <summary>

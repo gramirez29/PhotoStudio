@@ -1,6 +1,7 @@
 import { BOOKING_ACTIONS, BOOKING_STATUSES, CHANNELS, IMAGE_USES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../constants/booking';
 import type {
   BookingAction,
+  BookingContractResponse,
   BookingLinkResponse,
   BookingResponse,
   BookingSummaryResponse,
@@ -15,6 +16,7 @@ import {
   expectArray,
   expectRecord,
   readArray,
+  readBoolean,
   readLiteral,
   readNullableString,
   readNumber,
@@ -66,6 +68,21 @@ export function parseBookingLink(value: unknown): BookingLinkResponse {
     token: readString(record, 'token', path),
     url: readString(record, 'url', path),
     expiresAt: readString(record, 'expiresAt', path),
+  };
+}
+
+/**
+ * Parses the contract of a booking.
+ * @param value Unknown response body.
+ * @returns The typed contract.
+ */
+export function parseBookingContract(value: unknown): BookingContractResponse {
+  const path = 'contract';
+  const record = expectRecord(value, path);
+  return {
+    templateVersion: readString(record, 'templateVersion', path),
+    text: readString(record, 'text', path),
+    signed: readBoolean(record, 'signed', path),
   };
 }
 
@@ -216,5 +233,6 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
       ),
     listBookings: (signal) => client.get('/api/bookings', parseBookingSummaries, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
+    getContract: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}/contract`, parseBookingContract, signal),
   };
 }

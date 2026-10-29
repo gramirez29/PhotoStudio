@@ -79,18 +79,49 @@ public sealed class ContractCopyHandlerTests
     }
 
     /// <summary>
-    /// A contract the photographer registered in person or on paper has no text to send.
+    /// A contract the client signed on the photographer's phone is emailed like one signed through the portal: it keeps the text too.
     /// </summary>
-    /// <param name="channel">Channel of the signature.</param>
     /// <returns>A task that completes when the test finishes.</returns>
-    [Theory]
-    [InlineData(Channel.InPerson)]
-    [InlineData(Channel.External)]
-    public async Task HandleAsync_ForAContractSignedByThePhotographer_SendsNothing(Channel channel)
+    [Fact]
+    public async Task HandleAsync_ForAContractSignedOnThePhone_SendsTheSignedText()
+    {
+        var booking = NewBooking("maria@example.com", _bookingId, Channel.InPerson);
+        _bookings.GetByIdAsync(_bookingId, Arg.Any<CancellationToken>()).Returns(booking);
+
+        await NewHandler().HandleAsync(Signed() with { Channel = Channel.InPerson }, TestContext.Current.CancellationToken);
+
+        var message = _email.ReceivedCalls().Select(call => (EmailMessage)call.GetArguments()[0]!).ShouldHaveSingleItem();
+        message.To.ShouldBe("maria@example.com");
+        message.TextBody.ShouldContain(SignedText);
+        booking.Contract!.CopySentAt.ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// A contract registered in person without a text (the old way) has nothing to send.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_ForAnInPersonContractWithoutText_SendsNothing()
+    {
+        var booking = NewBooking("maria@example.com", _bookingId, Channel.InPerson, withText: false);
+        _bookings.GetByIdAsync(_bookingId, Arg.Any<CancellationToken>()).Returns(booking);
+
+        await NewHandler().HandleAsync(Signed() with { Channel = Channel.InPerson }, TestContext.Current.CancellationToken);
+
+        await _email.DidNotReceive().SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>());
+        await _bookings.DidNotReceive().UpdateAsync(Arg.Any<Booking>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A contract on paper has no text to send, and the handler does not even load the booking.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_ForAContractOnPaper_SendsNothing()
     {
         GivenTheBookingIsStored();
 
-        await NewHandler().HandleAsync(Signed() with { Channel = channel }, TestContext.Current.CancellationToken);
+        await NewHandler().HandleAsync(Signed() with { Channel = Channel.External }, TestContext.Current.CancellationToken);
 
         await _email.DidNotReceive().SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>());
         await _bookings.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
@@ -182,8 +213,10 @@ public sealed class ContractCopyHandlerTests
     /// </summary>
     /// <param name="email">Email of the client, or null.</param>
     /// <param name="id">Identifier of the booking; a new one when not given.</param>
+    /// <param name="channel">Channel of the signature: the portal, or in person on the photographer's phone.</param>
+    /// <param name="withText">Whether the signature keeps the text and the declaration, as every signature does now.</param>
     /// <returns>The booking.</returns>
-    private static Booking NewBooking(string? email, Guid? id = null)
+    private static Booking NewBooking(string? email, Guid? id = null, Channel channel = Channel.Portal, bool withText = true)
     {
         var booking = Booking.Create(
             id ?? Guid.CreateVersion7(),
@@ -194,8 +227,9 @@ public sealed class ContractCopyHandlerTests
             TimeSlot.Create(BookingFactory.SessionStart, BookingFactory.SessionStart.AddHours(2)),
             BookingPolicy.Default,
             BookingFactory.CreatedAt);
-        var declaration = ClientDeclaration.Create("112345678", 2, null, ImageUse.Authorized);
-        booking.SignContract("María Pérez", "v1", Actor.Client, Channel.Portal, BookingFactory.CreatedAt, declaration, SignedText);
+        var actor = channel == Channel.Portal ? Actor.Client : Actor.Photographer;
+        var declaration = withText ? ClientDeclaration.Create("112345678", 2, null, ImageUse.Authorized) : null;
+        booking.SignContract("María Pérez", "v1", actor, channel, BookingFactory.CreatedAt, declaration, withText ? SignedText : null);
         return booking;
     }
 

@@ -7,10 +7,10 @@ using PhotoStudio.Domain.Bookings.Events;
 namespace PhotoStudio.Application.Contracts;
 
 /// <summary>
-/// Emails the client a copy of the contract they signed through the portal, the same address that receives their verification
-/// codes. The outbox delivers an event at least once, so the handler remembers in the signature when the copy went out and does
-/// nothing the second time. A contract the photographer registered in person or on paper has no text to send, and a booking
-/// without a client email has nowhere to send it, so both are skipped.
+/// Emails the client a copy of the contract they signed, whether through the portal or on the photographer's phone: the exact text
+/// that was signed, to the same address that receives their verification codes. The outbox delivers an event at least once, so the
+/// handler remembers in the signature when the copy went out and does nothing the second time. A contract registered on paper has
+/// no text to send, and a booking without a client email has nowhere to send it, so both are skipped.
 /// </summary>
 /// <param name="bookings">Booking repository.</param>
 /// <param name="email">Sends the email.</param>
@@ -37,7 +37,8 @@ public sealed partial class ContractCopyHandler(
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
-        if (domainEvent.Channel != Channel.Portal)
+        // A contract on paper keeps no text, so it is the signature itself that says whether there is something to send.
+        if (domainEvent.Channel == Channel.External)
         {
             return;
         }
