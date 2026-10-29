@@ -13,7 +13,7 @@ conservan su contrato.
 | Temas | **Claro** (crema y terracota) y **oscuro** (azul noche y cobre), los de la marca (`portal/src/theme/tokens.css`). Con un **selector** en la app: Sistema / Claro / Oscuro, que se recuerda. |
 | Tipografía | **Josefin Sans** (títulos) y **DM Sans** (texto), las mismas de la web, dentro de la app (`@expo-google-fonts`). |
 | Color dinámico de Android (Material You) | **No.** Pisaría la paleta de la marca. |
-| Fondo | La foto `camera-background.jpg` **difuminada y lavada en blanco (78 % de lavado en los dos temas, con la foto ya con los niveles estirados y un desenfoque de radio 8: se reconocen las cámaras sin competir con el texto; la foto original es pequeña, 303×660, y con menos desenfoque se le ven los píxeles; con una foto de al menos 1080×2400 se podría bajar más)** en todas las pantallas (en el tema oscuro, lavada en azul noche). |
+| Fondo | La foto `camera-background.jpg` **difuminada y lavada en blanco (78 % de lavado en los dos temas, con la foto `camera-background-2` (una cámara con una mano que baja hacia ella, 1638×2048, fondo blanco liso), escalada a 540 px de ancho y con un desenfoque de radio 4: la cámara se reconoce y el resto es blanco limpio, que deja sitio para el texto; se recorta por los lados en los teléfonos, pero cámara y mano están al centro. La foto anterior, un montón de equipo de 303×660, quedaba confusa y se pixelaba con poco desenfoque)** en todas las pantallas (en el tema oscuro, lavada en azul noche). |
 
 ## 2. Cómo está hecho (fase 1, ya en el código)
 

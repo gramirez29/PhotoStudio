@@ -1,15 +1,17 @@
 # Makes assets/background.jpg, the picture behind every screen of the app, from assets/background-source.jpg.
 #
-# The picture is blurred here, once, instead of on every screen: a blur at run time costs memory and looks different on Android
-# and on iOS. It is a Gaussian-like blur (three passes of a box blur, with the edges repeated so no frame appears); a bigger
-# -Radius blurs more. The levels are then stretched, so the picture uses the whole range from dark to light: without that, a
-# dark photo under a wash is almost invisible. -Gamma below 1 brightens the middle tones. The wash (white in the light theme,
-# navy in the dark one) is laid over it by the app (src/theme/background.ts).
+# The picture is scaled to -Width pixels wide and blurred here, once, instead of on every screen: a blur at run time costs memory
+# and looks different on Android and on iOS. It is a Gaussian-like blur (three passes of a box blur, with the edges repeated so no
+# frame appears); a bigger -Radius, in pixels of the final picture, blurs more. The levels are then stretched, so the picture
+# uses the whole range from dark to light; -Gamma below 1 brightens the middle tones. The wash (white in the light theme, navy in
+# the dark one) is laid over it by the app (src/theme/background.ts).
 #
-# Usage, from the mobile folder:  powershell -ExecutionPolicy Bypass -File scripts/blur-background.ps1 [-Radius 8] [-Gamma 0.85]
+# Usage, from the mobile folder:
+#   powershell -ExecutionPolicy Bypass -File scripts/blur-background.ps1 [-Radius 4] [-Width 540] [-Gamma 1]
 param(
-    [int]$Radius = 8,
-    [double]$Gamma = 0.85
+    [int]$Radius = 4,
+    [int]$Width = 540,
+    [double]$Gamma = 1.0
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -21,24 +23,24 @@ using System.Drawing.Imaging;
 
 public static class BackgroundBlur
 {
-    // Enlarges the picture to twice its size with smooth resampling and returns its pixels as BGR bytes.
-    public static byte[] Load(string path, out int width, out int height)
+    // Scales the picture to the given width, keeping its shape, with smooth resampling, and returns its pixels as BGR bytes.
+    public static byte[] Load(string path, int targetWidth, out int width, out int height)
     {
         using (Image source = Image.FromFile(path))
-        using (Bitmap big = new Bitmap(source.Width * 2, source.Height * 2, PixelFormat.Format24bppRgb))
+        using (Bitmap scaled = new Bitmap(targetWidth, (int)Math.Round(source.Height * (double)targetWidth / source.Width), PixelFormat.Format24bppRgb))
         {
-            using (Graphics g = Graphics.FromImage(big))
+            using (Graphics g = Graphics.FromImage(scaled))
             {
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.DrawImage(source, 0, 0, big.Width, big.Height);
+                g.DrawImage(source, 0, 0, scaled.Width, scaled.Height);
             }
-            width = big.Width;
-            height = big.Height;
-            BitmapData data = big.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            width = scaled.Width;
+            height = scaled.Height;
+            BitmapData data = scaled.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
             byte[] pixels = new byte[Math.Abs(data.Stride) * height];
             System.Runtime.InteropServices.Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
-            big.UnlockBits(data);
+            scaled.UnlockBits(data);
             return pixels;
         }
     }
@@ -107,10 +109,10 @@ public static class BackgroundBlur
         }
     }
 
-    public static void Run(string source, string target, int radius, double gamma)
+    public static void Run(string source, string target, int radius, double gamma, int targetWidth)
     {
         int width, height;
-        byte[] a = Load(source, out width, out height);
+        byte[] a = Load(source, targetWidth, out width, out height);
         int stride = a.Length / height;
         byte[] b = new byte[a.Length];
         for (int round = 0; round < 3; round++)
@@ -141,4 +143,4 @@ public static class BackgroundBlur
 
 $source = (Resolve-Path (Join-Path $PSScriptRoot '..\assets\background-source.jpg')).Path
 $target = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..\assets')).Path 'background.jpg'
-[BackgroundBlur]::Run($source, $target, $Radius, $Gamma)
+[BackgroundBlur]::Run($source, $target, $Radius, $Gamma, $Width)
