@@ -13,6 +13,9 @@ export const PAYMENT_METHODS = ['SinpeMovil', 'Cash', 'Card'] as const;
 /** Every value of the backend `PaymentStatus` enum. */
 export const PAYMENT_STATUSES = ['PendingVerification', 'Verified', 'Rejected'] as const;
 
+/** Every value of the backend `ImageUse` enum: what the client allowed to do with the photos (clause 12 of the contract). */
+export const IMAGE_USES = ['Authorized', 'NotAuthorized'] as const;
+
 /** Every value of the backend `Channel` enum. */
 export const CHANNELS = ['Portal', 'PhotographerApp', 'InPerson', 'External'] as const;
 

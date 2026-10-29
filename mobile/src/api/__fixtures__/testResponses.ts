@@ -56,6 +56,7 @@ export const bookingPayload = {
     templateVersion: 'v1',
     channel: 'InPerson',
     signedAt: '2026-10-01T12:00:00+00:00',
+    declaration: null,
   },
   payments: [
     {

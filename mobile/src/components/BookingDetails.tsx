@@ -5,6 +5,7 @@ import type { BookingDetailsProps } from '../types/components/BookingDetails.typ
 import { formatDateTime } from '../utils/format';
 import { AmountRow } from './AmountRow';
 import { BookingActions } from './BookingActions';
+import { ContractCard } from './ContractCard';
 import { PendingPaymentsCard } from './PendingPaymentsCard';
 import { SettlementCard } from './SettlementCard';
 import { ShareLinkCard } from './ShareLinkCard';
@@ -34,14 +35,7 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
         <AmountRow label="Saldo" money={booking.balance} emphasized />
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Contrato</Text>
-        <Text style={styles.body}>
-          {booking.contract === null
-            ? 'Pendiente de firma'
-            : `Firmado por ${booking.contract.signerName} el ${formatDateTime(booking.contract.signedAt)}`}
-        </Text>
-      </View>
+      <ContractCard booking={booking} />
 
       <PendingPaymentsCard booking={booking} />
 
@@ -80,14 +74,5 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.md,
     padding: spacing.md,
-  },
-  cardTitle: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  body: {
-    color: colors.textPrimary,
-    fontSize: 15,
   },
 });

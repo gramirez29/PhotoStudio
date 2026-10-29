@@ -8,6 +8,7 @@ import type {
   BOOKING_ACTIONS,
   BOOKING_STATUSES,
   CHANNELS,
+  IMAGE_USES,
   PAYMENT_METHODS,
   PAYMENT_STATUSES,
 } from '../../constants/booking';
@@ -54,6 +55,21 @@ export interface PaymentResponse {
   readonly reference: string | null;
 }
 
+/** What the client allowed to do with the photos of the session. */
+export type ImageUse = (typeof IMAGE_USES)[number];
+
+/** What the client declared when signing the contract through the portal (backend `ClientDeclarationResponse`). */
+export interface ClientDeclarationResponse {
+  /** Identity number of the signer, digits only (cédula of 9 digits or DIMEX of 11 or 12). */
+  readonly idNumber: string;
+  /** Number of people in the session. */
+  readonly participantCount: number;
+  /** Place of the session, or null when the client left it blank. */
+  readonly sessionLocation: string | null;
+  /** What the client allowed to do with the photos. */
+  readonly imageUse: ImageUse;
+}
+
 /** Contract signature (backend `ContractResponse`). */
 export interface ContractResponse {
   /** Name typed by the signer. */
@@ -64,6 +80,8 @@ export interface ContractResponse {
   readonly channel: Channel;
   /** Instant of the signature (ISO 8601). */
   readonly signedAt: string;
+  /** What the client declared; null when the photographer registered the signature (in person or on paper). */
+  readonly declaration: ClientDeclarationResponse | null;
 }
 
 /** Booking (backend `BookingResponse`). */
