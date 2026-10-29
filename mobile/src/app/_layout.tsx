@@ -20,6 +20,7 @@ import { colors } from '../theme/tokens';
 export default function RootLayout(): ReactElement {
   const [queryClient] = useState(createQueryClient);
   const status = useSessionStore((state) => state.status);
+  const emailVerified = useSessionStore((state) => state.session?.emailVerified === true);
 
   useEffect(() => {
     void restoreSession();
@@ -51,7 +52,7 @@ export default function RootLayout(): ReactElement {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
-        <Stack.Protected guard={status === 'signedIn'}>
+        <Stack.Protected guard={status === 'signedIn' && emailVerified}>
           <Stack.Screen
             name="index"
             options={{ title: 'PhotoSense Studio', headerLeft: SignOutButton, headerRight: NewBookingButton }}
@@ -67,6 +68,9 @@ export default function RootLayout(): ReactElement {
           <Stack.Screen name="bookings/reason" options={{ title: 'Motivo' }} />
           <Stack.Screen name="bookings/reject-payment" options={{ title: 'Rechazar comprobante' }} />
           <Stack.Screen name="bookings/[id]" options={{ title: 'Reserva' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'signedIn' && !emailVerified}>
+          <Stack.Screen name="verify-email" options={{ title: 'Verifica tu correo', headerLeft: SignOutButton, headerBackVisible: false }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signedOut'}>
           <Stack.Screen name="login" options={{ title: 'Iniciar sesión', headerShown: false }} />

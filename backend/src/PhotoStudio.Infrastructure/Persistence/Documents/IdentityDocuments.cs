@@ -53,6 +53,47 @@ public sealed class UserDocument
     /// <summary>Gets or sets a value indicating whether the user may run system-wide work. Absent in older documents, which read as false.</summary>
     [BsonElement("isSystemOperator")]
     public bool IsSystemOperator { get; set; }
+
+    /// <summary>Gets or sets the instant the owner proved the email (UTC). Absent in older documents and until the user verifies.</summary>
+    [BsonElement("emailVerifiedAt")]
+    [BsonIgnoreIfNull]
+    public DateTime? EmailVerifiedAt { get; set; }
+}
+
+/// <summary>
+/// MongoDB data model of the code that verifies the email of a user (collection <c>email_verifications</c>). The document id is the
+/// user, so there is at most one code per user. Only a keyed hash of the code is stored.
+/// </summary>
+public sealed class EmailVerificationDocument
+{
+    /// <summary>Gets or sets the user identifier, which is also the document identifier.</summary>
+    [BsonId]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
+    public Guid UserId { get; set; }
+
+    /// <summary>Gets or sets the keyed hash of the code.</summary>
+    [BsonElement("codeHash")]
+    public string CodeHash { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the expiry instant (UTC); drives the retention index.</summary>
+    [BsonElement("expiresAt")]
+    public DateTime ExpiresAt { get; set; }
+
+    /// <summary>Gets or sets the instant the code was sent (UTC).</summary>
+    [BsonElement("sentAt")]
+    public DateTime SentAt { get; set; }
+
+    /// <summary>Gets or sets the wrong guesses counted so far.</summary>
+    [BsonElement("failedAttempts")]
+    public int FailedAttempts { get; set; }
+
+    /// <summary>Gets or sets the codes sent in the current window.</summary>
+    [BsonElement("sendCount")]
+    public int SendCount { get; set; }
+
+    /// <summary>Gets or sets the start of the current sending window (UTC).</summary>
+    [BsonElement("windowStartedAt")]
+    public DateTime WindowStartedAt { get; set; }
 }
 
 /// <summary>

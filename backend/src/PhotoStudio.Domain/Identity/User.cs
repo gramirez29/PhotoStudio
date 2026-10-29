@@ -74,7 +74,8 @@ public sealed class User : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         int failedLoginAttempts,
         DateTimeOffset? lockedUntil,
-        bool isSystemOperator)
+        bool isSystemOperator,
+        DateTimeOffset? emailVerifiedAt)
         : base(id, version)
     {
         Username = username;
@@ -86,6 +87,7 @@ public sealed class User : AggregateRoot<Guid>
         FailedLoginAttempts = failedLoginAttempts;
         LockedUntil = lockedUntil;
         IsSystemOperator = isSystemOperator;
+        EmailVerifiedAt = emailVerifiedAt;
     }
 
     /// <summary>
@@ -94,8 +96,8 @@ public sealed class User : AggregateRoot<Guid>
     public string Username { get; }
 
     /// <summary>
-    /// Gets the email, trimmed and in lower case. It is not verified yet: nothing sends mail, so it is contact data and the
-    /// future channel for recovering a password, not a proof of ownership. It is empty for users created before it existed.
+    /// Gets the email, trimmed and in lower case. It is only a proof of ownership once <see cref="IsEmailVerified"/> is true. It
+    /// is empty for users created before it existed, and those can never be verified.
     /// </summary>
     public string Email { get; }
 
@@ -136,6 +138,17 @@ public sealed class User : AggregateRoot<Guid>
     public bool IsSystemOperator { get; }
 
     /// <summary>
+    /// Gets the instant the owner of the email proved it with the code sent there (UTC), or <see langword="null"/> while they have not.
+    /// A user created before verification existed starts as not verified.
+    /// </summary>
+    public DateTimeOffset? EmailVerifiedAt { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the owner of the email proved it with the code sent there.
+    /// </summary>
+    public bool IsEmailVerified => EmailVerifiedAt is not null;
+
+    /// <summary>
     /// Creates a new user, validating and normalizing the data.
     /// </summary>
     /// <param name="id">Photographer identifier; becomes the tenant of every booking of the user.</param>
@@ -159,7 +172,7 @@ public sealed class User : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.RequiredValue, "The password hash is required.");
         }
 
-        return new User(id, 0, NormalizeUsername(username), NormalizeEmail(email), passwordHash, NormalizeName(name), NormalizePhone(phone), now, 0, null, false);
+        return new User(id, 0, NormalizeUsername(username), NormalizeEmail(email), passwordHash, NormalizeName(name), NormalizePhone(phone), now, 0, null, false, null);
     }
 
     /// <summary>
@@ -176,6 +189,7 @@ public sealed class User : AggregateRoot<Guid>
     /// <param name="failedLoginAttempts">Consecutive failed logins.</param>
     /// <param name="lockedUntil">Lock end, if locked.</param>
     /// <param name="isSystemOperator">Whether the user may run system-wide work.</param>
+    /// <param name="emailVerifiedAt">Instant the email was verified, if it was.</param>
     /// <returns>The restored user.</returns>
     public static User Restore(
         Guid id,
@@ -188,8 +202,9 @@ public sealed class User : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         int failedLoginAttempts,
         DateTimeOffset? lockedUntil,
-        bool isSystemOperator = false) =>
-        new(id, version, username, email, passwordHash, name, phone, createdAt, failedLoginAttempts, lockedUntil, isSystemOperator);
+        bool isSystemOperator = false,
+        DateTimeOffset? emailVerifiedAt = null) =>
+        new(id, version, username, email, passwordHash, name, phone, createdAt, failedLoginAttempts, lockedUntil, isSystemOperator, emailVerifiedAt);
 
     /// <summary>
     /// Checks that a password meets the length rules. Only the length is checked: a longer passphrase is better than a

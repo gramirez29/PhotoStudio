@@ -174,6 +174,13 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<PortalOtpDocument>.IndexKeys.Ascending(otp => otp.ExpiresAt),
             new CreateIndexOptions { Name = "ix_otp_retention", ExpireAfter = TimeSpan.FromHours(1) });
 
+        var emailVerifications = database.GetCollection<EmailVerificationDocument>(MongoEmailVerificationRepository.CollectionName);
+
+        // Removes the code that verifies an email an hour after it expires, for the same reason as the portal codes.
+        var emailVerificationRetentionIndex = new CreateIndexModel<EmailVerificationDocument>(
+            Builders<EmailVerificationDocument>.IndexKeys.Ascending(verification => verification.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_email_verification_retention", ExpireAfter = TimeSpan.FromHours(1) });
+
         var pushDevices = database.GetCollection<PushDeviceDocument>(MongoPushDeviceRepository.CollectionName);
 
         // Serves the push: the phones of a photographer. The token is the document id, so it is unique without an index.
@@ -185,6 +192,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
         {
             await links.Indexes.CreateManyAsync([linkHashIndex, linkBookingIndex, linkRetentionIndex], cancellationToken: cancellationToken);
             await portalOtps.Indexes.CreateManyAsync([otpRetentionIndex], cancellationToken: cancellationToken);
+            await emailVerifications.Indexes.CreateManyAsync([emailVerificationRetentionIndex], cancellationToken: cancellationToken);
             await pushDevices.Indexes.CreateManyAsync([pushPhotographerIndex], cancellationToken: cancellationToken);
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);

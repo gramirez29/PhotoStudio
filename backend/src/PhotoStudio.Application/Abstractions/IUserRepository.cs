@@ -74,4 +74,14 @@ public interface IUserRepository
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns><see langword="true"/> when the hash was replaced; <see langword="false"/> when the stored hash had changed meanwhile.</returns>
     Task<bool> ChangePasswordAsync(Guid id, string expectedPasswordHash, string newPasswordHash, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Records that the owner of the email proved it. It only writes when the user is not verified yet, so doing it twice keeps
+    /// the first instant.
+    /// </summary>
+    /// <param name="id">User identifier.</param>
+    /// <param name="verifiedAt">Instant of the verification.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the user is recorded as verified.</returns>
+    Task MarkEmailVerifiedAsync(Guid id, DateTimeOffset verifiedAt, CancellationToken cancellationToken);
 }

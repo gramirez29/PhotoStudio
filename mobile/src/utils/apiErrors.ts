@@ -237,3 +237,49 @@ export function rescheduleBookingErrorMessage(error: Error): string {
       return 'No se pudo reprogramar la reserva. Inténtalo de nuevo.';
   }
 }
+
+/**
+ * Converts the error of a failed email verification into a message for the user.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function verifyEmailErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'auth.invalid_email_code':
+      return 'El código no es correcto o ya venció. Revísalo en tu correo o pide uno nuevo.';
+    case 'rate_limit.exceeded':
+      return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    default:
+      return 'No se pudo verificar el correo. Inténtalo de nuevo.';
+  }
+}
+
+/**
+ * Converts the error of a failed request for a new verification code into a message for the user.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function resendEmailCodeErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'auth.email_code_rate_limited':
+      return 'Ya te enviamos un código hace poco. Revisa tu correo, o espera un momento para pedir otro.';
+    case 'auth.email_already_verified':
+      return 'Tu correo ya está verificado. Cierra la sesión y vuelve a entrar.';
+    case 'auth.email_missing':
+      return 'Tu cuenta no tiene un correo registrado.';
+    case 'email.delivery_failed':
+      return 'No pudimos enviar el correo ahora. Inténtalo en un momento.';
+    case 'rate_limit.exceeded':
+      return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    default:
+      return 'No se pudo enviar el código. Inténtalo de nuevo.';
+  }
+}

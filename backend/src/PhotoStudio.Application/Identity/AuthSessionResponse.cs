@@ -12,6 +12,7 @@ namespace PhotoStudio.Application.Identity;
 /// <param name="Email">Email of the user; empty for users created before the email existed.</param>
 /// <param name="Name">Display name of the user.</param>
 /// <param name="IsSystemOperator">Whether the user may run system-wide work; the app uses it only to show or hide that action, the API enforces it with the token.</param>
+/// <param name="EmailVerified">Whether the user may use the app: they proved their email, or verification is not required for them. While it is false the app only shows the screen to verify the email, and the API refuses everything else.</param>
 public sealed record AuthSessionResponse(
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAt,
@@ -21,4 +22,5 @@ public sealed record AuthSessionResponse(
     string Username,
     string Email,
     string Name,
-    bool IsSystemOperator);
+    bool IsSystemOperator,
+    bool EmailVerified);

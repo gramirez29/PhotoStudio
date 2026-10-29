@@ -17,7 +17,9 @@ using PhotoStudio.Application.Identity.ChangePassword;
 using PhotoStudio.Application.Identity.Login;
 using PhotoStudio.Application.Identity.Logout;
 using PhotoStudio.Application.Identity.RefreshSession;
+using PhotoStudio.Application.Identity.ResendEmailVerification;
 using PhotoStudio.Application.Identity.Register;
+using PhotoStudio.Application.Identity.VerifyEmail;
 using PhotoStudio.Application.Maintenance.RunMaintenance;
 using PhotoStudio.Application.Notifications;
 using PhotoStudio.Application.Notifications.DeliverDue;
@@ -150,6 +152,9 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<LogoutCommand, LogoutResponse>, LogoutHandler>();
         services.AddScoped<ICommandHandler<RegisterUserCommand, AuthSessionResponse>, RegisterUserHandler>();
         services.AddScoped<ICommandHandler<ChangePasswordCommand, AuthSessionResponse>, ChangePasswordHandler>();
+        services.AddScoped<EmailVerificationSender>();
+        services.AddScoped<ICommandHandler<VerifyEmailCommand, AuthSessionResponse>, VerifyEmailHandler>();
+        services.AddScoped<ICommandHandler<ResendEmailVerificationCommand, EmailVerificationSentResponse>, ResendEmailVerificationHandler>();
 
         return services;
     }

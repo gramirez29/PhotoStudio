@@ -21,6 +21,7 @@ export function parseAuthSession(value: unknown): AuthSessionResponse {
     email: readString(record, 'email', path),
     name: readString(record, 'name', path),
     isSystemOperator: readBoolean(record, 'isSystemOperator', path),
+    emailVerified: readBoolean(record, 'emailVerified', path),
   };
 }
 

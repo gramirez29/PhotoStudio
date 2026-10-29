@@ -8,6 +8,8 @@ import {
   maintenanceErrorMessage,
   registerErrorMessage,
   rescheduleBookingErrorMessage,
+  resendEmailCodeErrorMessage,
+  verifyEmailErrorMessage,
 } from '../apiErrors';
 
 describe('loginErrorMessage', () => {
@@ -165,5 +167,37 @@ describe('bookingCommandErrorMessage', () => {
       'No se pudo completar la acción. Inténtalo de nuevo.',
     );
     expect(bookingCommandErrorMessage(new TypeError('Network request failed'))).toBe(NETWORK_ERROR_MESSAGE);
+  });
+});
+
+describe('verifyEmailErrorMessage', () => {
+  it('says the code is wrong or expired without telling which', () => {
+    expect(verifyEmailErrorMessage(new ApiError(422, 'x', 'auth.invalid_email_code'))).toMatch(/no es correcto o ya venció/);
+  });
+
+  it('asks to wait when too many attempts were made', () => {
+    expect(verifyEmailErrorMessage(new ApiError(429, 'x', 'rate_limit.exceeded'))).toMatch(/Espera un minuto/);
+  });
+
+  it('explains a lost connection and an error nobody planned for', () => {
+    expect(verifyEmailErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(verifyEmailErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo verificar el correo/);
+  });
+});
+
+describe('resendEmailCodeErrorMessage', () => {
+  it.each([
+    ['auth.email_code_rate_limited', /Ya te enviamos un código hace poco/],
+    ['auth.email_already_verified', /ya está verificado/],
+    ['auth.email_missing', /no tiene un correo/],
+    ['email.delivery_failed', /No pudimos enviar el correo/],
+    ['rate_limit.exceeded', /Espera un minuto/],
+  ])('explains %s', (code, message) => {
+    expect(resendEmailCodeErrorMessage(new ApiError(409, 'x', code))).toMatch(message);
+  });
+
+  it('explains a lost connection and an error nobody planned for', () => {
+    expect(resendEmailCodeErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(resendEmailCodeErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo enviar el código/);
   });
 });

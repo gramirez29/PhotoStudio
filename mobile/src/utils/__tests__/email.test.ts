@@ -1,4 +1,4 @@
-import { MAX_EMAIL_LENGTH, normalizeEmail } from '../email';
+import { MAX_EMAIL_LENGTH, normalizeEmail, maskEmail } from '../email';
 
 describe('normalizeEmail', () => {
   it('trims and lower-cases a valid address', () => {
@@ -14,5 +14,17 @@ describe('normalizeEmail', () => {
 
   it('rejects an address longer than the limit', () => {
     expect(normalizeEmail(`${'a'.repeat(MAX_EMAIL_LENGTH)}@example.com`)).toBeNull();
+  });
+});
+
+describe('maskEmail', () => {
+  it('keeps the first letter and the domain, and hides the rest', () => {
+    expect(maskEmail('ana.perez@gmail.com')).toBe('a***@gmail.com');
+  });
+
+  it('hides everything when the text has no valid shape', () => {
+    expect(maskEmail('')).toBe('***');
+    expect(maskEmail('no-at-sign')).toBe('***');
+    expect(maskEmail('@gmail.com')).toBe('***');
   });
 });
