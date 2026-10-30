@@ -47,7 +47,7 @@ describe('BookingActions', () => {
     render(<BookingActions booking={bookingWith(['Reschedule', 'Cancel'])} />);
 
     expect(screen.getByText('Reprogramar')).toBeTruthy();
-    expect(screen.getByText('Cancelar')).toBeTruthy();
+    expect(screen.getByText('Cancelar reserva')).toBeTruthy();
     expect(screen.queryByText('Marcar sesión completada')).toBeNull();
     expect(screen.queryByText('Marcar cliente ausente')).toBeNull();
   });

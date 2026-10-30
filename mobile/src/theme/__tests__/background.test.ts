@@ -1,18 +1,19 @@
 import type { ColorScheme } from '../../types/theme/palette.types';
-import { WASH_OPACITY } from '../background';
+import { WATERMARK_OPACITY } from '../background';
 import { getPalette } from '../palettes';
 
 /**
- * Mixes the wash over a gray of the picture, as the screen does.
- * @param washHex Color of the wash, #rrggbb.
- * @param opacity How much of the wash covers the picture, from 0 to 1.
- * @param pictureLevel Gray of the picture under the wash, from 0 (black) to 255 (white).
+ * Mixes the color of the logo over the color of the background, as the screen does where the logo is solid.
+ * @param tintHex Color of the logo, #rrggbb.
+ * @param opacity How much of the logo color shows, from 0 to 1.
+ * @param backgroundHex Color of the background under it, #rrggbb.
  * @returns The color seen on the screen, #rrggbb.
  */
-function seenColor(washHex: string, opacity: number, pictureLevel: number): string {
+function seenColor(tintHex: string, opacity: number, backgroundHex: string): string {
   const channels = [1, 3, 5].map((offset) => {
-    const wash = parseInt(washHex.slice(offset, offset + 2), 16);
-    return Math.round(wash * opacity + pictureLevel * (1 - opacity));
+    const tint = parseInt(tintHex.slice(offset, offset + 2), 16);
+    const background = parseInt(backgroundHex.slice(offset, offset + 2), 16);
+    return Math.round(tint * opacity + background * (1 - opacity));
   });
   return `#${channels.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 }
@@ -40,27 +41,26 @@ function contrast(first: string, second: string): number {
   return (light + 0.05) / (dark + 0.05);
 }
 
-describe.each<ColorScheme>(['light', 'dark'])('the picture behind the app, in the %s theme', (scheme) => {
+describe.each<ColorScheme>(['light', 'dark'])('the logo behind the app, in the %s theme', (scheme) => {
   const palette = getPalette(scheme);
-  const opacity = WASH_OPACITY[scheme];
-  // The picture goes from black to white; the text must read over the worst of those two ends.
-  const ends = [seenColor(palette.wash, opacity, 0), seenColor(palette.wash, opacity, 255)];
+  const opacity = WATERMARK_OPACITY[scheme];
+  // Where the logo is solid, the screen shows the background mixed with the logo color: the worst place for the text.
+  const strongest = seenColor(palette.primary, opacity, palette.background);
 
-  it('is a soft wash: the picture shows through, but it never hides the screen', () => {
-    expect(opacity).toBeGreaterThan(0.6);
-    expect(opacity).toBeLessThan(0.9);
+  it('is a faint watermark: it can be seen, and it never competes with the screen', () => {
+    expect(opacity).toBeGreaterThanOrEqual(0.04);
+    expect(opacity).toBeLessThanOrEqual(0.12);
   });
 
-  it.each(ends)('keeps the text readable on %s, whatever part of the picture is under it', (background) => {
-    expect(contrast(palette.onBackground, background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(palette.onSurfaceVariant, background)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(palette.muted, background)).toBeGreaterThanOrEqual(4.5);
+  it('keeps the text readable on the background, and on the logo where it is strongest', () => {
+    for (const background of [palette.background, strongest]) {
+      expect(contrast(palette.onBackground, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(palette.onSurfaceVariant, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(palette.muted, background)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
-  it('lets the picture be seen: the darkest and the lightest part differ by at least 10 levels of luminance', () => {
-    const [darkest = '#000000', lightest = '#000000'] = ends;
-    const levels = (hex: string): number => Math.round(luminance(hex) * 255);
-
-    expect(Math.abs(levels(lightest) - levels(darkest))).toBeGreaterThanOrEqual(10);
+  it('lets the logo be seen: it differs from the background by at least 5 % of contrast', () => {
+    expect(contrast(strongest, palette.background)).toBeGreaterThanOrEqual(1.05);
   });
 });
