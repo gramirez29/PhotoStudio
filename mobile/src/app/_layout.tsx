@@ -60,7 +60,8 @@ export default function RootLayout(): ReactElement {
         screenLayout={appScreenLayout}
         screenOptions={{
           ...buildHeaderOptions(palette),
-          contentStyle: { backgroundColor: palette.background },
+          // Transparent: a screen paints its own background, and what no screen covers shows the one of the whole window.
+          contentStyle: { backgroundColor: 'transparent' },
         }}
       >
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
