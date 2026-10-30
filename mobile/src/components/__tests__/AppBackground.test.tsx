@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react-native';
-import { Image, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { appScreenLayout } from '../../navigation/appScreenLayout';
 import { WATERMARK_OPACITY, WATERMARK_SCALE } from '../../theme/background';
@@ -72,6 +72,17 @@ describe('AppBackground', () => {
       top: (window.height - size) / 2,
     });
     expect(window.height).toBeGreaterThan(0);
+  });
+
+  it('centers the logo in the space below the header once it is measured, which is higher than the window', () => {
+    const { toJSON } = render(<AppBackground />);
+    const root = toJSON();
+    expect(root).not.toBeNull();
+
+    fireEvent(screen.UNSAFE_getAllByType(View)[0]!, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 600 } } });
+
+    const logo = StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style);
+    expect(logo.top).toBe((600 - logo.height) / 2);
   });
 
   it('is decoration: hidden from the screen reader', () => {
