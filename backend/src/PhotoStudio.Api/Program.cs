@@ -12,6 +12,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Infrastructure;
 using PhotoStudio.Infrastructure.Identity;
 using PhotoStudio.Infrastructure.Portal;
+using PhotoStudio.Infrastructure.Storage;
 
 // Composition root of the PhotoStudio API. Configuration comes from environment variables (Railway service variables).
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +41,7 @@ builder.Services.AddApplication();
 builder.Services.AddApplicationAuthentication();
 builder.Services.AddApplicationPortal();
 builder.Services.AddInfrastructure();
+builder.Services.AddObjectStorage();
 // This process delivers the outbox soon after a booking changes (see OutboxWakeUpService); the worker keeps doing it on a schedule.
 builder.Services.AddSingleton<OutboxWakeUpService>();
 builder.Services.Replace(ServiceDescriptor.Singleton<IOutboxWakeUp>(provider => provider.GetRequiredService<OutboxWakeUpService>()));

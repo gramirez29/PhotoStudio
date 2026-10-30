@@ -72,6 +72,29 @@ Las acciones de GitHub están fijadas por commit (`@<sha> # vX.Y.Z`) y el CLI de
 4. **Dominio del sitio:** Workers & Pages → `photosense-develop` → Custom domains → `develop.photosensestudio.com` → *Activate domain*. Como el dominio está en la misma cuenta, Cloudflare crea el CNAME (con proxy).
 5. **Dominio de la API:** se crea en 3.3 (necesita el destino que da Railway).
 
+### 3.2.1 Almacenamiento de fotos (Cloudflare R2)
+
+Hace falta para la galería (`docs/Gallery.md`). La API habla con R2 por la API S3 y **nunca** le pasa los bytes al cliente: le da direcciones firmadas de vida corta (subida 15 min como máximo, descarga 30 min). El bucket es **privado**.
+
+1. **Bucket:** R2 → *Create bucket*. Un bucket **por ambiente**: `photostudio-media-develop` para develop y `photostudio-media` para producción. Región: la más cercana a Railway (Norteamérica del Este). Deja el acceso público **apagado**: sin dominio personalizado y sin `r2.dev`.
+2. **Token de API de R2** (distinto del de Pages): R2 → *Manage R2 API Tokens* → *Create API token* → permiso **Object Read & Write**, **limitado a ese bucket** (no a todos) y sin permisos de administración. Cópiate el *Access Key ID* y el *Secret Access Key*: el secreto se muestra una sola vez. **No los pegues en el chat ni en un archivo del repositorio.** Un token por ambiente: nunca uses el de producción en develop.
+3. **CORS del bucket** (el navegador sube directo a R2): bucket → *Settings* → *CORS Policy* → pega esto, con el origen del sitio de ese ambiente (en producción, `https://photosensestudio.com`):
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://develop.photosensestudio.com", "http://localhost:5173"],
+       "AllowedMethods": ["PUT", "GET", "HEAD"],
+       "AllowedHeaders": ["Content-Type"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+4. **Variables de Railway** en la API (y, desde que el worker use el almacenamiento, también en el worker): `R2_ACCOUNT_ID` (Cloudflare → R2 → Overview), `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. Todas o ninguna: con alguna sola la API **no arranca** y dice cuáles faltan; con ninguna arranca y todo lo que necesite fotos responde 503 `storage.unavailable`. `R2_ENDPOINT` solo existe para el servidor local de desarrollo.
+5. **Verificación contra R2 real** (opcional, con un bucket de pruebas aparte, nunca el de datos): las pruebas de almacenamiento corren contra cualquier servidor S3 con `STORAGE_TEST_ENDPOINT` (`https://<account>.r2.cloudflarestorage.com`), `STORAGE_TEST_BUCKET`, `STORAGE_TEST_ACCESS_KEY_ID` y `STORAGE_TEST_SECRET_ACCESS_KEY`: `dotnet test backend/tests/PhotoStudio.Infrastructure.IntegrationTests --filter "FullyQualifiedName~Storage"`. Cada prueba borra sus objetos.
+
+**Local:** `docker compose up -d storage` (en `backend/`) levanta un servidor S3 compatible (SeaweedFS) en `127.0.0.1:9020` con claves de desarrollo que no son secretos de nada; `launchSettings.json` ya apunta ahí y el bucket `photostudio-dev` se crea al primer uso de las pruebas.
+
 ### 3.3 Railway
 1. **Proyecto** `photosense`. Crea el ambiente `develop` (Project → Environments → *New Environment*). Todo lo siguiente va en ese ambiente.
 2. **Servicio API:** *New → Empty Service* → nómbralo exactamente `photostudio-api`. **No lo conectes a GitHub**: el código lo sube el workflow.
@@ -174,7 +197,8 @@ Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arra
 - **Volver el job de backend a `ubuntu-latest`.** Hoy corre en `ubuntu-22.04` porque MongoDB se niega a arrancar en kernels Linux 6.19 hasta 7.0.13 (SERVER-121912, incompatibilidad con `tcmalloc`; afecta a todas las imágenes de `mongo`, Docker incluido) y `ubuntu-latest` pasó a uno de esos kernels entre las imágenes de runner `20261012` y `20261025`. Síntoma: el paso `Start MongoDB` falla con `container photostudio-mongo is unhealthy` a los 0,5 s y el log de Mongo dice `MongoDB cannot start: Linux kernel versions 6.19 and newer...`. Revisar cuando el runner traiga un kernel 7.0.14 o más nuevo; el paso `MongoDB diagnostics` del workflow imprime esos logs. Lo mismo puede ocurrir en local si WSL2 se actualiza a un kernel de ese rango (hoy: 6.6.114).
 - **Contenido de la página principal** (hoy provisional) y si en producción se indexa o no.
 - **Reply-To** de los correos y un remitente que no sea `no-reply`.
-- **Respaldo semanal** con `mongodump` hacia R2.
+- **Respaldo semanal** con `mongodump` hacia R2 (otro bucket: el de las fotos no es para respaldos).
+- **Fotos huérfanas en R2:** una subida que nunca se registra deja un objeto sin dueño. Lo barrerá el trabajo de archivo de la galería (PR 10 de `docs/Gallery.md`).
 - **Producción de la app móvil:** perfil `production` de EAS, keystore y Firebase de producción, Google Play, y las credenciales de iOS (APNs). Detalle en `docs/PushNotifications.md` §14.
 
 ## 7. App móvil: build de desarrollo y push (EAS)
