@@ -1,4 +1,5 @@
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
+import { MaterialIcons } from '@expo/vector-icons';
 import { JosefinSans_600SemiBold, JosefinSans_700Bold } from '@expo-google-fonts/josefin-sans';
 
 /**
@@ -18,8 +19,12 @@ export const FONT_FAMILIES = {
   bodyBold: 'DMSans_700Bold',
 } as const;
 
-/** The font files the app loads at start, by family name. They ship inside the app: no download, no network. */
+/**
+ * The font files the app loads at start, by family name: the two fonts of the brand and the font of the icons (the gear of the
+ * header). They ship inside the app: no download, no network.
+ */
 export const FONT_ASSETS = {
+  ...MaterialIcons.font,
   [FONT_FAMILIES.title]: JosefinSans_600SemiBold,
   [FONT_FAMILIES.titleBold]: JosefinSans_700Bold,
   [FONT_FAMILIES.body]: DMSans_400Regular,

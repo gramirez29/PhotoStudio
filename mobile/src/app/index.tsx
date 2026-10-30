@@ -1,6 +1,5 @@
 import type { ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
-import { ApiStatus } from '../components/ApiStatus';
 import { BookingListItem } from '../components/BookingListItem';
 import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
@@ -57,7 +56,6 @@ export default function HomeScreen(): ReactElement {
         ItemSeparatorComponent={ListSeparator}
         ListHeaderComponent={
           <View>
-            <ApiStatus />
             <NotificationsButton />
             <RefundsButton />
             {isSystemOperator && <MaintenanceButton />}

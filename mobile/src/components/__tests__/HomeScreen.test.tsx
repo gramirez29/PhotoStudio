@@ -22,7 +22,6 @@ function mockStandIn(name: string, text: string): Record<string, () => unknown> 
   return { [name]: () => React.createElement(Text, null, text) };
 }
 
-jest.mock('../ApiStatus', () => mockStandIn('ApiStatus', 'estado del servidor'));
 jest.mock('../NotificationsButton', () => mockStandIn('NotificationsButton', 'botón de avisos'));
 jest.mock('../RefundsButton', () => mockStandIn('RefundsButton', 'botón de reembolsos'));
 jest.mock('../MaintenanceButton', () => mockStandIn('MaintenanceButton', 'mantenimiento'));
@@ -81,11 +80,12 @@ describe('HomeScreen', () => {
     expect(screen.queryByText('mantenimiento')).toBeNull();
   });
 
-  it('does not carry the settings: the appearance and the password are in their own screen', () => {
+  it('does not carry the settings: the appearance, the password and the state of the server are in their own screen', () => {
     bookingsAre({ data: [] });
 
     render(<HomeScreen />);
 
+    expect(screen.queryByText(/Servidor/)).toBeNull();
     expect(screen.queryByText('Apariencia')).toBeNull();
     expect(screen.queryByLabelText('Apariencia: Oscuro')).toBeNull();
     expect(screen.queryByText('Cambiar contraseña')).toBeNull();

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
+import { useApiHealth } from '../../hooks/useApiHealth';
 import { openChangePassword, openSettings } from '../../navigation/appNavigation';
 import { LIGHT_PALETTE } from '../../theme/palettes';
 import { SettingsButton } from '../SettingsButton';
@@ -12,11 +13,21 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 jest.mock('../../navigation/appNavigation', () => ({ openSettings: jest.fn(), openChangePassword: jest.fn() }));
+jest.mock('../../hooks/useApiHealth');
+
+/**
+ * Makes the readiness check of the server answer.
+ * @param state Parts of the query to replace.
+ */
+function serverIs(state: { isError: boolean; data: boolean | undefined }): void {
+  jest.mocked(useApiHealth).mockReturnValue(state as unknown as ReturnType<typeof useApiHealth>);
+}
 
 describe('the settings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAppearanceStore.setState({ preference: 'light' });
+    serverIs({ isError: false, data: true });
   });
 
   describe('SettingsButton', () => {
@@ -28,14 +39,39 @@ describe('the settings', () => {
       expect(openSettings).toHaveBeenCalledTimes(1);
     });
 
-    it('writes its label in the color of the text of the band', () => {
+    it('is a gear, in the color of the text of the band, and has no text of its own', () => {
       render(<SettingsButton />);
 
-      expect(StyleSheet.flatten(screen.getByText('Ajustes').props.style)).toMatchObject({ color: LIGHT_PALETTE.onBrand });
+      const gear = screen.UNSAFE_getByType(MaterialIcons);
+      expect(gear.props.name).toBe('settings');
+      expect(gear.props.color).toBe(LIGHT_PALETTE.onBrand);
+      expect(screen.queryByText('Ajustes')).toBeNull();
+    });
+
+    it('is named for the screen reader, and the gear is hidden from it', () => {
+      render(<SettingsButton />);
+
+      expect(screen.getByLabelText('Ajustes')).toBeTruthy();
+      expect(screen.UNSAFE_getByType(MaterialIcons).props.accessible).toBe(false);
     });
   });
 
   describe('SettingsList', () => {
+    it('shows whether the server is connected, here and not on the home screen', () => {
+      render(<SettingsList />);
+
+      expect(screen.getByText('Servidor')).toBeTruthy();
+      expect(screen.getByText('Servidor conectado')).toBeTruthy();
+    });
+
+    it('says so when the server cannot be reached', () => {
+      serverIs({ isError: true, data: undefined });
+
+      render(<SettingsList />);
+
+      expect(screen.getByText('Sin conexión con el servidor')).toBeTruthy();
+    });
+
     it('has the appearance and the account', () => {
       render(<SettingsList />);
 
