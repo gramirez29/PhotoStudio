@@ -17,6 +17,8 @@ using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.EditTerms;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.ListGalleries;
+using PhotoStudio.Application.Galleries.Proofs;
+using PhotoStudio.Domain.Galleries.Events;
 using PhotoStudio.Application.Contracts;
 using PhotoStudio.Application.Identity;
 using PhotoStudio.Application.Identity.Studio;
@@ -126,6 +128,12 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetGalleryQuery, GalleryResponse>, GetGalleryHandler>();
         services.AddScoped<IQueryHandler<GetGalleryByBookingQuery, GalleryResponse>, GetGalleryByBookingHandler>();
         services.AddScoped<ICommandHandler<EditGalleryTermsCommand, GalleryResponse>, EditGalleryTermsHandler>();
+        services.AddScoped<ICommandHandler<RequestProofUploadsCommand, ProofUploadSlotsResponse>, RequestProofUploadsHandler>();
+        services.AddScoped<ICommandHandler<RegisterProofsCommand, RegisterProofsResponse>, RegisterProofsHandler>();
+        services.AddScoped<IQueryHandler<ListProofsQuery, ProofListResponse>, ListProofsHandler>();
+        services.AddScoped<ICommandHandler<RemoveProofCommand, GalleryResponse>, RemoveProofHandler>();
+        services.AddScoped<ICommandHandler<OpenSelectionCommand, GalleryResponse>, OpenSelectionHandler>();
+        services.AddScoped<IDomainEventHandler<SelectionOpened>, SelectionOpenedEmailHandler>();
 
         return services;
     }

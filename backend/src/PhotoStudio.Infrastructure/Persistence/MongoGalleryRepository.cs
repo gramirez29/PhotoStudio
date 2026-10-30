@@ -4,6 +4,7 @@ using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Galleries;
 using PhotoStudio.Infrastructure.Persistence.Documents;
+using PhotoStudio.Infrastructure.Persistence.Outbox;
 
 namespace PhotoStudio.Infrastructure.Persistence;
 
@@ -20,7 +21,11 @@ public sealed class MongoGalleryRepository(IMongoDatabase database) : IGalleryRe
     /// </summary>
     public const string CollectionName = "galleries";
 
+    private static readonly TransactionOptions MajorityTransaction = new(writeConcern: WriteConcern.WMajority);
+
     private readonly IMongoCollection<GalleryDocument> _collection = database.GetCollection<GalleryDocument>(CollectionName);
+
+    private readonly IMongoCollection<OutboxMessageDocument> _outbox = database.GetCollection<OutboxMessageDocument>(OutboxProcessor.CollectionName);
 
     /// <inheritdoc />
     public async Task<Gallery?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -58,16 +63,52 @@ public sealed class MongoGalleryRepository(IMongoDatabase database) : IGalleryRe
         ArgumentNullException.ThrowIfNull(gallery);
 
         var expectedVersion = gallery.Version;
-        var result = await _collection.ReplaceOneAsync(
-            stored => stored.Id == gallery.Id && stored.Version == expectedVersion,
-            gallery.ToDocument(expectedVersion + 1),
-            cancellationToken: cancellationToken);
+        var document = gallery.ToDocument(expectedVersion + 1);
+        var messages = gallery.DomainEvents.Select(domainEvent => domainEvent.ToOutboxMessage()).ToList();
 
-        if (result.MatchedCount == 0)
+        if (messages.Count == 0)
+        {
+            var result = await _collection.ReplaceOneAsync(
+                stored => stored.Id == gallery.Id && stored.Version == expectedVersion,
+                document,
+                cancellationToken: cancellationToken);
+            EnsureMatched(result.MatchedCount, gallery.Id);
+            return;
+        }
+
+        // The events go to the outbox in the same transaction as the change: either both are stored or neither is.
+        using var session = await database.Client.StartSessionAsync(cancellationToken: cancellationToken);
+        await session.WithTransactionAsync(
+            async (transactionSession, token) =>
+            {
+                var result = await _collection.ReplaceOneAsync(
+                    transactionSession,
+                    stored => stored.Id == gallery.Id && stored.Version == expectedVersion,
+                    document,
+                    cancellationToken: token);
+                EnsureMatched(result.MatchedCount, gallery.Id);
+                await _outbox.InsertManyAsync(transactionSession, messages, cancellationToken: token);
+                return true;
+            },
+            MajorityTransaction,
+            cancellationToken);
+
+        gallery.ClearDomainEvents();
+    }
+
+    /// <summary>
+    /// Refuses a save that matched nothing: another request changed the gallery first.
+    /// </summary>
+    /// <param name="matchedCount">Documents the save matched.</param>
+    /// <param name="galleryId">Gallery that was being saved.</param>
+    /// <exception cref="ConflictException">When nothing matched.</exception>
+    private static void EnsureMatched(long matchedCount, Guid galleryId)
+    {
+        if (matchedCount == 0)
         {
             throw new ConflictException(
                 ApplicationErrorCodes.ConcurrencyConflict,
-                $"Gallery {gallery.Id} was modified by another request. Reload it and try again.");
+                $"Gallery {galleryId} was modified by another request. Reload it and try again.");
         }
     }
 

@@ -71,6 +71,12 @@ public sealed class ApiFixture : IAsyncLifetime
     public bool IsAvailable { get; private set; }
 
     /// <summary>
+    /// Gets a value indicating whether the S3-compatible server of the tests answered, so the tests that move photos can run. The
+    /// API is configured to use it, with the same <c>STORAGE_TEST_*</c> variables the storage tests read.
+    /// </summary>
+    public bool StorageAvailable { get; private set; }
+
+    /// <summary>
     /// Gets the name of the throwaway database used by the API under test.
     /// </summary>
     public string DatabaseName { get; } = $"photostudio_api_it_{Guid.NewGuid():N}";
@@ -95,6 +101,7 @@ public sealed class ApiFixture : IAsyncLifetime
 
         _mongo = client;
         IsAvailable = true;
+        await ConfigureStorageAsync();
 
         // The API reads its configuration from the process environment, like in production.
         Environment.SetEnvironmentVariable("MONGODB_CONNECTION_STRING", connectionString);
@@ -121,6 +128,51 @@ public sealed class ApiFixture : IAsyncLifetime
             });
         });
         _ = _factory.Server;
+    }
+
+    /// <summary>
+    /// Points the API at the S3-compatible server of the tests when it answers, making the bucket if needed. When it does not, the
+    /// API starts without storage, as it does when nothing is configured, and the tests that need photos skip themselves.
+    /// </summary>
+    /// <returns>A task that completes when the storage is configured or turned out to be unavailable.</returns>
+    private async Task ConfigureStorageAsync()
+    {
+        var endpoint = Environment.GetEnvironmentVariable("STORAGE_TEST_ENDPOINT") ?? "http://127.0.0.1:9020";
+        var bucket = Environment.GetEnvironmentVariable("STORAGE_TEST_BUCKET") ?? "photostudio-test";
+        var accessKey = Environment.GetEnvironmentVariable("STORAGE_TEST_ACCESS_KEY_ID") ?? "dev-storage-access-key";
+        var secret = Environment.GetEnvironmentVariable("STORAGE_TEST_SECRET_ACCESS_KEY") ?? "dev-storage-secret-key-0123456789";
+
+        using var s3 = new Amazon.S3.AmazonS3Client(
+            new Amazon.Runtime.BasicAWSCredentials(accessKey, secret),
+            new Amazon.S3.AmazonS3Config
+            {
+                ServiceURL = endpoint,
+                ForcePathStyle = true,
+                AuthenticationRegion = "auto",
+                RequestChecksumCalculation = Amazon.Runtime.RequestChecksumCalculation.WHEN_REQUIRED,
+                ResponseChecksumValidation = Amazon.Runtime.ResponseChecksumValidation.WHEN_REQUIRED,
+                MaxErrorRetry = 0,
+                Timeout = TimeSpan.FromSeconds(3),
+            });
+
+        try
+        {
+            var buckets = await s3.ListBucketsAsync();
+            if (buckets.Buckets?.Any(candidate => candidate.BucketName == bucket) != true)
+            {
+                await s3.PutBucketAsync(bucket);
+            }
+
+            Environment.SetEnvironmentVariable("R2_ENDPOINT", endpoint);
+            Environment.SetEnvironmentVariable("R2_BUCKET", bucket);
+            Environment.SetEnvironmentVariable("R2_ACCESS_KEY_ID", accessKey);
+            Environment.SetEnvironmentVariable("R2_SECRET_ACCESS_KEY", secret);
+            StorageAvailable = true;
+        }
+        catch (Exception exception) when (exception is Amazon.Runtime.AmazonServiceException or Amazon.Runtime.AmazonClientException or HttpRequestException or TaskCanceledException)
+        {
+            StorageAvailable = false;
+        }
     }
 
     /// <summary>

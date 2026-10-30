@@ -133,7 +133,7 @@ public sealed class GalleryHandlerTests
         response.ExtraPhotoPrice.Amount.ShouldBe(3_000m);
         response.MaxPhotos.ShouldBe(Gallery.MaxPhotos);
         response.ClientName.ShouldBe("María Pérez");
-        response.AllowedActions.ShouldBe([GalleryAction.EditTerms]);
+        response.AllowedActions.ShouldBe([GalleryAction.EditTerms, GalleryAction.UploadProofs]);
     }
 
     /// <summary>

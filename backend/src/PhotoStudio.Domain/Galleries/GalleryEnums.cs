@@ -32,4 +32,13 @@ public enum GalleryAction
 {
     /// <summary>Change how many photos are included, how many are a gift and the price of an extra photo.</summary>
     EditTerms,
+
+    /// <summary>Upload more proofs: the gallery is waiting for them and has room.</summary>
+    UploadProofs,
+
+    /// <summary>Remove a proof that was uploaded by mistake.</summary>
+    RemoveProof,
+
+    /// <summary>Publish the proofs so the client can choose.</summary>
+    OpenSelection,
 }

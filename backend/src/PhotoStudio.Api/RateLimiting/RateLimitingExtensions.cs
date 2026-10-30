@@ -43,6 +43,11 @@ public static class RateLimitingExtensions
     public const string PortalActionPolicy = "portal-action";
 
     /// <summary>
+    /// Name of the policy of the actions of the web area that move proofs (ask for places, register, remove, open the selection): per address.
+    /// </summary>
+    public const string StudioUploadPolicy = "studio-upload";
+
+    /// <summary>
     /// Stable error code returned when a request is rejected by the rate limiter.
     /// </summary>
     public const string RateLimitExceededCode = "rate_limit.exceeded";
@@ -84,6 +89,7 @@ public static class RateLimitingExtensions
             AddPerAddressPolicy(options, PortalReadPolicy, 60);
             AddPerAddressPolicy(options, PortalCodePolicy, 10);
             AddPerAddressPolicy(options, PortalActionPolicy, 10);
+            AddPerAddressPolicy(options, StudioUploadPolicy, 60);
             options.OnRejected = WriteRejectionAsync;
         });
     }

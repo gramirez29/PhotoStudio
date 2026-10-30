@@ -79,7 +79,7 @@ export function parseStudioGallery(value: unknown, path: string): StudioGallery 
     extraPhotoPrice: parseMoney(record.extraPhotoPrice, `${path}.extraPhotoPrice`),
     maxPhotos: readCount(record, 'maxPhotos', path),
     createdAt: readString(record, 'createdAt', path),
-    allowedActions: readArray(record, 'allowedActions', path).map((action, index) => parseAction(action, `${path}.allowedActions[${index}]`)),
+    allowedActions: readArray(record, 'allowedActions', path).flatMap(knownAction),
   };
 }
 
@@ -114,18 +114,14 @@ function readCount(record: Record<string, unknown>, key: string, path: string): 
 }
 
 /**
- * Parses one of the actions the photographer can do with a gallery.
+ * Keeps an action the page knows. An action it does not know is left out, not an error: the API may learn to do more than this
+ * version of the page does, and the page must keep working until it is updated.
  * @param value Unknown value from the response.
- * @param path Location of the value, for error messages.
- * @returns The typed action.
+ * @returns The action in a list of one, or an empty list.
  */
-function parseAction(value: unknown, path: string): (typeof GALLERY_ACTIONS)[number] {
+function knownAction(value: unknown): readonly (typeof GALLERY_ACTIONS)[number][] {
   const action = GALLERY_ACTIONS.find((candidate) => candidate === value);
-  if (action === undefined) {
-    throw new Error(`${path} is not a known action`);
-  }
-
-  return action;
+  return action === undefined ? [] : [action];
 }
 
 /**

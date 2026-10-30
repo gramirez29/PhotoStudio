@@ -63,6 +63,14 @@ public sealed class GalleryDocument
     [BsonRepresentation(BsonType.Decimal128)]
     public decimal ExtraPhotoPrice { get; set; }
 
+    /// <summary>Gets or sets the proofs of the gallery, in the order they were registered.</summary>
+    [BsonElement("photos")]
+    public List<GalleryPhotoDocument> Photos { get; set; } = [];
+
+    /// <summary>Gets or sets the instant the client was told the proofs are ready (UTC), if they were.</summary>
+    [BsonElement("selectionNotifiedAt")]
+    public DateTime? SelectionNotifiedAt { get; set; }
+
     /// <summary>Gets or sets the instant the gallery was created (UTC).</summary>
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }
@@ -70,6 +78,29 @@ public sealed class GalleryDocument
     /// <summary>Gets or sets the instant the gallery last changed (UTC).</summary>
     [BsonElement("updatedAt")]
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// MongoDB data model of a proof, embedded in the document of its gallery: a gallery holds at most 150, so they always fit.
+/// </summary>
+public sealed class GalleryPhotoDocument
+{
+    /// <summary>Gets or sets the photo identifier.</summary>
+    [BsonElement("id")]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
+    public Guid Id { get; set; }
+
+    /// <summary>Gets or sets the name of the file the photo came from.</summary>
+    [BsonElement("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the size of the stored proof in bytes.</summary>
+    [BsonElement("proofBytes")]
+    public long ProofBytes { get; set; }
+
+    /// <summary>Gets or sets the instant the proof was registered (UTC).</summary>
+    [BsonElement("uploadedAt")]
+    public DateTime UploadedAt { get; set; }
 }
 
 /// <summary>
@@ -101,6 +132,14 @@ public static class GalleryDocumentMappings
             BonusPhotos = gallery.BonusPhotos,
             Currency = gallery.ExtraPhotoPrice.Currency,
             ExtraPhotoPrice = gallery.ExtraPhotoPrice.Amount,
+            Photos = [.. gallery.Photos.Select(photo => new GalleryPhotoDocument
+            {
+                Id = photo.Id,
+                Name = photo.OriginalName,
+                ProofBytes = photo.ProofBytes,
+                UploadedAt = photo.UploadedAt.UtcDateTime,
+            })],
+            SelectionNotifiedAt = gallery.SelectionNotifiedAt?.UtcDateTime,
             CreatedAt = gallery.CreatedAt.UtcDateTime,
             UpdatedAt = gallery.UpdatedAt.UtcDateTime,
         };
@@ -126,7 +165,9 @@ public static class GalleryDocumentMappings
             document.BonusPhotos,
             Money.Restore(document.ExtraPhotoPrice, document.Currency),
             ToOffset(document.CreatedAt),
-            ToOffset(document.UpdatedAt));
+            ToOffset(document.UpdatedAt),
+            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt))),
+            document.SelectionNotifiedAt is null ? null : ToOffset(document.SelectionNotifiedAt.Value));
     }
 
     /// <summary>

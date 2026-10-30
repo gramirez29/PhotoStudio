@@ -86,6 +86,15 @@ public static class DomainErrorCodes
     /// <summary>The code to sign in on the web was wrong, expired or already spent (the answer never says which).</summary>
     public const string InvalidLoginCode = "auth.invalid_login_code";
 
+    /// <summary>The gallery has no photos, so there is nothing to show the client.</summary>
+    public const string GalleryNoPhotos = "gallery.no_photos";
+
+    /// <summary>The gallery already holds the most photos it can.</summary>
+    public const string GalleryFull = "gallery.full";
+
+    /// <summary>A photo has a name or a size that is not valid.</summary>
+    public const string GalleryInvalidPhoto = "gallery.invalid_photo";
+
     /// <summary>The gallery is not in a state that allows this action.</summary>
     public const string GalleryInvalidState = "gallery.invalid_state";
 
