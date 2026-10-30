@@ -77,8 +77,8 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 ## 9. PRs
 
 0. **Este plan** (documento).
-1. **R2 y almacenamiento:** puerto `IObjectStorage` (Application) y adaptador con `AWSSDK.S3` contra R2 (URLs firmadas de subida y lectura, `HEAD`, borrado); MinIO en el compose local; pasos de Cloudflare y variables en `docs/Deployment.md`.
-2. **Agregado `Gallery`:** G1 al consumir `SessionCompleted`, fotos incluidas y de regalo, precio de extra, repositorio, índices, `allowedActions`, eventos y lectura para el fotógrafo.
+1. **R2 y almacenamiento** (hecho, PR #55): puerto `IObjectStorage` (Application) y adaptador con `AWSSDK.S3` contra R2 (URLs firmadas de subida y lectura, `HEAD`, borrado); MinIO en el compose local; pasos de Cloudflare y variables en `docs/Deployment.md`.
+2. **Agregado `Gallery`** (hecho en `feature/gallery-aggregate`; solo creación, lectura y edición de términos: las demás transiciones llegan con el PR que las usa, y los eventos de dominio con su primer consumidor): G1 al consumir `SessionCompleted`, fotos incluidas y de regalo, precio de extra, repositorio, índices, `allowedActions`, eventos y lectura para el fotógrafo.
 3. **Sesión web del fotógrafo:** cookie, alcance limitado, CORS, página de inicio de sesión y lista de galerías.
 4. **Subida de pruebas (web):** URLs firmadas, registro de la foto, módulo de marca de agua y compresión, página de subida y "Publicar pruebas" (G2) con el correo al cliente.
 5. **Selección del cliente en el portal:** sesión por código, cuadrícula con URLs de vida corta, contador, leyendas, mensaje de extras, sin clic derecho; enviar (G3) y push al fotógrafo.

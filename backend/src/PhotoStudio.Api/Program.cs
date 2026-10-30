@@ -101,6 +101,7 @@ app.MapPortalEndpoints();
 app.MapNotificationEndpoints();
 app.MapPushDeviceEndpoints();
 app.MapBillingEndpoints();
+app.MapGalleryEndpoints();
 app.MapMaintenanceEndpoints();
 
 await app.RunAsync();
