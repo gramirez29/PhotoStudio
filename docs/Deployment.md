@@ -95,6 +95,21 @@ Hace falta para la galería (`docs/Gallery.md`). La API habla con R2 por la API 
 
 **Local:** `docker compose up -d storage` (en `backend/`) levanta un servidor S3 compatible (SeaweedFS) en `127.0.0.1:9020` con claves de desarrollo que no son secretos de nada; `launchSettings.json` ya apunta ahí y el bucket `photostudio-dev` se crea al primer uso de las pruebas.
 
+### 3.2.2 Documentación de la API (Swagger UI)
+
+Una pantalla para probar a mano cada endpoint, sobre el documento OpenAPI. Muestra toda la superficie de la API y deja llamarla a quien pegue un token, así que **solo está encendida donde se trabaja**:
+
+| Ambiente | Estado | Cómo |
+|---|---|---|
+| Local (Development) | Encendida | Nada que hacer: `http://localhost:8080/swagger` |
+| develop | **Encendida con la variable** | En Railway, servicio `photostudio-api`, ambiente develop: `API_DOCS_ENABLED=true` → `https://develop-api.photosensestudio.com/swagger` |
+| producción | **Apagada: no pongas la variable** (o `API_DOCS_ENABLED=false`) | Sin la variable, las rutas `/swagger` y `/openapi/v1.json` no existen |
+
+- **Regla:** `API_DOCS_ENABLED=true` la enciende, `false` la apaga incluso en Development, y sin la variable solo está en Development. Cualquier otro texto cuenta como apagada (un error de tipeo no la abre).
+- **Producción, más adelante:** cuando exista el ambiente de producción, **no** definas esta variable ahí. Si alguna vez hace falta verla en producción, enciéndela solo un rato y apágala al terminar: con ella encendida, cualquiera que sepa la dirección ve el mapa completo de la API, y aunque no pueda llamarla sin un token, no hay razón para regalarlo. Los tipos de TypeScript se generan en local (donde está encendida), no desde producción.
+- **Cómo usarla:** abre `/swagger`. Con `POST /api/auth/login` (*Try it out*) obtienes un `accessToken`; toca **Authorize** arriba a la derecha y pega **solo el token** (sin la palabra Bearer). Dura 15 minutos: si empiezan a salir 401, vuelve a iniciar sesión. La cuenta debe tener el correo verificado, o la API responde 403 a casi todo. La pantalla **no guarda** el token: al recargar hay que pegarlo otra vez (a propósito).
+- **Seguridad:** la pantalla se sirve desde la propia API, sin cargar scripts ni estilos de otros sitios. Cada operación que exige sesión muestra un candado; las públicas (inicio de sesión, registro, salud) no. Cuidado al compartir pantalla o capturas: el token pegado es una sesión real. En develop usa una cuenta de pruebas, no la tuya.
+
 ### 3.3 Railway
 1. **Proyecto** `photosense`. Crea el ambiente `develop` (Project → Environments → *New Environment*). Todo lo siguiente va en ese ambiente.
 2. **Servicio API:** *New → Empty Service* → nómbralo exactamente `photostudio-api`. **No lo conectes a GitHub**: el código lo sube el workflow.
@@ -192,7 +207,7 @@ Lo que sí está verificado fuera de Railway: la imagen de Docker compila y arra
 
 ## 6. Pendiente
 
-- **Producción:** segundo ambiente de Railway con su token, proyecto de Pages `photosense`, `deploy-production.yml` con un *environment* `production` que exija aprobación manual, y los dominios finales.
+- **Producción:** segundo ambiente de Railway con su token, proyecto de Pages `photosense`, `deploy-production.yml` con un *environment* `production` que exija aprobación manual, y los dominios finales. **En ese ambiente no se define `API_DOCS_ENABLED`** (la pantalla de pruebas y el documento OpenAPI no deben existir en producción; §3.2.2).
 - **Distinguir versiones en el health check** (por ejemplo, exponer el commit desplegado) para que el job de la API no dé por bueno un despliegue que Railway rechazó.
 - **Volver el job de backend a `ubuntu-latest`.** Hoy corre en `ubuntu-22.04` porque MongoDB se niega a arrancar en kernels Linux 6.19 hasta 7.0.13 (SERVER-121912, incompatibilidad con `tcmalloc`; afecta a todas las imágenes de `mongo`, Docker incluido) y `ubuntu-latest` pasó a uno de esos kernels entre las imágenes de runner `20261012` y `20261025`. Síntoma: el paso `Start MongoDB` falla con `container photostudio-mongo is unhealthy` a los 0,5 s y el log de Mongo dice `MongoDB cannot start: Linux kernel versions 6.19 and newer...`. Revisar cuando el runner traiga un kernel 7.0.14 o más nuevo; el paso `MongoDB diagnostics` del workflow imprime esos logs. Lo mismo puede ocurrir en local si WSL2 se actualiza a un kernel de ese rango (hoy: 6.6.114).
 - **Contenido de la página principal** (hoy provisional) y si en producción se indexa o no.

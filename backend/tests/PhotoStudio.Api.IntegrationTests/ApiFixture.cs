@@ -156,6 +156,20 @@ public sealed class ApiFixture : IAsyncLifetime
             builder.ConfigureTestServices(services => services.AddSingleton(new EmailVerificationSettings(true))));
 
     /// <summary>
+    /// Builds a copy of the API started with extra configuration settings, as if they were environment variables. The caller disposes it.
+    /// </summary>
+    /// <param name="settings">Configuration keys and values.</param>
+    /// <returns>The factory.</returns>
+    public WebApplicationFactory<Program> CreateFactory(IReadOnlyDictionary<string, string?> settings) =>
+        (_factory ?? throw new InvalidOperationException("MongoDB is not available.")).WithWebHostBuilder(builder =>
+        {
+            foreach (var (key, value) in settings)
+            {
+                builder.UseSetting(key, value);
+            }
+        });
+
+    /// <summary>
     /// Creates a client of a factory, with its own client address so the rate limits of one test do not affect another.
     /// </summary>
     /// <param name="factory">Factory to create the client from.</param>
