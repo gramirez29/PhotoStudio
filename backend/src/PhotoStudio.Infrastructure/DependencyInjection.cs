@@ -40,6 +40,9 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, MongoNotificationRepository>();
         services.AddScoped<ISettlementRepository, MongoSettlementRepository>();
         services.AddScoped<IGalleryRepository, MongoGalleryRepository>();
+        services.AddScoped<IStudioSessionRepository, MongoStudioSessionRepository>();
+        services.AddScoped<IStudioDeviceRepository, MongoStudioDeviceRepository>();
+        services.AddScoped<IStudioChallengeRepository, MongoStudioChallengeRepository>();
         services.AddScoped<IPushDeviceRepository, MongoPushDeviceRepository>();
         services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
         services.AddScoped<IBookingLinkRepository, MongoBookingLinkRepository>();

@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
+using PhotoStudio.Application.Identity.Studio;
 using PhotoStudio.Domain.Common;
 using PhotoStudio.Domain.Identity;
 
@@ -15,12 +16,14 @@ namespace PhotoStudio.Application.Identity.ChangePassword;
 /// <param name="refreshTokens">Refresh token repository.</param>
 /// <param name="passwordHasher">Password hashing.</param>
 /// <param name="sessions">Builds the session tokens.</param>
+/// <param name="studioAccess">Revokes what the web area trusts about the user: sessions, remembered browsers and pending code.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class ChangePasswordHandler(
     IUserRepository users,
     IRefreshTokenRepository refreshTokens,
     IPasswordHasher passwordHasher,
     SessionIssuer sessions,
+    StudioAccessRevoker studioAccess,
     TimeProvider timeProvider) : ICommandHandler<ChangePasswordCommand, AuthSessionResponse>
 {
     /// <summary>
@@ -72,6 +75,9 @@ public sealed class ChangePasswordHandler(
 
         // Anyone who had a session with the old password (a stolen refresh token included) is signed out; this device gets a new one.
         await refreshTokens.RevokeAllForUserAsync(user.Id, now, cancellationToken);
+
+        // The same for the web area: its sessions, the browsers it remembered and any code it was waiting for.
+        await studioAccess.RevokeAllAsync(user.Id, cancellationToken);
         var session = sessions.Issue(user, Guid.CreateVersion7(), now);
         await refreshTokens.AddAsync(session.RefreshToken, cancellationToken);
         return session.Response;

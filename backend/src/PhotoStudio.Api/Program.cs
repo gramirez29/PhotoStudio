@@ -13,6 +13,7 @@ using PhotoStudio.Infrastructure;
 using PhotoStudio.Infrastructure.Identity;
 using PhotoStudio.Infrastructure.Portal;
 using PhotoStudio.Api.Documentation;
+using PhotoStudio.Api.Studio;
 using PhotoStudio.Infrastructure.Storage;
 
 // Composition root of the PhotoStudio API. Configuration comes from environment variables (Railway service variables).
@@ -50,6 +51,7 @@ builder.Services.AddHostedService(provider => provider.GetRequiredService<Outbox
 builder.Services.AddPhotographerAuthentication(builder.Environment.IsDevelopment());
 builder.Services.AddClientPortal(builder.Environment.IsDevelopment());
 builder.Services.AddPortalCors(builder.Environment.IsDevelopment());
+builder.Services.AddStudioWeb(builder.Environment.IsDevelopment());
 builder.Services.AddProblemDetails();
 builder.Services.AddApiRateLimiting();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -76,6 +78,10 @@ app.Use(async (context, next) =>
 // token. The policy itself is attached only to the portal endpoints.
 app.UseCors();
 app.UseExceptionHandler();
+
+// The web area of the photographer is the one part that uses a cookie: its answers are never cached and a request that changes
+// something must come from its site. Before authentication, so a forged request is refused before a cookie is even read.
+app.UseStudioWebGuard();
 
 // Swagger UI (only where the documentation is on) is middleware before authorization: its files are public.
 app.UseApiDocsUi();
@@ -107,6 +113,7 @@ app.MapNotificationEndpoints();
 app.MapPushDeviceEndpoints();
 app.MapBillingEndpoints();
 app.MapGalleryEndpoints();
+app.MapStudioEndpoints();
 app.MapMaintenanceEndpoints();
 
 await app.RunAsync();

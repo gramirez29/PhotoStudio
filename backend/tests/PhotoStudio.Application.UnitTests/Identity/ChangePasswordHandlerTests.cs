@@ -36,6 +36,41 @@ public sealed class ChangePasswordHandlerTests
     }
 
     /// <summary>
+    /// Changing the password also takes away what the web area trusts: its sessions, the browsers it remembered and any code it was
+    /// waiting for, so whoever had the old password, or a copied cookie, is out.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_AlsoRevokesTheAccessOfTheWebArea()
+    {
+        var account = GivenAccount(currentPasswordMatches: true);
+        _fixture.Users.ChangePasswordAsync(account.Id, "stored-hash", "hashed-password", Arg.Any<CancellationToken>()).Returns(true);
+
+        await NewHandler().HandleAsync(new ChangePasswordCommand(account.Id, "old password", "a brand new password"), TestContext.Current.CancellationToken);
+
+        await _fixture.StudioSessions.Received(1).DeleteAllForUserAsync(account.Id, Arg.Any<CancellationToken>());
+        await _fixture.StudioDevices.Received(1).DeleteAllForUserAsync(account.Id, Arg.Any<CancellationToken>());
+        await _fixture.StudioChallenges.Received(1).DeleteAsync(account.Id, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// When the password could not be changed, the web area keeps its sessions: nothing about the account changed.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WhenThePasswordIsNotChanged_LeavesTheWebAreaAlone()
+    {
+        var account = GivenAccount(currentPasswordMatches: false);
+        _fixture.Users.RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>()).Returns(1);
+
+        await Should.ThrowAsync<DomainException>(() => NewHandler().HandleAsync(
+            new ChangePasswordCommand(account.Id, "wrong", "a brand new password"), TestContext.Current.CancellationToken));
+
+        await _fixture.StudioSessions.DidNotReceive().DeleteAllForUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await _fixture.StudioDevices.DidNotReceive().DeleteAllForUserAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
     /// A wrong current password is rejected, counts as a failed login and changes nothing.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
@@ -171,5 +206,5 @@ public sealed class ChangePasswordHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private ChangePasswordHandler NewHandler() =>
-        new(_fixture.Users, _fixture.RefreshTokens, _fixture.PasswordHasher, _fixture.Sessions, _fixture.Clock);
+        new(_fixture.Users, _fixture.RefreshTokens, _fixture.PasswordHasher, _fixture.Sessions, _fixture.StudioAccess, _fixture.Clock);
 }

@@ -643,3 +643,59 @@ Las mismas del portal: 6 dígitos, vive 10 minutos, **un solo uso**, hash HMAC c
 - **La app** decide sus pantallas con `emailVerified` de la sesión (`app/verify-email.tsx`: código, "Enviar un código nuevo" con espera de 60 s y "Salir"); mientras sea `false` solo existe esa pantalla y el registro del push no corre.
 - **Sigue sin resolverse:** quien se equivoca al escribir el correo al registrarse **no puede verificar** y no hay forma de cambiarlo desde la app; el usuario queda tomado. Hoy la salida es que un operador ponga el interruptor en `false` o corrija el correo en Mongo. Pendiente: cambiar el correo mientras no está verificado. Tampoco se resuelve que alguien ocupe el correo de otra persona sin poder usarlo (el índice único sigue protegiéndolo).
 - **Recuperación de contraseña** sigue pendiente, pero ahora ya hay un correo verificado en el que apoyarla.
+
+## 21. La web del fotógrafo (cookie y segundo factor)
+
+La web del fotógrafo (`/studio` del sitio, PR 3 y 3b de `docs/Gallery.md`) es la **única parte de la API que un navegador usa con una cookie**, y por eso es la única expuesta a que una página maliciosa haga una petición con la cookie del usuario. Está construida aparte de la app y se defiende en capas. Nada de lo de las secciones anteriores cambió: la app sigue con su JWT.
+
+### 21.1 Cómo se entra
+
+1. `POST /api/web/auth/login` con usuario y contraseña. Se comprueban **exactamente igual que en la app** (`CredentialChecker`: mismo tiempo de hash para un usuario que no existe, mismo mensaje, **mismo bloqueo de 15 min tras 5 fallos**; los intentos de un lado cuentan en el otro).
+2. La cuenta debe tener el **correo verificado**: el segundo factor va a ese correo. Si no, 403 `auth.web_requires_verified_email` y no se envía nada.
+3. Si el navegador es uno **recordado** (cookie de dispositivo válida de ese usuario), entra sin código: 200 y cookie de sesión. La contraseña se pide siempre; la cookie de dispositivo solo salta el código.
+4. Si no, se envía un **código de 6 dígitos** al correo y se responde 202 (`CodeRequired`) con una cookie de desafío. El código vive 10 minutos, sirve una vez, admite 5 intentos (contados con `$inc` atómico **antes** de comparar), y no se puede pedir otro antes de 60 s ni más de 5 por hora. Se guarda solo su hash (HMAC con la clave de firma), con un prefijo de propósito (`studio-login:`) para que nunca coincida con un código hecho para otra cosa.
+5. `POST /api/web/auth/code/verify` con el código y, si el usuario quiere, `rememberDevice`. El código **solo vale desde el mismo navegador** que dio la contraseña (el secreto del desafío viaja en una cookie): el código correcto enviado desde otro navegador se rechaza. Un código malo, vencido o gastado responde siempre lo mismo (422 `auth.invalid_login_code`).
+6. `POST /api/web/auth/code/resend` pide otro código (mismos límites). La contraseña dada en el paso 1 vale solo durante la **hora de la ventana de envíos**: pasada, hay que empezar de nuevo, para que nadie mantenga vivo un desafío viejo pidiendo códigos.
+7. `POST /api/web/auth/logout` cierra la sesión **en el servidor** (una copia robada de la cookie deja de servir) y, con `forgetDevice`, olvida el navegador. `GET /api/web/auth/session` dice quién está dentro (401 si nadie), para que la página decida al cargar.
+
+### 21.2 La sesión y las cookies
+
+- La sesión es un **secreto opaco de 256 bits** que se busca en el servidor en cada petición (colección `studio_sessions`, solo su hash SHA-256). No es un JWT: cerrar sesión, cambiar la contraseña o bloquear la cuenta surten efecto **al instante**. Dura **2 horas sin uso** y **12 horas como máximo**, se use o no. Una cuenta bloqueada, sin correo verificado o que ya no existe cierra su sesión en el acto.
+- Las cookies (`ps-session`, `ps-device`, `ps-challenge`) son todas **`HttpOnly`** (la página no las lee: un script inyectado no puede robarlas), **`Secure`**, **`SameSite=Strict`** (el navegador solo las manda desde nuestro sitio), de **ruta `/`, sin `Domain`** y con el prefijo **`__Host-`** (el navegador rechaza que otro subdominio o una conexión http las fije). Solo en Development, sobre http en esta computadora, pierden `Secure` y el prefijo (el navegador no las guardaría). En cualquier otro ambiente, una petición insegura nunca recibe una cookie insegura.
+- **Funciona porque el sitio y la API comparten el dominio raíz** (`develop.photosensestudio.com` y `develop-api.photosensestudio.com` son el mismo *site*): `SameSite=Strict` no bloquea las llamadas entre ellos. Si el sitio y la API se separaran en dominios distintos, este diseño dejaría de funcionar y habría que repensarlo.
+
+### 21.3 El navegador recordado (30 días)
+
+La cookie de dispositivo (colección `studio_devices`) solo salta el código, nunca la contraseña, y **solo vale para el usuario que la creó**. Su secreto **cambia en cada uso** (rotación atómica: de dos peticiones con la misma cookie solo una rota; la otra encuentra el hash viejo ya cambiado), así que una cookie copiada sirve a lo sumo una vez. Cada uso extiende los 30 días. Se olvida al cerrar sesión con `forgetDevice`, al cambiar la contraseña y a los 30 días sin uso (índice de expiración).
+
+### 21.4 Qué puede hacer la sesión web
+
+Solo lo que está en `/api/web`: iniciar y cerrar sesión, y **leer sus galerías** (`GET /api/web/galleries` y `/{id}`). La política `studio-web` consulta **solo** el esquema de cookie y exige el *claim* `scope=studio`, que ningún token de la app tiene; y el resto de la API consulta solo los esquemas Bearer, así que **la cookie no abre nada fuera de `/api/web` y el token de la app no abre `/api/web`** (hay pruebas de las dos cosas). La web muestra menos que la app (el correo va enmascarado, sin clientes ni pagos).
+
+### 21.5 Amenazas consideradas
+
+| Amenaza | Defensa |
+|---|---|
+| CSRF (otra página hace una petición con la cookie) | `SameSite=Strict`; CORS con credenciales solo para el sitio; toda petición que cambia algo **debe traer `Origin` igual al del sitio** (si no, 403 `request.forbidden_origin` antes de leer nada); cuerpo JSON (obliga a *preflight*) |
+| XSS roba la sesión | Cookies `HttpOnly`; sin tokens en el navegador; el sitio no carga scripts de terceros |
+| Contraseña robada | Segundo factor por correo en cada navegador nuevo; la cookie de desafío ata el código al navegador |
+| Cookie de sesión copiada | Se busca en el servidor: cerrar sesión, cambiar la contraseña o bloquear la cuenta la matan; 2 h sin uso y 12 h máximo |
+| Cookie de dispositivo copiada | Rota en cada uso; solo salta el código, no la contraseña; solo de su usuario |
+| Fuerza bruta de la contraseña | El mismo bloqueo que la app (5 fallos, 15 min) y 10 peticiones por minuto por IP |
+| Fuerza bruta del código | 5 intentos por código contados de forma atómica; el código vive 10 min; un millón de valores, con la clave del servidor |
+| Enumeración de usuarios | La misma respuesta y el mismo tiempo para usuario inexistente y contraseña mala |
+| Código usado desde otro navegador | Se rechaza: va atado a la cookie de desafío |
+| Reuso de un código | Se gasta con una eliminación atómica: de dos peticiones solo una gana |
+| Otro subdominio de `photosensestudio.com` comprometido (es del mismo *site*, así que `SameSite` no lo frena) | El `Origin` debe ser **exactamente** el del sitio, no solo del mismo dominio raíz; CORS con credenciales solo para ese origen; cookies con prefijo `__Host-` (ningún subdominio puede fijarlas ni pisarlas) |
+| Respuestas en caché | Todo lo de `/api/web` responde `Cache-Control: no-store` |
+| La base de datos se filtra | Solo hashes de secretos y de códigos; los códigos con HMAC y clave |
+
+### 21.6 Datos y configuración
+
+Colecciones `studio_sessions`, `studio_devices` y `studio_challenges` (esta con el usuario como `_id`, una por usuario), con índices únicos por hash y de expiración automática (TTL). Sin variables nuevas: el origen permitido es `PORTAL_BASE_URL` (y, en Development, `localhost:5173`); las `PORTAL_ORIGINS` extra del portal **no** reciben credenciales. Cambiar la contraseña desde la app **cierra las sesiones web, olvida los navegadores recordados y borra el código pendiente**.
+
+### 21.7 Lo que no se hizo
+- Ver o cerrar desde la app las sesiones web abiertas.
+- App autenticadora (TOTP): el segundo factor es el correo, que protege contra la contraseña robada pero no contra el correo robado.
+- Recuperación de contraseña (no existe tampoco para la app).
+- El correo con el código es de texto simple, sin la imagen de marca; lo unificará el PR de los correos de la galería.

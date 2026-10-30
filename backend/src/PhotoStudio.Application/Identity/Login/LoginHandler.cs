@@ -34,47 +34,11 @@ public sealed class LoginHandler(
         ArgumentNullException.ThrowIfNull(command);
 
         var now = timeProvider.GetUtcNow();
-        var password = command.Password ?? string.Empty;
-        var username = User.TryNormalizeUsername(command.Username);
-        var user = username is null ? null : await users.GetByUsernameAsync(username, cancellationToken);
-
-        if (user is null)
-        {
-            passwordHasher.SpendVerificationTime(password);
-            throw InvalidCredentials();
-        }
-
-        if (user.IsLockedAt(now))
-        {
-            throw new AccountLockedException(user.LockedUntil!.Value - now);
-        }
-
-        if (!passwordHasher.Verify(user.PasswordHash, password))
-        {
-            var failedAttempts = await users.RegisterFailedLoginAsync(user.Id, cancellationToken);
-            if (User.ShouldLock(failedAttempts))
-            {
-                await users.LockAsync(user.Id, now + User.LockoutDuration, cancellationToken);
-            }
-
-            throw InvalidCredentials();
-        }
-
-        if (user.FailedLoginAttempts > 0 || user.LockedUntil is not null)
-        {
-            await users.ResetFailedLoginsAsync(user.Id, cancellationToken);
-        }
+        var user = await new CredentialChecker(users, passwordHasher).VerifyAsync(command.Username, command.Password, now, cancellationToken);
 
         // Every login starts a new family, so signing out of one device never signs out the others.
         var session = sessions.Issue(user, Guid.CreateVersion7(), now);
         await refreshTokens.AddAsync(session.RefreshToken, cancellationToken);
         return session.Response;
     }
-
-    /// <summary>
-    /// Builds the generic failure used for every rejected login.
-    /// </summary>
-    /// <returns>The exception to throw.</returns>
-    private static AuthenticationFailedException InvalidCredentials() =>
-        new(ApplicationErrorCodes.InvalidCredentials, "The username or the password is not correct.");
 }

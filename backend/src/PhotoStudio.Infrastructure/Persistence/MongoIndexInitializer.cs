@@ -172,6 +172,40 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 .Descending(gallery => gallery.Id),
             new CreateIndexOptions { Name = "ix_gallery_photographer_created" });
 
+        var studioSessions = database.GetCollection<StudioSessionDocument>(MongoStudioSessionRepository.CollectionName);
+        var studioDevices = database.GetCollection<StudioDeviceDocument>(MongoStudioDeviceRepository.CollectionName);
+        var studioChallenges = database.GetCollection<StudioChallengeDocument>(MongoStudioChallengeRepository.CollectionName);
+
+        // Web sessions are found by the hash of the secret in the cookie, closed by user, and removed when they end.
+        var studioSessionHashIndex = new CreateIndexModel<StudioSessionDocument>(
+            Builders<StudioSessionDocument>.IndexKeys.Ascending(session => session.TokenHash),
+            new CreateIndexOptions { Name = "ix_studio_session_hash", Unique = true });
+        var studioSessionUserIndex = new CreateIndexModel<StudioSessionDocument>(
+            Builders<StudioSessionDocument>.IndexKeys.Ascending(session => session.UserId),
+            new CreateIndexOptions { Name = "ix_studio_session_user" });
+        var studioSessionRetentionIndex = new CreateIndexModel<StudioSessionDocument>(
+            Builders<StudioSessionDocument>.IndexKeys.Ascending(session => session.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_studio_session_retention", ExpireAfter = TimeSpan.Zero });
+
+        // Remembered browsers: the same three needs.
+        var studioDeviceHashIndex = new CreateIndexModel<StudioDeviceDocument>(
+            Builders<StudioDeviceDocument>.IndexKeys.Ascending(device => device.TokenHash),
+            new CreateIndexOptions { Name = "ix_studio_device_hash", Unique = true });
+        var studioDeviceUserIndex = new CreateIndexModel<StudioDeviceDocument>(
+            Builders<StudioDeviceDocument>.IndexKeys.Ascending(device => device.UserId),
+            new CreateIndexOptions { Name = "ix_studio_device_user" });
+        var studioDeviceRetentionIndex = new CreateIndexModel<StudioDeviceDocument>(
+            Builders<StudioDeviceDocument>.IndexKeys.Ascending(device => device.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_studio_device_retention", ExpireAfter = TimeSpan.Zero });
+
+        // Challenges are found by the hash of the secret of the browser, and removed when their sending window is over.
+        var studioChallengeHashIndex = new CreateIndexModel<StudioChallengeDocument>(
+            Builders<StudioChallengeDocument>.IndexKeys.Ascending(challenge => challenge.TokenHash),
+            new CreateIndexOptions { Name = "ix_studio_challenge_hash", Unique = true });
+        var studioChallengeRetentionIndex = new CreateIndexModel<StudioChallengeDocument>(
+            Builders<StudioChallengeDocument>.IndexKeys.Ascending(challenge => challenge.PurgeAt),
+            new CreateIndexOptions { Name = "ix_studio_challenge_retention", ExpireAfter = TimeSpan.Zero });
+
         var links = database.GetCollection<BookingLinkDocument>(MongoBookingLinkRepository.CollectionName);
 
         // A link is found by the hash of the token in the URL; uniqueness guarantees two links never share a token.
@@ -224,6 +258,9 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 cancellationToken: cancellationToken);
             await settlements.Indexes.CreateManyAsync([settlementBookingIndex, settlementRefundIndex], cancellationToken: cancellationToken);
             await galleries.Indexes.CreateManyAsync([galleryBookingIndex, galleryPhotographerIndex], cancellationToken: cancellationToken);
+            await studioSessions.Indexes.CreateManyAsync([studioSessionHashIndex, studioSessionUserIndex, studioSessionRetentionIndex], cancellationToken: cancellationToken);
+            await studioDevices.Indexes.CreateManyAsync([studioDeviceHashIndex, studioDeviceUserIndex, studioDeviceRetentionIndex], cancellationToken: cancellationToken);
+            await studioChallenges.Indexes.CreateManyAsync([studioChallengeHashIndex, studioChallengeRetentionIndex], cancellationToken: cancellationToken);
             await refreshTokens.Indexes.CreateManyAsync(
                 [refreshHashIndex, refreshFamilyIndex, refreshPhotographerIndex, refreshRetentionIndex],
                 cancellationToken: cancellationToken);
