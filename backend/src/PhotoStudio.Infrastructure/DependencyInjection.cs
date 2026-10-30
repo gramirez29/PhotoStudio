@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<INotificationRepository, MongoNotificationRepository>();
         services.AddScoped<ISettlementRepository, MongoSettlementRepository>();
+        services.AddScoped<IGalleryRepository, MongoGalleryRepository>();
         services.AddScoped<IPushDeviceRepository, MongoPushDeviceRepository>();
         services.AddScoped<IRefreshTokenRepository, MongoRefreshTokenRepository>();
         services.AddScoped<IBookingLinkRepository, MongoBookingLinkRepository>();
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, AspNetPasswordHasher>();
         services.AddSingleton<IRefreshTokenGenerator, RefreshTokenGenerator>();
         services.AddSingleton<IBookingPolicyProvider, EnvironmentBookingPolicyProvider>();
+        services.AddSingleton<IGalleryPolicyProvider, EnvironmentGalleryPolicyProvider>();
         services.AddSingleton(ExpoPushOptions.FromEnvironment());
         services.AddHttpClient<IPushSender, ExpoPushSender>(client =>
         {

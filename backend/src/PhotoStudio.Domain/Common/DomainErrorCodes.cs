@@ -82,4 +82,10 @@ public static class DomainErrorCodes
 
     /// <summary>The push token is not an Expo push token.</summary>
     public const string InvalidPushToken = "push.invalid_token";
+
+    /// <summary>The gallery is not in a state that allows this action.</summary>
+    public const string GalleryInvalidState = "gallery.invalid_state";
+
+    /// <summary>The photo counts or the price of a gallery are not valid.</summary>
+    public const string GalleryInvalidTerms = "gallery.invalid_terms";
 }

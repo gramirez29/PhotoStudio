@@ -108,7 +108,8 @@ public sealed partial class GlobalExceptionHandler(
         DomainErrorCodes.GuardFailed or
         DomainErrorCodes.ContractAlreadySigned or
         DomainErrorCodes.ContractTemplateChanged or
-        DomainErrorCodes.InvalidPaymentStatus;
+        DomainErrorCodes.InvalidPaymentStatus or
+        DomainErrorCodes.GalleryInvalidState;
 
     /// <summary>
     /// Logs an exception that was not mapped to a known error.

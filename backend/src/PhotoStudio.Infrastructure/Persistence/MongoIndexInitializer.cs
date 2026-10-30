@@ -143,6 +143,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<NotificationDocument>.IndexKeys.Ascending(notification => notification.RetainUntil),
             new CreateIndexOptions { Name = "ix_notification_retention", ExpireAfter = TimeSpan.Zero });
 
+        var galleries = database.GetCollection<GalleryDocument>(MongoGalleryRepository.CollectionName);
         var settlements = database.GetCollection<SettlementDocument>(MongoSettlementRepository.CollectionName);
 
         // One settlement per booking: two events that settle the same booking cannot create two.
@@ -157,6 +158,19 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 .Ascending(settlement => settlement.RefundStatus)
                 .Ascending(settlement => settlement.CreatedAt),
             new CreateIndexOptions { Name = "ix_settlement_refund" });
+
+        // One gallery per booking: the event that creates it can be delivered twice and still creates one.
+        var galleryBookingIndex = new CreateIndexModel<GalleryDocument>(
+            Builders<GalleryDocument>.IndexKeys.Ascending(gallery => gallery.BookingId),
+            new CreateIndexOptions { Name = "ix_gallery_booking", Unique = true });
+
+        // Serves the list of galleries of a photographer, the most recently created first, page by page.
+        var galleryPhotographerIndex = new CreateIndexModel<GalleryDocument>(
+            Builders<GalleryDocument>.IndexKeys
+                .Ascending(gallery => gallery.PhotographerId)
+                .Descending(gallery => gallery.CreatedAt)
+                .Descending(gallery => gallery.Id),
+            new CreateIndexOptions { Name = "ix_gallery_photographer_created" });
 
         var links = database.GetCollection<BookingLinkDocument>(MongoBookingLinkRepository.CollectionName);
 
@@ -209,6 +223,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 [notificationKeyIndex, notificationDueIndex, notificationInboxIndex, notificationBookingIndex, notificationRetentionIndex],
                 cancellationToken: cancellationToken);
             await settlements.Indexes.CreateManyAsync([settlementBookingIndex, settlementRefundIndex], cancellationToken: cancellationToken);
+            await galleries.Indexes.CreateManyAsync([galleryBookingIndex, galleryPhotographerIndex], cancellationToken: cancellationToken);
             await refreshTokens.Indexes.CreateManyAsync(
                 [refreshHashIndex, refreshFamilyIndex, refreshPhotographerIndex, refreshRetentionIndex],
                 cancellationToken: cancellationToken);
