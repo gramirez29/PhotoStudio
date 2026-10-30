@@ -6,6 +6,7 @@ using PhotoStudio.Api.Studio;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.GetGallery;
+using PhotoStudio.Application.Galleries.Proofs;
 using PhotoStudio.Application.Galleries.ListGalleries;
 using PhotoStudio.Application.Identity.Studio;
 using PhotoStudio.Application.Pagination;
@@ -32,6 +33,32 @@ public sealed record StudioVerifyRequest(string? Code, bool RememberDevice);
 /// </summary>
 /// <param name="ForgetDevice">Whether to also forget this browser, so the next sign-in asks for the code again.</param>
 public sealed record StudioLogoutRequest(bool ForgetDevice);
+
+/// <summary>
+/// One file in the request for places to upload proofs.
+/// </summary>
+/// <param name="Name">Name of the file, as a label.</param>
+/// <param name="Bytes">Size of the proof in bytes.</param>
+public sealed record ProofFileRequest(string? Name, long Bytes);
+
+/// <summary>
+/// Body to ask for the places to upload proofs.
+/// </summary>
+/// <param name="Files">The files about to be uploaded, 1 to 50.</param>
+public sealed record RequestProofUploadsRequest(IReadOnlyList<ProofFileRequest>? Files);
+
+/// <summary>
+/// One upload in the request to register proofs.
+/// </summary>
+/// <param name="PhotoId">Identifier the slot gave.</param>
+/// <param name="Name">Name of the file, as a label.</param>
+public sealed record ProofRegistrationRequest(Guid PhotoId, string? Name);
+
+/// <summary>
+/// Body to register the proofs that were uploaded.
+/// </summary>
+/// <param name="Photos">The uploads, 1 to 50.</param>
+public sealed record RegisterProofsRequest(IReadOnlyList<ProofRegistrationRequest>? Photos);
 
 /// <summary>
 /// The user of a web session, as the page sees them.
@@ -81,6 +108,11 @@ public static class StudioEndpoints
         var galleries = endpoints.MapGroup("/api/web/galleries").WithTags("Web area").RequireCors(StudioWebSettings.CorsPolicyName).RequireAuthorization(StudioWebSettings.Policy);
         galleries.MapGet("/", ListGalleriesAsync).WithName("StudioListGalleries");
         galleries.MapGet("/{id:guid}", GetGalleryAsync).WithName("StudioGetGallery");
+        galleries.MapGet("/{id:guid}/proofs", ListProofsAsync).WithName("StudioListProofs");
+        galleries.MapPost("/{id:guid}/proofs/uploads", RequestUploadsAsync).WithName("StudioRequestProofUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/proofs", RegisterProofsAsync).WithName("StudioRegisterProofs").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/proofs/{photoId:guid}/remove", RemoveProofAsync).WithName("StudioRemoveProof").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/selection/open", OpenSelectionAsync).WithName("StudioOpenSelection").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
 
         return endpoints;
     }
@@ -233,6 +265,91 @@ public static class StudioEndpoints
         TypedResults.Ok(await handler.HandleAsync(
             new ListGalleriesQuery(user.GetPhotographerId(), PageCursors.Read(cursor), PageSizes.Resolve(limit)),
             cancellationToken));
+
+    /// <summary>
+    /// Lists the proofs of a gallery, each with a signed address that works for a few minutes.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the proofs; 404 when the gallery does not exist or is another photographer's.</returns>
+    private static async Task<Ok<ProofListResponse>> ListProofsAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IQueryHandler<ListProofsQuery, ProofListResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ListProofsQuery(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Asks for the places to upload proofs, one per file. The bytes go straight to the storage, not through the API.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">The files about to be uploaded.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with a signed address per file; 409 <c>gallery.invalid_state</c> or <c>gallery.full</c>; 422 <c>gallery.invalid_photo</c>.</returns>
+    private static async Task<Ok<ProofUploadSlotsResponse>> RequestUploadsAsync(
+        Guid id,
+        RequestProofUploadsRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<RequestProofUploadsCommand, ProofUploadSlotsResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(
+            new RequestProofUploadsCommand(user.GetPhotographerId(), id, [.. (request.Files ?? []).Select(file => new ProofFile(file.Name ?? string.Empty, file.Bytes))]),
+            cancellationToken));
+
+    /// <summary>
+    /// Registers the proofs that were uploaded, after the API looks at what is really in the storage.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">The uploads to register.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery and the uploads that were not accepted, each with its reason.</returns>
+    private static async Task<Ok<RegisterProofsResponse>> RegisterProofsAsync(
+        Guid id,
+        RegisterProofsRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<RegisterProofsCommand, RegisterProofsResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(
+            new RegisterProofsCommand(user.GetPhotographerId(), id, [.. (request.Photos ?? []).Select(photo => new ProofRegistration(photo.PhotoId, photo.Name ?? string.Empty))]),
+            cancellationToken));
+
+    /// <summary>
+    /// Removes a proof, while the selection is not open.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="photoId">Photo identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 404 when the gallery or the photo does not exist; 409 <c>gallery.invalid_state</c> once the selection is open.</returns>
+    private static async Task<Ok<GalleryResponse>> RemoveProofAsync(
+        Guid id,
+        Guid photoId,
+        ClaimsPrincipal user,
+        ICommandHandler<RemoveProofCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RemoveProofCommand(user.GetPhotographerId(), id, photoId), cancellationToken));
+
+    /// <summary>
+    /// Opens the selection: the proofs are published, the client can choose, and the client is told by email.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 409 <c>gallery.no_photos</c> without proofs, or <c>gallery.invalid_state</c> when it is already open.</returns>
+    private static async Task<Ok<GalleryResponse>> OpenSelectionAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<OpenSelectionCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new OpenSelectionCommand(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Reads one gallery of the signed-in photographer.

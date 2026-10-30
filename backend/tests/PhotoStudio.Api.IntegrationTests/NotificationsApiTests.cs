@@ -80,9 +80,21 @@ public sealed class NotificationsApiTests(ApiFixture fixture)
             owner.AccessToken,
             new { amount = 50000, currency = "CRC", method = "Cash", idempotencyKey = "deposit-1" })).EnsureSuccessStatusCode();
 
-        await RunMaintenancePassAsync();
+        // The API also delivers the outbox by itself after a change, so the message may be in the hands of that pass for a moment: look
+        // again, running a pass each time, until the reminder is in the inbox.
+        System.Text.Json.JsonElement inbox = default;
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            await RunMaintenancePassAsync();
+            inbox = await (await client.SendAsync(HttpMethod.Get, "/api/notifications", owner.AccessToken)).ReadJsonAsync();
+            if (inbox.GetProperty("items").EnumerateArray().Any(notification => notification.GetProperty("bookingId").GetGuid() == bookingId))
+            {
+                break;
+            }
 
-        var inbox = await (await client.SendAsync(HttpMethod.Get, "/api/notifications", owner.AccessToken)).ReadJsonAsync();
+            await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+        }
+
         var item = inbox.GetProperty("items").EnumerateArray().Single(notification => notification.GetProperty("bookingId").GetGuid() == bookingId);
         item.GetProperty("type").GetString().ShouldBe("SessionReminder");
         item.GetProperty("clientName").GetString().ShouldBe("María Pérez");

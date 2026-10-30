@@ -63,7 +63,7 @@ public sealed class GalleriesApiTests(ApiFixture fixture)
         byId.GetProperty("selectablePhotos").GetInt32().ShouldBe(30);
         byId.GetProperty("maxPhotos").GetInt32().ShouldBe(150);
         byId.GetProperty("extraPhotoPrice").GetProperty("amount").GetDecimal().ShouldBe(3_000m);
-        byId.GetProperty("allowedActions").EnumerateArray().Select(action => action.GetString()).ShouldBe(["EditTerms"]);
+        byId.GetProperty("allowedActions").EnumerateArray().Select(action => action.GetString()).ShouldBe(["EditTerms", "UploadProofs"]);
 
         (await client.SendAsync(HttpMethod.Get, $"/api/galleries/{gallery.Id}", other.AccessToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await client.SendAsync(HttpMethod.Get, $"/api/galleries/by-booking/{gallery.BookingId}", other.AccessToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);

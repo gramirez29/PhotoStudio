@@ -55,9 +55,12 @@ describe('the parsers of the web area', () => {
     expect(gallery.allowedActions).toEqual(['EditTerms']);
   });
 
-  it('refuses a gallery with a state, an action or a count it does not know', () => {
+  it('leaves out an action it does not know, so a newer API does not break an older page', () => {
+    expect(parseStudioGallery({ ...galleryPayload, allowedActions: ['EditTerms', 'SomethingNew', 'OpenSelection'] }, 'gallery').allowedActions).toEqual(['EditTerms', 'OpenSelection']);
+  });
+
+  it('refuses a gallery with a state or a count it does not know', () => {
     expect(() => parseStudioGallery({ ...galleryPayload, status: 'Lost' }, 'gallery')).toThrow('gallery.status');
-    expect(() => parseStudioGallery({ ...galleryPayload, allowedActions: ['Explode'] }, 'gallery')).toThrow('allowedActions[0]');
     expect(() => parseStudioGallery({ ...galleryPayload, bonusPhotos: -1 }, 'gallery')).toThrow('bonusPhotos');
     expect(() => parseStudioGallery({ ...galleryPayload, includedPhotos: 1.5 }, 'gallery')).toThrow('includedPhotos');
   });

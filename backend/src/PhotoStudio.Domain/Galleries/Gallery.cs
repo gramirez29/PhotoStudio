@@ -1,4 +1,5 @@
 using PhotoStudio.Domain.Common;
+using PhotoStudio.Domain.Galleries.Events;
 
 namespace PhotoStudio.Domain.Galleries;
 
@@ -17,6 +18,8 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <summary>
     /// Initializes a new instance of the <see cref="Gallery"/> class. Use <see cref="Create"/> or <see cref="Restore"/>.
     /// </summary>
+    private readonly List<GalleryPhoto> _photos;
+
     private Gallery(
         Guid id,
         long version,
@@ -28,7 +31,9 @@ public sealed class Gallery : AggregateRoot<Guid>
         int bonusPhotos,
         Money extraPhotoPrice,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
+        DateTimeOffset updatedAt,
+        IEnumerable<GalleryPhoto> photos,
+        DateTimeOffset? selectionNotifiedAt)
         : base(id, version)
     {
         PhotographerId = photographerId;
@@ -40,6 +45,8 @@ public sealed class Gallery : AggregateRoot<Guid>
         ExtraPhotoPrice = extraPhotoPrice;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
+        _photos = [.. photos];
+        SelectionNotifiedAt = selectionNotifiedAt;
     }
 
     /// <summary>
@@ -81,6 +88,17 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// Gets the price of each photo the client picks beyond <see cref="SelectablePhotos"/>.
     /// </summary>
     public Money ExtraPhotoPrice { get; private set; }
+
+    /// <summary>
+    /// Gets the proofs of the gallery, in the order they were registered.
+    /// </summary>
+    public IReadOnlyList<GalleryPhoto> Photos => _photos;
+
+    /// <summary>
+    /// Gets the instant the client was told that the proofs are ready (UTC), or <see langword="null"/> while they were not. It makes
+    /// the email idempotent: the outbox delivers an event at least once.
+    /// </summary>
+    public DateTimeOffset? SelectionNotifiedAt { get; private set; }
 
     /// <summary>
     /// Gets the instant the gallery was created (UTC).
@@ -132,7 +150,9 @@ public sealed class Gallery : AggregateRoot<Guid>
             0,
             extraPhotoPrice,
             now,
-            now);
+            now,
+            [],
+            null);
     }
 
     /// <summary>
@@ -149,6 +169,8 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <param name="extraPhotoPrice">Price of an extra photo.</param>
     /// <param name="createdAt">Instant the gallery was created.</param>
     /// <param name="updatedAt">Instant the gallery last changed.</param>
+    /// <param name="photos">The proofs registered so far.</param>
+    /// <param name="selectionNotifiedAt">Instant the client was told the proofs are ready, if they were.</param>
     /// <returns>The restored gallery.</returns>
     public static Gallery Restore(
         Guid id,
@@ -161,8 +183,10 @@ public sealed class Gallery : AggregateRoot<Guid>
         int bonusPhotos,
         Money extraPhotoPrice,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt) =>
-        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt);
+        DateTimeOffset updatedAt,
+        IEnumerable<GalleryPhoto>? photos = null,
+        DateTimeOffset? selectionNotifiedAt = null) =>
+        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt);
 
     /// <summary>
     /// Changes the terms of the gallery: how many photos the package includes (for a custom package the photographer sets it
@@ -196,14 +220,137 @@ public sealed class Gallery : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Registers a proof that was uploaded to the storage. Registering the same photo twice does nothing: a request that is repeated
+    /// must not duplicate it.
+    /// </summary>
+    /// <param name="photoId">Identifier of the photo, which is part of its key in the storage.</param>
+    /// <param name="originalName">Name of the file the photographer chose, as a label.</param>
+    /// <param name="proofBytes">Size of the stored proof.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the photo was added; <see langword="false"/> when it was already registered.</returns>
+    /// <exception cref="DomainException">When the gallery no longer takes proofs, it is full, or the name or the size is not valid.</exception>
+    public bool RegisterProof(Guid photoId, string originalName, long proofBytes, DateTimeOffset now)
+    {
+        if (photoId == Guid.Empty)
+        {
+            throw new DomainException(DomainErrorCodes.RequiredValue, "The identifier of a photo is required.");
+        }
+
+        if (Status != GalleryStatus.Pending)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {Status} no longer takes proofs.");
+        }
+
+        if (_photos.Any(photo => photo.Id == photoId))
+        {
+            return false;
+        }
+
+        GalleryPhoto.EnsureValid(originalName, proofBytes);
+        if (_photos.Count >= MaxPhotos)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryFull, $"A gallery holds at most {MaxPhotos} photos.");
+        }
+
+        _photos.Add(new GalleryPhoto(photoId, originalName.Trim(), proofBytes, now));
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Removes a proof that was uploaded by mistake, while the selection is not open.
+    /// </summary>
+    /// <param name="photoId">Identifier of the photo.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the photo was removed; <see langword="false"/> when the gallery had no such photo.</returns>
+    /// <exception cref="DomainException">When the gallery no longer allows it.</exception>
+    public bool RemoveProof(Guid photoId, DateTimeOffset now)
+    {
+        if (Status != GalleryStatus.Pending)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"The proofs of a gallery in state {Status} cannot be changed.");
+        }
+
+        var removed = _photos.RemoveAll(photo => photo.Id == photoId) > 0;
+        if (removed)
+        {
+            UpdatedAt = now;
+        }
+
+        return removed;
+    }
+
+    /// <summary>
+    /// Opens the selection (G2): the proofs are published and the client can choose from them. Raises <see cref="SelectionOpened"/>,
+    /// which makes the system tell the client.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the gallery is not waiting for its proofs, or has none.</exception>
+    public void OpenSelection(DateTimeOffset now)
+    {
+        if (Status != GalleryStatus.Pending)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"The selection of a gallery in state {Status} cannot be opened.");
+        }
+
+        if (_photos.Count == 0)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryNoPhotos, "A gallery needs at least one proof before the client can choose.");
+        }
+
+        Status = GalleryStatus.InSelection;
+        UpdatedAt = now;
+        Raise(new SelectionOpened(Id, BookingId, PhotographerId, now));
+    }
+
+    /// <summary>
+    /// Records that the client was told that the proofs are ready.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was recorded now; <see langword="false"/> when it already was.</returns>
+    public bool MarkClientNotified(DateTimeOffset now)
+    {
+        if (SelectionNotifiedAt is not null)
+        {
+            return false;
+        }
+
+        SelectionNotifiedAt = now;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
     /// Lists what the photographer can do with the gallery in its current state.
     /// </summary>
     /// <returns>The allowed actions.</returns>
     public IReadOnlyList<GalleryAction> GetAllowedActions() => Status switch
     {
-        GalleryStatus.Pending or GalleryStatus.InSelection => [GalleryAction.EditTerms],
+        GalleryStatus.Pending => PendingActions(),
+        GalleryStatus.InSelection => [GalleryAction.EditTerms],
         _ => [],
     };
+
+    /// <summary>
+    /// Lists the actions of a gallery that is waiting for its proofs.
+    /// </summary>
+    /// <returns>The allowed actions.</returns>
+    private List<GalleryAction> PendingActions()
+    {
+        var actions = new List<GalleryAction> { GalleryAction.EditTerms };
+        if (_photos.Count < MaxPhotos)
+        {
+            actions.Add(GalleryAction.UploadProofs);
+        }
+
+        if (_photos.Count > 0)
+        {
+            actions.Add(GalleryAction.RemoveProof);
+            actions.Add(GalleryAction.OpenSelection);
+        }
+
+        return actions;
+    }
 
     /// <summary>
     /// Checks that the photo counts make sense: none negative, and no more selectable photos than a gallery can hold.

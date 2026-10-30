@@ -111,7 +111,9 @@ public sealed partial class GlobalExceptionHandler(
         DomainErrorCodes.ContractAlreadySigned or
         DomainErrorCodes.ContractTemplateChanged or
         DomainErrorCodes.InvalidPaymentStatus or
-        DomainErrorCodes.GalleryInvalidState;
+        DomainErrorCodes.GalleryInvalidState or
+        DomainErrorCodes.GalleryNoPhotos or
+        DomainErrorCodes.GalleryFull;
 
     /// <summary>
     /// Logs an exception that was not mapped to a known error.

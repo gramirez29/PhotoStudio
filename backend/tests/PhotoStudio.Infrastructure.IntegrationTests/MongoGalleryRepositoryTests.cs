@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Pagination;
@@ -173,6 +174,83 @@ public sealed class MongoGalleryRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The proofs and the instant the client was told survive being saved and read, in order.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheProofs_AndTheNotification_SurviveASaveAndARead()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var gallery = NewGallery(Guid.CreateVersion7(), Now);
+        await repository.TryAddAsync(gallery, TestContext.Current.CancellationToken);
+        var stored = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        var first = Guid.CreateVersion7();
+        var second = Guid.CreateVersion7();
+        stored.RegisterProof(first, "IMG_0001.jpg", 120_000, Now.AddMinutes(1));
+        stored.RegisterProof(second, "IMG_0002.jpg", 90_000, Now.AddMinutes(2));
+        stored.MarkClientNotified(Now.AddMinutes(3));
+
+        await repository.UpdateAsync(stored, TestContext.Current.CancellationToken);
+        var read = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+
+        read.Photos.ShouldBe([new GalleryPhoto(first, "IMG_0001.jpg", 120_000, Now.AddMinutes(1)), new GalleryPhoto(second, "IMG_0002.jpg", 90_000, Now.AddMinutes(2))]);
+        read.SelectionNotifiedAt.ShouldBe(Now.AddMinutes(3));
+    }
+
+    /// <summary>
+    /// A change that raises an event stores the event in the outbox in the same transaction, and clears it from the gallery; a change
+    /// without events stores nothing in the outbox.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task AnEvent_GoesToTheOutboxWithTheChange()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var gallery = NewGallery(Guid.CreateVersion7(), Now);
+        await repository.TryAddAsync(gallery, TestContext.Current.CancellationToken);
+        var stored = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        stored.RegisterProof(Guid.CreateVersion7(), "a.jpg", 10, Now);
+        await repository.UpdateAsync(stored, TestContext.Current.CancellationToken);
+        (await OutboxMessagesOfAsync(gallery.Id)).ShouldBe(0);
+
+        stored = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        stored.OpenSelection(Now.AddHours(1));
+        await repository.UpdateAsync(stored, TestContext.Current.CancellationToken);
+
+        (await OutboxMessagesOfAsync(gallery.Id)).ShouldBe(1);
+        stored.DomainEvents.ShouldBeEmpty();
+        (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!.Status.ShouldBe(GalleryStatus.InSelection);
+    }
+
+    /// <summary>
+    /// If the version is stale the change is refused and its event is not stored: the outbox never announces a change that did not happen.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task AStaleChange_StoresNoEvent()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var gallery = NewGallery(Guid.CreateVersion7(), Now);
+        await repository.TryAddAsync(gallery, TestContext.Current.CancellationToken);
+        var winner = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        var loser = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        winner.RegisterProof(Guid.CreateVersion7(), "a.jpg", 10, Now);
+        await repository.UpdateAsync(winner, TestContext.Current.CancellationToken);
+        loser.RegisterProof(Guid.CreateVersion7(), "b.jpg", 10, Now);
+        loser.OpenSelection(Now);
+
+        await Should.ThrowAsync<ConflictException>(() => repository.UpdateAsync(loser, TestContext.Current.CancellationToken));
+
+        (await OutboxMessagesOfAsync(gallery.Id)).ShouldBe(0);
+        var stored = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        stored.Status.ShouldBe(GalleryStatus.Pending);
+        stored.Photos.Count.ShouldBe(1);
+    }
+
+    /// <summary>
     /// The indexes exist after startup: one gallery per booking (unique) and the one that serves the list.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
@@ -188,6 +266,15 @@ public sealed class MongoGalleryRepositoryTests(MongoFixture fixture) : IClassFi
         indexes.ShouldContain(index => index["name"] == "ix_gallery_booking" && index.GetValue("unique", false).AsBoolean);
         indexes.ShouldContain(index => index["name"] == "ix_gallery_photographer_created");
     }
+
+    /// <summary>
+    /// Counts the outbox messages that talk about a gallery.
+    /// </summary>
+    /// <param name="galleryId">Gallery identifier.</param>
+    /// <returns>The number of messages.</returns>
+    private async Task<long> OutboxMessagesOfAsync(Guid galleryId) =>
+        await fixture.Database.GetCollection<BsonDocument>("outbox_messages")
+            .CountDocumentsAsync(Builders<BsonDocument>.Filter.Regex("payload", new BsonRegularExpression(galleryId.ToString())), cancellationToken: TestContext.Current.CancellationToken);
 
     /// <summary>
     /// Creates the repository after making sure the indexes exist.

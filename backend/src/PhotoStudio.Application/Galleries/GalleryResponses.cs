@@ -17,6 +17,7 @@ namespace PhotoStudio.Application.Galleries;
 /// <param name="SelectablePhotos">Photos the client can pick without paying more (included plus gift).</param>
 /// <param name="ExtraPhotoPrice">Price of each photo beyond that.</param>
 /// <param name="MaxPhotos">Most photos a gallery holds.</param>
+/// <param name="PhotoCount">Proofs registered so far.</param>
 /// <param name="CreatedAt">Instant it was created (UTC).</param>
 /// <param name="AllowedActions">What the photographer can do with it now.</param>
 public sealed record GalleryResponse(
@@ -31,6 +32,7 @@ public sealed record GalleryResponse(
     int SelectablePhotos,
     MoneyResponse ExtraPhotoPrice,
     int MaxPhotos,
+    int PhotoCount,
     DateTimeOffset CreatedAt,
     IReadOnlyList<GalleryAction> AllowedActions);
 
@@ -67,6 +69,7 @@ public static class GalleryResponseMappings
             gallery.SelectablePhotos,
             gallery.ExtraPhotoPrice.ToResponse(),
             Gallery.MaxPhotos,
+            gallery.Photos.Count,
             gallery.CreatedAt,
             gallery.GetAllowedActions());
     }
