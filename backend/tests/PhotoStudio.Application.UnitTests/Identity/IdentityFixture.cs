@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Identity;
+using PhotoStudio.Application.Identity.Studio;
 using PhotoStudio.Application.UnitTests.Support;
 using PhotoStudio.Domain.Identity;
 
@@ -38,6 +39,9 @@ internal sealed class IdentityFixture
         PasswordHasher.Hash(Arg.Any<string>()).Returns("hashed-password");
         Sessions = new SessionIssuer(AccessTokens, TokenGenerator, new AuthSessionSettings(RefreshLifetime), Verification);
         VerificationSender = new EmailVerificationSender(Codes, CodeService, Email);
+        StudioAccess = new StudioAccessRevoker(StudioSessions, StudioDevices, StudioChallenges);
+        StudioIssuer = new StudioSessionIssuer(StudioSessions, StudioDevices, TokenGenerator);
+        Credentials = new CredentialChecker(Users, PasswordHasher);
     }
 
     /// <summary>Gets the substituted user repository.</summary>
@@ -64,6 +68,24 @@ internal sealed class IdentityFixture
     /// <summary>Gets the substituted email sender.</summary>
     public IEmailSender Email { get; } = Substitute.For<IEmailSender>();
 
+    /// <summary>Gets the substituted store of the sessions of the web area.</summary>
+    public IStudioSessionRepository StudioSessions { get; } = Substitute.For<IStudioSessionRepository>();
+
+    /// <summary>Gets the substituted store of the remembered browsers.</summary>
+    public IStudioDeviceRepository StudioDevices { get; } = Substitute.For<IStudioDeviceRepository>();
+
+    /// <summary>Gets the substituted store of the second-factor challenges.</summary>
+    public IStudioChallengeRepository StudioChallenges { get; } = Substitute.For<IStudioChallengeRepository>();
+
+    /// <summary>Gets the real revoker of the access of the web area, built on the substituted ports.</summary>
+    public StudioAccessRevoker StudioAccess { get; }
+
+    /// <summary>Gets the real issuer of the sessions of the web area, built on the substituted ports.</summary>
+    public StudioSessionIssuer StudioIssuer { get; }
+
+    /// <summary>Gets the real credential checker, built on the substituted ports.</summary>
+    public CredentialChecker Credentials { get; }
+
     /// <summary>Gets whether accounts must verify their email in this fixture.</summary>
     public EmailVerificationSettings Verification { get; }
 
@@ -85,6 +107,14 @@ internal sealed class IdentityFixture
     public static User NewUser(int failedLoginAttempts = 0, DateTimeOffset? lockedUntil = null) =>
         Domain.Identity.User.Restore(
             Guid.CreateVersion7(), 1, "ana", "ana@example.com", "stored-hash", "Ana Pérez", "+50670189220", Now.AddDays(-30), failedLoginAttempts, lockedUntil);
+
+    /// <summary>
+    /// Builds a stored user whose email is verified, which is what the web area asks for.
+    /// </summary>
+    /// <returns>The user.</returns>
+    public static User NewVerifiedUser() =>
+        Domain.Identity.User.Restore(
+            Guid.CreateVersion7(), 1, "ana", "ana@example.com", "stored-hash", "Ana Pérez", "+50670189220", Now.AddDays(-30), 0, null, false, Now.AddDays(-29));
 
     /// <summary>
     /// Builds a stored refresh token for a user.

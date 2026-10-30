@@ -37,6 +37,8 @@ public sealed partial class GlobalExceptionHandler(
                 (StatusCodes.Status409Conflict, "The request conflicts with the current state.", conflict.Code),
             AuthenticationFailedException authentication =>
                 (StatusCodes.Status401Unauthorized, "Authentication failed.", authentication.Code),
+            StudioAccessDeniedException denied =>
+                (StatusCodes.Status403Forbidden, "The web area needs an account with a verified email.", denied.Code),
             RegistrationDisabledException disabled =>
                 (StatusCodes.Status403Forbidden, "Creating accounts is turned off.", disabled.Code),
             AccountLockedException locked =>

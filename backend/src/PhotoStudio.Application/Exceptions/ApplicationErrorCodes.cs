@@ -38,6 +38,12 @@ public static class ApplicationErrorCodes
     /// <summary>The email could not be sent (provider not configured or it refused the message).</summary>
     public const string EmailDeliveryFailed = "email.delivery_failed";
 
+    /// <summary>Too many codes to sign in on the web were asked for; wait and try again.</summary>
+    public const string LoginCodeRateLimited = "auth.login_code_rate_limited";
+
+    /// <summary>The web area needs an account with a verified email, because the second factor goes to it.</summary>
+    public const string StudioEmailRequired = "auth.web_requires_verified_email";
+
     /// <summary>The object storage that holds the photos is not configured or did not answer.</summary>
     public const string StorageUnavailable = "storage.unavailable";
 

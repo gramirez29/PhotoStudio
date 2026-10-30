@@ -33,4 +33,29 @@ internal static class IdentityEmails
 
         return new EmailMessage(to, "Verifica tu correo de PhotoSense Studio", text, html);
     }
+
+    /// <summary>
+    /// Builds the email that carries the code of the second factor of the web sign-in.
+    /// </summary>
+    /// <param name="to">Recipient address, the verified email of the account.</param>
+    /// <param name="name">Name of the user, for the greeting.</param>
+    /// <param name="code">Code in clear text.</param>
+    /// <returns>The email.</returns>
+    public static EmailMessage StudioLoginCode(string to, string name, string code)
+    {
+        var minutes = (int)StudioLoginChallenge.Lifetime.TotalMinutes;
+        var text =
+            $"Hola {name},\n\n" +
+            $"Tu código para entrar a la web de PhotoSense Studio es: {code}\n\n" +
+            $"Vence en {minutes} minutos y sirve una sola vez. Si no intentaste entrar, no compartas este código con nadie y cambia tu contraseña desde la app: alguien más ya la conoce.\n\n" +
+            "PhotoSense Studio";
+
+        var html =
+            $"<p>Hola {WebUtility.HtmlEncode(name)},</p>" +
+            $"<p>Tu código para entrar a la web de PhotoSense Studio es:</p><p style=\"font-size:28px;font-weight:700;letter-spacing:6px\">{code}</p>" +
+            $"<p>Vence en {minutes} minutos y sirve una sola vez. Si no intentaste entrar, no compartas este código con nadie y cambia tu contraseña desde la app: alguien más ya la conoce.</p>" +
+            "<p>PhotoSense Studio</p>";
+
+        return new EmailMessage(to, "Tu código para entrar a PhotoSense Studio", text, html);
+    }
 }
