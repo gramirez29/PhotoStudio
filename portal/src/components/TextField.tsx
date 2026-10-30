@@ -14,6 +14,7 @@ export function TextField({
   onChange,
   error,
   hint,
+  type = 'text',
   inputMode,
   autoComplete,
   maxLength,
@@ -36,6 +37,7 @@ export function TextField({
         )}
         <input
           id={id}
+          type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           inputMode={inputMode}

@@ -72,6 +72,7 @@ function readRetryAfter(response: Response): number | null {
  */
 export function createHttpClient(baseUrl: string, options: HttpClientOptions = {}): HttpClient {
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
+  const withCredentials = options.withCredentials ?? false;
 
   /**
    * Sends a request and parses the answer.
@@ -105,6 +106,7 @@ export function createHttpClient(baseUrl: string, options: HttpClientOptions = {
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: request.signal,
+        ...(withCredentials ? { credentials: 'include' as const } : {}),
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -117,6 +119,11 @@ export function createHttpClient(baseUrl: string, options: HttpClientOptions = {
     if (!response.ok) {
       const problem = await readProblem(response);
       throw new ApiError(response.status, problem.message, problem.code, readRetryAfter(response));
+    }
+
+    // An answer with no content (204, such as signing out) has no body to read; its parser gets null.
+    if (response.status === 204) {
+      return parse(null);
     }
 
     return parse(await response.json());

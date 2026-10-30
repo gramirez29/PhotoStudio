@@ -12,6 +12,8 @@ export interface TextFieldProps {
   readonly error?: string | undefined;
   /** Help shown under the field. */
   readonly hint?: string;
+  /** Kind of input; a password hides what is typed. Defaults to text. */
+  readonly type?: 'text' | 'password';
   /** Keyboard the phone shows. */
   readonly inputMode?: 'numeric' | 'text';
   /** What the browser may autofill. */

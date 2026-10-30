@@ -1,6 +1,6 @@
 # Portal del cliente (PhotoSense Studio)
 
-La página que el cliente abre desde el enlace de su reserva (`/b/{token}`). Plan y alcance en `docs/ClientPortalWeb.md`; el
+La página que el cliente abre desde el enlace de su reserva (`/b/{token}`) y, aparte, la **web del fotógrafo** en `/studio` (inicio de sesión con código por correo y lista de sus galerías; ver `docs/ClientPortalWeb.md` §9 y `docs/Authentication.md` §21). Plan y alcance en `docs/ClientPortalWeb.md`; el
 backend que consume, en `docs/ClientPortal.md`.
 
 React 19 + Vite + TypeScript estricto. Sin librería de UI. Tipografías **Josefin Sans** (títulos) y **DM Sans** (texto),
