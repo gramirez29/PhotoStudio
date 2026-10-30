@@ -1,7 +1,6 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { usePaymentForm } from '../hooks/usePaymentForm';
-import { colors } from '../theme/tokens';
 import type { PaymentFormProps } from '../types/components/PaymentForm.types';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { IN_PERSON_PAYMENT_LABELS, PAYMENT_METHOD_LABELS, inPersonMethodFromLabel } from '../utils/payments';
@@ -9,6 +8,8 @@ import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { SelectField } from './SelectField';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Form shown once the booking is loaded: what is owed, the amount and method received, and the button that records the
@@ -17,6 +18,7 @@ import { SelectField } from './SelectField';
  * @returns The form.
  */
 export function PaymentForm({ booking }: PaymentFormProps): ReactElement {
+  const styles = useStyles();
   const form = usePaymentForm(booking);
 
   return (
@@ -66,26 +68,30 @@ export function PaymentForm({ booking }: PaymentFormProps): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   summary: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

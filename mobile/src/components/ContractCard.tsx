@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { Text } from 'react-native';
+import { spacing } from '../theme/tokens';
 import type { ContractCardProps } from '../types/components/ContractCard.types';
 import { describeContract } from '../utils/contract';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card of the booking detail with the contract: whether it is signed, by whom, how and when. When the client signed through the
@@ -13,6 +15,7 @@ import { AppCard } from './AppCard';
  * @returns The card.
  */
 export function ContractCard({ booking }: ContractCardProps): ReactElement {
+  const styles = useStyles();
   const [headline, ...details] = describeContract(booking.contract);
 
   return (
@@ -29,22 +32,24 @@ export function ContractCard({ booking }: ContractCardProps): ReactElement {
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.xs,
     marginTop: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   body: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   detail: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

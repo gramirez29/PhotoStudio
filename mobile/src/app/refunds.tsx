@@ -1,11 +1,14 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, FlatList, Text } from 'react-native';
 import { ListSeparator } from '../components/ListSeparator';
 import { Placeholder } from '../components/Placeholder';
 import { RefundListItem } from '../components/RefundListItem';
 import { useRefundActions } from '../hooks/useRefundActions';
 import { useRefunds } from '../hooks/useRefunds';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 /**
  * Pending refunds: money that belongs to clients whose booking ended (cancelled, expired or absent) and that the
@@ -13,13 +16,15 @@ import { colors, spacing } from '../theme/tokens';
  * @returns The screen.
  */
 export default function RefundsScreen(): ReactElement {
+  const styles = useStyles();
+  const { palette } = useAppTheme();
   const query = useRefunds();
   const actions = useRefundActions();
   const items = query.data?.items ?? [];
 
   let empty: ReactElement;
   if (query.isPending) {
-    empty = <ActivityIndicator color={colors.primary} accessibilityLabel="Cargando reembolsos" style={styles.loader} />;
+    empty = <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reembolsos" style={styles.loader} />;
   } else if (query.isError) {
     empty = (
       <Placeholder
@@ -54,16 +59,17 @@ export default function RefundsScreen(): ReactElement {
 }
 
 /** Styles of the screen. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     padding: spacing.md,
   },
   error: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
     marginBottom: spacing.md,
+    fontFamily: FONT_FAMILIES.body,
   },
   loader: {
     marginTop: spacing.lg,
   },
-});
+}));

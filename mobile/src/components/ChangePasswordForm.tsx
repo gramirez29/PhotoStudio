@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { MIN_PASSWORD_LENGTH } from '../forms/registerForm';
 import { useChangePasswordForm } from '../hooks/useChangePasswordForm';
-import { colors } from '../theme/tokens';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Change-password fields and button: the current password and the new one, typed twice. On success the screen closes by
@@ -13,6 +14,7 @@ import { KeyboardAwareScreen } from './KeyboardAwareScreen';
  * @returns The form.
  */
 export function ChangePasswordForm(): ReactElement {
+  const styles = useStyles();
   const form = useChangePasswordForm();
 
   return (
@@ -69,13 +71,15 @@ export function ChangePasswordForm(): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

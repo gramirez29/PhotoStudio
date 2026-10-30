@@ -1,11 +1,14 @@
 import type { ReactElement } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text } from 'react-native';
 import { useRescheduleForm } from '../hooks/useRescheduleForm';
-import { colors, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
 import type { RescheduleFormProps } from '../types/components/RescheduleForm.types';
 import { formatDateTime } from '../utils/format';
 import { DateTimeField } from './DateTimeField';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { useAppTheme } from '../hooks/useAppTheme';
 
 /**
  * Form shown once the booking is loaded: the current date, a picker for the new one and the confirm button.
@@ -13,6 +16,8 @@ import { AppCard } from './AppCard';
  * @returns The form.
  */
 export function RescheduleForm({ booking }: RescheduleFormProps): ReactElement {
+  const styles = useStyles();
+  const { palette } = useAppTheme();
   const form = useRescheduleForm(booking);
 
   return (
@@ -43,7 +48,7 @@ export function RescheduleForm({ booking }: RescheduleFormProps): ReactElement {
         style={({ pressed }) => [styles.submit, form.isPending && styles.submitDisabled, pressed && styles.submitPressed]}
       >
         {form.isPending ? (
-          <ActivityIndicator color={colors.textInverse} accessibilityLabel="Reprogramando" />
+          <ActivityIndicator color={palette.onPrimary} accessibilityLabel="Reprogramando" />
         ) : (
           <Text style={styles.submitLabel}>Reprogramar</Text>
         )}
@@ -53,43 +58,47 @@ export function RescheduleForm({ booking }: RescheduleFormProps): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     gap: spacing.md,
     padding: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   card: {
     gap: spacing.xs,
   },
   cardLabel: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   cardValue: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   submit: {
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: palette.primary,
     borderRadius: radius.sm,
     paddingVertical: spacing.md,
   },
@@ -100,8 +109,8 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   submitLabel: {
-    color: colors.textInverse,
+    color: palette.onPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

@@ -51,6 +51,14 @@ const TEXT_PAIRS: readonly (readonly [keyof Palette, keyof Palette])[] = [
   ['info', 'surfaceVariant'],
   ['muted', 'background'],
   ['muted', 'surfaceVariant'],
+  // The name of a status, written over the fill of its color.
+  ['onError', 'success'],
+  ['onError', 'warning'],
+  ['onError', 'info'],
+  ['onError', 'muted'],
+  // The option chosen in a list, and the floating button, in the main color of the app.
+  ['onPrimary', 'primary'],
+  ['onBrand', 'brand'],
 ];
 
 describe.each(SCHEMES)('%s palette', (scheme) => {
@@ -74,14 +82,15 @@ describe.each(SCHEMES)('%s palette', (scheme) => {
 });
 
 describe('the brand', () => {
-  it('is the cream and terracotta palette of the web in light, with a darker action color for the smaller labels of the app', () => {
+  it('is the cream, slate blue and terracotta palette of the web in light, with the slate blue of the logo as the main color', () => {
     expect([LIGHT_PALETTE.background, LIGHT_PALETTE.surfaceVariant, LIGHT_PALETTE.onBackground, LIGHT_PALETTE.brand]).toEqual([
       '#fbf3ea',
       '#f6d5be',
       '#0b1a40',
       '#3a4466',
     ]);
-    expect(LIGHT_PALETTE.primary).toBe('#b04a25');
+    expect(LIGHT_PALETTE.primary).toBe('#3a4466');
+    expect(LIGHT_PALETTE.secondary).toBe('#b04a25');
   });
 
   it('is the navy and copper palette of the web in dark', () => {

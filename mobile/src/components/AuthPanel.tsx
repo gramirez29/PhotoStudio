@@ -1,10 +1,12 @@
 import { useState, type ReactElement } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { Pressable, Text } from 'react-native';
+import { spacing } from '../theme/tokens';
 import type { AuthMode } from '../types/components/AuthPanel.types';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * The content of the sign-in screen: the login form, or the account creation form one tap away. Switching resets what was
@@ -12,6 +14,7 @@ import { RegisterForm } from './RegisterForm';
  * @returns The panel.
  */
 export function AuthPanel(): ReactElement {
+  const styles = useStyles();
   const [mode, setMode] = useState<AuthMode>('login');
   const isLogin = mode === 'login';
 
@@ -37,16 +40,17 @@ export function AuthPanel(): ReactElement {
 }
 
 /** Styles of the panel. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
     marginBottom: spacing.sm,
+    fontFamily: FONT_FAMILIES.body,
   },
   switch: {
     alignItems: 'center',
@@ -56,8 +60,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   switchLabel: {
-    color: colors.primary,
+    color: palette.primary,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

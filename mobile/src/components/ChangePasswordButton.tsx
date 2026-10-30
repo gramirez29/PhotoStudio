@@ -1,7 +1,9 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { openChangePassword } from '../navigation/appNavigation';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Entry to the change-password form. It is a quiet text link, because it is used rarely and must not compete with the
@@ -9,6 +11,7 @@ import { colors, spacing } from '../theme/tokens';
  * @returns The button.
  */
 export function ChangePasswordButton(): ReactElement {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -23,7 +26,7 @@ export function ChangePasswordButton(): ReactElement {
 }
 
 /** Styles of the button. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   button: {
     alignSelf: 'flex-start',
     marginBottom: spacing.md,
@@ -32,9 +35,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   label: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 14,
-    fontWeight: '600',
     textDecorationLine: 'underline',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

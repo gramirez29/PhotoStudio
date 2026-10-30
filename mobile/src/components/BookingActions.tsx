@@ -1,13 +1,15 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useBookingActions } from '../hooks/useBookingActions';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { BookingActionsProps } from '../types/components/BookingActions.types';
 import type { SupportedAction } from '../types/utils/bookingActions.types';
 import { ACTION_VARIANTS, splitActions } from '../utils/bookingActions';
 import { BOOKING_ACTION_LABELS } from '../utils/labels';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card with the actions the photographer can perform on a booking right now. Only the actions the API allows are shown,
@@ -16,6 +18,7 @@ import { AppCard } from './AppCard';
  * @returns The card.
  */
 export function BookingActions({ booking }: BookingActionsProps): ReactElement {
+  const styles = useStyles();
   const actions = useBookingActions(booking);
   const { supported, pending } = splitActions(booking.allowedActions);
 
@@ -60,26 +63,29 @@ export function BookingActions({ booking }: BookingActionsProps): ReactElement {
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.sm,
     marginTop: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   body: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   error: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

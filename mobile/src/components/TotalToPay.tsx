@@ -1,8 +1,10 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { Text, View } from 'react-native';
+import { spacing } from '../theme/tokens';
 import type { TotalToPayProps } from '../types/components/TotalToPay.types';
 import { formatColones } from '../utils/pricing';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * What the client pays, written bigger than the rest of the screen and in bold.
@@ -10,6 +12,7 @@ import { formatColones } from '../utils/pricing';
  * @returns The total.
  */
 export function TotalToPay({ total }: TotalToPayProps): ReactElement {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.label}>Total a pagar</Text>
@@ -21,7 +24,7 @@ export function TotalToPay({ total }: TotalToPayProps): ReactElement {
 }
 
 /** Styles of the total. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   row: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -29,13 +32,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   label: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   value: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 26,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
-});
+}));

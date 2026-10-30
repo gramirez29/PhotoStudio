@@ -1,10 +1,12 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { useVerifyEmailForm } from '../hooks/useVerifyEmailForm';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Screen content that asks the user to prove they own their email: it says where the code went, takes the six digits, and lets
@@ -12,6 +14,7 @@ import { KeyboardAwareScreen } from './KeyboardAwareScreen';
  * @returns The form.
  */
 export function VerifyEmailForm(): ReactElement {
+  const styles = useStyles();
   const form = useVerifyEmailForm();
   const waiting = form.cooldownSeconds > 0;
   const resendDisabled = waiting || form.isSending;
@@ -66,23 +69,26 @@ export function VerifyEmailForm(): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   body: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   notice: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   link: {
     alignItems: 'center',
@@ -91,16 +97,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   linkLabel: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
-    fontWeight: '600',
     textDecorationLine: 'underline',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
   linkLabelDisabled: {
-    color: colors.muted,
+    color: palette.muted,
     textDecorationLine: 'none',
   },
   pressed: {
     opacity: 0.6,
   },
-});
+}));

@@ -1,12 +1,15 @@
 import { useState, type ReactElement } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { EXTRAS } from '../config/pricing';
-import { colors, radius, spacing } from '../theme/tokens';
+import { radius, spacing } from '../theme/tokens';
 import type { ExtrasModalProps } from '../types/components/ExtrasModal.types';
 import type { SelectedExtra } from '../types/utils/pricing.types';
 import { extrasTotal, formatColones, quantityOf, withQuantity } from '../utils/pricing';
 import { ActionButton } from './ActionButton';
 import { ExtraRow } from './ExtraRow';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
+import { withAlpha } from '../utils/color';
 
 /**
  * Modal to choose the extras of a booking: every extra with its unit price and a control to add units, and the total of the
@@ -16,6 +19,7 @@ import { ExtraRow } from './ExtraRow';
  * @returns The modal.
  */
 export function ExtrasModal({ selected, onConfirm, onClose }: ExtrasModalProps): ReactElement {
+  const styles = useStyles();
   const [draft, setDraft] = useState<readonly SelectedExtra[]>(selected);
 
   return (
@@ -52,15 +56,15 @@ export function ExtrasModal({ selected, onConfirm, onClose }: ExtrasModalProps):
 }
 
 /** Styles of the modal. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   backdrop: {
-    backgroundColor: colors.overlay,
+    backgroundColor: withAlpha(palette.scrim, 0.45),
     flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   sheet: {
-    backgroundColor: colors.background,
+    backgroundColor: palette.background,
     borderRadius: radius.md,
     maxHeight: '85%',
     paddingVertical: spacing.sm,
@@ -73,13 +77,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   close: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 18,
+    fontFamily: FONT_FAMILIES.body,
   },
   footer: {
     gap: spacing.sm,
@@ -90,12 +95,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   totalLabel: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   totalValue: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
-});
+}));

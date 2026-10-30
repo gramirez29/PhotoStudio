@@ -1,7 +1,6 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useRefundForm } from '../hooks/useRefundForm';
-import { colors } from '../theme/tokens';
 import type { RefundFormProps } from '../types/components/RefundForm.types';
 import { MAX_REFUND_NOTE_LENGTH } from '../constants/billing';
 import { formatMoney } from '../utils/format';
@@ -10,6 +9,8 @@ import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
 import { SelectField } from './SelectField';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Form shown once the settlement is loaded: how much goes back and to whom, how it was given back, an optional note, and the
@@ -18,6 +19,7 @@ import { SelectField } from './SelectField';
  * @returns The form.
  */
 export function RefundForm({ settlement }: RefundFormProps): ReactElement {
+  const styles = useStyles();
   const form = useRefundForm(settlement.bookingId);
 
   return (
@@ -64,27 +66,30 @@ export function RefundForm({ settlement }: RefundFormProps): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   amount: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

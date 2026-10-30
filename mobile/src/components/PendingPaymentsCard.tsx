@@ -1,11 +1,13 @@
 import type { ReactElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { usePaymentReview } from '../hooks/usePaymentReview';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { PendingPaymentsCardProps } from '../types/components/PendingPaymentsCard.types';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card with the payment proofs the client sent through the link and the photographer has not resolved yet. For each one it
@@ -15,6 +17,7 @@ import { AppCard } from './AppCard';
  * @returns The card, or nothing when no proof is waiting.
  */
 export function PendingPaymentsCard({ booking }: PendingPaymentsCardProps): ReactElement | null {
+  const styles = useStyles();
   const review = usePaymentReview(booking);
   const pending = booking.payments.filter((payment) => payment.status === 'PendingVerification');
 
@@ -50,37 +53,40 @@ export function PendingPaymentsCard({ booking }: PendingPaymentsCardProps): Reac
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.sm,
     marginTop: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   proof: {
-    borderTopColor: colors.border,
+    borderTopColor: palette.outlineVariant,
     borderTopWidth: StyleSheet.hairlineWidth,
     gap: spacing.xs,
     paddingTop: spacing.sm,
   },
   amount: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   detail: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   error: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

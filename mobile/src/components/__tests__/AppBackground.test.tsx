@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { appScreenLayout } from '../../navigation/appScreenLayout';
 import { WASH_OPACITY } from '../../theme/background';
@@ -47,6 +47,26 @@ describe('AppBackground', () => {
     const root = toJSON();
     const rootStyle = StyleSheet.flatten(!Array.isArray(root) && root !== null ? root.props.style : undefined);
     expect(rootStyle).toMatchObject({ backgroundColor: LIGHT_PALETTE.background, flex: 1 });
+  });
+
+  it('makes the picture and the wash as big as the window, so they reach the bottom even if their container does not', () => {
+    let window = { width: 0, height: 0 };
+    function Probe(): null {
+      window = useWindowDimensions();
+      return null;
+    }
+    render(
+      <>
+        <Probe />
+        <AppBackground />
+      </>,
+    );
+
+    const picture = StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style);
+    expect(picture).toMatchObject({ width: window.width, height: window.height, top: 0, left: 0, position: 'absolute' });
+    const wash = screen.UNSAFE_getAllByType(View).find((view) => view.props.pointerEvents === 'none');
+    expect(StyleSheet.flatten(wash?.props.style)).toMatchObject({ width: window.width, height: window.height });
+    expect(window.height).toBeGreaterThan(0);
   });
 
   it('is decoration: hidden from the screen reader and never takes a touch', () => {

@@ -1,11 +1,13 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../theme/tokens';
+import { Pressable, Text, View } from 'react-native';
+import { spacing } from '../theme/tokens';
 import type { RefundListItemProps } from '../types/components/RefundListItem.types';
 import { SETTLEMENT_REASON_LABELS } from '../utils/billing';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card of the pending refunds: who is owed how much and why, with the actions to write to the client on WhatsApp, record
@@ -14,6 +16,7 @@ import { AppCard } from './AppCard';
  * @returns The card.
  */
 export function RefundListItem({ settlement, onContact, onComplete, onOpenBooking }: RefundListItemProps): ReactElement {
+  const styles = useStyles();
   return (
     <AppCard style={styles.card}>
       <View style={styles.header}>
@@ -46,7 +49,7 @@ export function RefundListItem({ settlement, onContact, onComplete, onOpenBookin
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.xs,
   },
@@ -57,19 +60,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   client: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     flex: 1,
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   amount: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   detail: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   actions: {
     gap: spacing.sm,
@@ -80,8 +84,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   link: {
-    color: colors.info,
+    color: palette.info,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

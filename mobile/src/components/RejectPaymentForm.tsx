@@ -1,12 +1,13 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useRejectPaymentForm } from '../hooks/useRejectPaymentForm';
-import { colors } from '../theme/tokens';
 import type { RejectPaymentFormProps } from '../types/components/RejectPaymentForm.types';
 import { formatDateTime, formatMoney } from '../utils/format';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Form shown once the booking is loaded: which proof is being rejected and the reason field. The proof stays on record
@@ -15,6 +16,7 @@ import { KeyboardAwareScreen } from './KeyboardAwareScreen';
  * @returns The form.
  */
 export function RejectPaymentForm({ booking, payment }: RejectPaymentFormProps): ReactElement {
+  const styles = useStyles();
   const form = useRejectPaymentForm(booking.id, payment.id);
 
   return (
@@ -52,22 +54,25 @@ export function RejectPaymentForm({ booking, payment }: RejectPaymentFormProps):
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

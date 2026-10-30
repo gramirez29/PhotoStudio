@@ -123,13 +123,13 @@ describe('the base components', () => {
   });
 
   describe('StatusBadge', () => {
-    it.each(BOOKING_STATUSES)('marks %s with a dot of the color its role has in the palette', (status) => {
+    it.each(BOOKING_STATUSES)('fills the pill of %s with the color its role has in the palette', (status) => {
       render(<StatusBadge status={status} />);
 
       expect(isPaintedWith(LIGHT_PALETTE[STATUS_COLOR_ROLES[status]])).toBe(true);
     });
 
-    it('marks a status with another color in the dark theme', () => {
+    it('fills it with another color in the dark theme', () => {
       useAppearanceStore.setState({ preference: 'dark' });
 
       render(<StatusBadge status="Confirmed" />);
@@ -143,6 +143,19 @@ describe('the base components', () => {
         const role = STATUS_COLOR_ROLES[status];
         expect(LIGHT_PALETTE[role]).toMatch(/^#[0-9a-f]{6}$/);
         expect(DARK_PALETTE[role]).toMatch(/^#[0-9a-f]{6}$/);
+      }
+    });
+  });
+
+  describe('StatusBadge text', () => {
+    it.each(BOOKING_STATUSES)('writes %s in a color that reads over its fill, in both themes', (status) => {
+      for (const preference of ['light', 'dark'] as const) {
+        useAppearanceStore.setState({ preference });
+        const palette = preference === 'dark' ? DARK_PALETTE : LIGHT_PALETTE;
+        const { unmount } = render(<StatusBadge status={status} />);
+
+        expect(JSON.stringify(screen.toJSON())).toContain(`"color":"${palette.onError}"`);
+        unmount();
       }
     });
   });

@@ -1,11 +1,13 @@
 import type { ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { Pressable, Text, View } from 'react-native';
+import { radius, spacing } from '../theme/tokens';
 import type { NotificationListItemProps } from '../types/components/NotificationListItem.types';
 import { formatDateTime } from '../utils/format';
 import { describeNotification } from '../utils/notifications';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card of the inbox: what happened, when it arrived, and the actions the photographer can take (message the client on
@@ -19,6 +21,7 @@ export function NotificationListItem({
   onOpenBooking,
   onMarkRead,
 }: NotificationListItemProps): ReactElement {
+  const styles = useStyles();
   const text = describeNotification(notification);
   const unread = notification.readAt === null;
   const isProof = notification.type === 'PaymentProofSubmitted';
@@ -55,12 +58,12 @@ export function NotificationListItem({
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.xs,
   },
   unreadCard: {
-    borderColor: colors.primary,
+    borderColor: palette.primary,
     borderWidth: 1,
   },
   header: {
@@ -70,25 +73,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
+    fontFamily: FONT_FAMILIES.body,
   },
   unreadTitle: {
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   dot: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.primary,
     borderRadius: radius.pill,
     height: 10,
     width: 10,
   },
   detail: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
   time: {
-    color: colors.muted,
+    color: palette.muted,
     fontSize: 12,
+    fontFamily: FONT_FAMILIES.body,
   },
   actions: {
     gap: spacing.sm,
@@ -99,8 +105,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   link: {
-    color: colors.info,
+    color: palette.info,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

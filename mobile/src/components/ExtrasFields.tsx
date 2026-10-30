@@ -1,10 +1,12 @@
 import { useState, type ReactElement } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing } from '../theme/tokens';
+import { Pressable, Text, View } from 'react-native';
+import { radius, spacing } from '../theme/tokens';
 import type { ExtrasFieldsProps } from '../types/components/ExtrasFields.types';
 import { formatColones } from '../utils/pricing';
 import { ExtrasModal } from './ExtrasModal';
 import { FormInput } from './FormInput';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * The extras of a booking and its discount: a button that opens the list of extras, a read-only field with their total, and the
@@ -13,6 +15,7 @@ import { FormInput } from './FormInput';
  * @returns The fields and, while it is open, the list of extras.
  */
 export function ExtrasFields({ extras, extrasTotal, discount, discountError, onExtrasChange, onDiscountChange }: ExtrasFieldsProps): ReactElement {
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
 
   return (
@@ -54,13 +57,13 @@ export function ExtrasFields({ extras, extrasTotal, discount, discountError, onE
 }
 
 /** Styles of the fields. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   container: {
     gap: spacing.md,
   },
   button: {
     alignItems: 'center',
-    borderColor: colors.primary,
+    borderColor: palette.primary,
     borderRadius: radius.sm,
     borderWidth: 1,
     paddingVertical: spacing.md,
@@ -69,8 +72,8 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   buttonLabel: {
-    color: colors.primary,
+    color: palette.primary,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONT_FAMILIES.bodyMedium,
   },
-});
+}));

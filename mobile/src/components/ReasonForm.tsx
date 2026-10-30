@@ -1,13 +1,14 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useReasonForm } from '../hooks/useReasonForm';
-import { colors } from '../theme/tokens';
 import type { ReasonFormProps } from '../types/components/ReasonForm.types';
 import { ACTION_VARIANTS, reasonFormCopy } from '../utils/bookingActions';
 import { formatDateTime } from '../utils/format';
 import { ActionButton } from './ActionButton';
 import { FormInput } from './FormInput';
 import { KeyboardAwareScreen } from './KeyboardAwareScreen';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Form shown once the booking is loaded: which booking it is, the reason field and the button that performs the action.
@@ -15,6 +16,7 @@ import { KeyboardAwareScreen } from './KeyboardAwareScreen';
  * @returns The form.
  */
 export function ReasonForm({ booking, action }: ReasonFormProps): ReactElement {
+  const styles = useStyles();
   const form = useReasonForm(booking, action);
   const copy = reasonFormCopy(action);
 
@@ -50,22 +52,25 @@ export function ReasonForm({ booking, action }: ReasonFormProps): ReactElement {
 }
 
 /** Styles of the form. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.titleBold,
   },
   subtitle: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
   hint: {
-    color: colors.textSecondary,
+    color: palette.onSurfaceVariant,
     fontSize: 13,
+    fontFamily: FONT_FAMILIES.body,
   },
   submitError: {
-    color: colors.danger,
+    color: palette.error,
     fontSize: 14,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));

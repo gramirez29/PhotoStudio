@@ -1,13 +1,15 @@
 import type { ReactElement } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { SETTLED_BOOKING_STATUSES } from '../constants/billing';
 import { useSettlement } from '../hooks/useSettlement';
 import { openRefund } from '../navigation/appNavigation';
-import { colors, spacing } from '../theme/tokens';
+import { spacing } from '../theme/tokens';
 import type { SettlementCardProps } from '../types/components/SettlementCard.types';
 import { describeSettlement } from '../utils/billing';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { makeStyles } from '../theme/makeStyles';
+import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Card of the booking detail with what happened to the money when the booking ended without delivering its session: what
@@ -17,6 +19,7 @@ import { AppCard } from './AppCard';
  * @returns The card, or nothing.
  */
 export function SettlementCard({ booking }: SettlementCardProps): ReactElement | null {
+  const styles = useStyles();
   const settled = SETTLED_BOOKING_STATUSES.some((status) => status === booking.status);
   const query = useSettlement(booking.id, settled);
   const settlement = query.data;
@@ -41,18 +44,19 @@ export function SettlementCard({ booking }: SettlementCardProps): ReactElement |
 }
 
 /** Styles of the card. */
-const styles = StyleSheet.create({
+const useStyles = makeStyles((palette) => ({
   card: {
     gap: spacing.sm,
     marginTop: spacing.md,
   },
   title: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILIES.bodyBold,
   },
   body: {
-    color: colors.textPrimary,
+    color: palette.onSurface,
     fontSize: 15,
+    fontFamily: FONT_FAMILIES.body,
   },
-});
+}));
