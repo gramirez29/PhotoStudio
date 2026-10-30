@@ -1,10 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { useApiHealth } from '../../hooks/useApiHealth';
-import { openChangePassword, openSettings } from '../../navigation/appNavigation';
-import { LIGHT_PALETTE } from '../../theme/palettes';
-import { SettingsButton } from '../SettingsButton';
+import { useSessionStore } from '../../session/sessionStore';
+import { openChangePassword } from '../../navigation/appNavigation';
 import { SettingsList } from '../SettingsList';
 
 jest.mock('expo-secure-store', () => ({
@@ -12,8 +10,21 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(),
   deleteItemAsync: jest.fn(),
 }));
-jest.mock('../../navigation/appNavigation', () => ({ openSettings: jest.fn(), openChangePassword: jest.fn() }));
+jest.mock('../../navigation/appNavigation', () => ({ openChangePassword: jest.fn() }));
 jest.mock('../../hooks/useApiHealth');
+
+/**
+ * Makes the module of the maintenance button a stand-in that shows a text, so the test sees where it goes without its hooks.
+ * @returns The module.
+ */
+function mockMaintenance(): Record<string, () => unknown> {
+  // The factory of jest.mock cannot use what is imported above, so what it needs is loaded inside.
+  const React: typeof import('react') = jest.requireActual('react');
+  const { Text }: typeof import('react-native') = jest.requireActual('react-native');
+  return { MaintenanceButton: () => React.createElement(Text, null, 'liberar reservas vencidas') };
+}
+
+jest.mock('../MaintenanceButton', () => mockMaintenance());
 
 /**
  * Makes the readiness check of the server answer.
@@ -27,33 +38,8 @@ describe('the settings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAppearanceStore.setState({ preference: 'light' });
+    useSessionStore.setState({ session: null });
     serverIs({ isError: false, data: true });
-  });
-
-  describe('SettingsButton', () => {
-    it('opens the settings from the header', () => {
-      render(<SettingsButton />);
-
-      fireEvent.press(screen.getByRole('button', { name: 'Ajustes' }));
-
-      expect(openSettings).toHaveBeenCalledTimes(1);
-    });
-
-    it('is a gear, in the color of the text of the band, and has no text of its own', () => {
-      render(<SettingsButton />);
-
-      const gear = screen.UNSAFE_getByType(MaterialIcons);
-      expect(gear.props.name).toBe('settings');
-      expect(gear.props.color).toBe(LIGHT_PALETTE.onBrand);
-      expect(screen.queryByText('Ajustes')).toBeNull();
-    });
-
-    it('is named for the screen reader, and the gear is hidden from it', () => {
-      render(<SettingsButton />);
-
-      expect(screen.getByLabelText('Ajustes')).toBeTruthy();
-      expect(screen.UNSAFE_getByType(MaterialIcons).props.accessible).toBe(false);
-    });
   });
 
   describe('SettingsList', () => {
@@ -62,6 +48,33 @@ describe('the settings', () => {
 
       expect(screen.getByText('Servidor')).toBeTruthy();
       expect(screen.getByText('Servidor conectado')).toBeTruthy();
+    });
+
+    it('has no maintenance for an ordinary photographer', () => {
+      render(<SettingsList />);
+
+      expect(screen.queryByText('Mantenimiento')).toBeNull();
+      expect(screen.queryByText('liberar reservas vencidas')).toBeNull();
+    });
+
+    it('has the maintenance pass, with its title, for a system operator', () => {
+      useSessionStore.setState({
+        session: {
+          accessToken: 't',
+          accessTokenExpiresAt: 1,
+          photographerId: 'p',
+          username: 'u',
+          email: 'u@example.com',
+          name: 'n',
+          isSystemOperator: true,
+          emailVerified: true,
+        },
+      });
+
+      render(<SettingsList />);
+
+      expect(screen.getByText('Mantenimiento')).toBeTruthy();
+      expect(screen.getByText('liberar reservas vencidas')).toBeTruthy();
     });
 
     it('says so when the server cannot be reached', () => {

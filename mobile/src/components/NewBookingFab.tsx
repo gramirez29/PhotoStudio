@@ -12,7 +12,7 @@ import { withAlpha } from '../utils/color';
 const FAB_SIZE = 56;
 
 /** How dark the rest of the screen gets while the menu is open: 0 leaves it as it is, 1 hides it. */
-const MENU_DIMMING = 0.7;
+const MENU_DIMMING = 0.85;
 
 /**
  * Floating button of the home screen: a round button with a plus that, when tapped, shows the option "Agregar reserva" above it,

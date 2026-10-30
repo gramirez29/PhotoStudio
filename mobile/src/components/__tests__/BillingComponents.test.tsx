@@ -3,14 +3,11 @@ import { parseSettlement } from '../../api/billingApi';
 import { parseBooking } from '../../api/bookingsApi';
 import { bookingPayload } from '../../api/__fixtures__/testResponses';
 import { pendingSettlementPayload } from '../../api/__fixtures__/billingPayloads';
-import { useRefunds } from '../../hooks/useRefunds';
 import { useSettlement } from '../../hooks/useSettlement';
 import { openRefund } from '../../navigation/appNavigation';
 import { RefundListItem } from '../RefundListItem';
-import { RefundsButton } from '../RefundsButton';
 import { SettlementCard } from '../SettlementCard';
 
-jest.mock('../../hooks/useRefunds');
 jest.mock('../../hooks/useSettlement');
 jest.mock('../../navigation/appNavigation');
 
@@ -24,24 +21,6 @@ const booking = parseBooking(bookingPayload);
 function settlementIs(data: ReturnType<typeof parseSettlement> | null): void {
   jest.mocked(useSettlement).mockReturnValue({ data } as ReturnType<typeof useSettlement>);
 }
-
-describe('RefundsButton', () => {
-  it('shows nothing while no refund is pending', () => {
-    jest.mocked(useRefunds).mockReturnValue({ data: { items: [], pendingCount: 0 } } as unknown as ReturnType<typeof useRefunds>);
-
-    render(<RefundsButton />);
-
-    expect(screen.queryByRole('button')).toBeNull();
-  });
-
-  it('shows the count and opens the list', () => {
-    jest.mocked(useRefunds).mockReturnValue({ data: { items: [], pendingCount: 2 } } as unknown as ReturnType<typeof useRefunds>);
-
-    render(<RefundsButton />);
-
-    expect(screen.getByRole('button', { name: 'Reembolsos pendientes (2)' })).toBeTruthy();
-  });
-});
 
 describe('RefundListItem', () => {
   it('shows who is owed how much and runs each action', () => {

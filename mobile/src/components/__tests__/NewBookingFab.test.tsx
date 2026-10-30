@@ -76,7 +76,7 @@ describe('NewBookingFab', () => {
     fireEvent.press(screen.getByLabelText('Nueva reserva'));
 
     const dimming = screen.getByRole('button', { name: 'Cerrar el menú' });
-    expect(StyleSheet.flatten(dimming.props.style).backgroundColor).toBe('rgba(11, 26, 64, 0.7)');
+    expect(StyleSheet.flatten(dimming.props.style).backgroundColor).toBe('rgba(11, 26, 64, 0.85)');
   });
 
   it('closes the menu, without opening anything, from the cross', () => {

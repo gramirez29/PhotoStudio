@@ -6,8 +6,9 @@ import { createQueryClient } from '../api/queryClient';
 import { restoreAppearance } from '../appearance/appearanceManager';
 import { AppBackground } from '../components/AppBackground';
 import { AppThemeProvider } from '../components/AppThemeProvider';
+import { AppMenu } from '../components/AppMenu';
 import { HeaderBrand } from '../components/HeaderBrand';
-import { SettingsButton } from '../components/SettingsButton';
+import { MenuButton } from '../components/MenuButton';
 import { Placeholder } from '../components/Placeholder';
 import { PushRegistration } from '../components/PushRegistration';
 import { ScreenLoader } from '../components/ScreenLoader';
@@ -68,7 +69,7 @@ export default function RootLayout(): ReactElement {
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
           <Stack.Screen
             name="index"
-            options={{ title: 'PhotoSense Studio', headerTitle: HeaderBrand, headerLeft: SignOutButton, headerRight: SettingsButton }}
+            options={{ title: 'PhotoSense Studio', headerTitle: HeaderBrand, headerLeft: MenuButton }}
           />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
@@ -101,6 +102,7 @@ export default function RootLayout(): ReactElement {
         <PushRegistration />
         {/* The background of the whole window: it covers what no screen paints, such as the strip under the system bars. */}
         <AppBackground>{content}</AppBackground>
+        {status === 'signedIn' && emailVerified && <AppMenu />}
       </AppThemeProvider>
     </QueryClientProvider>
   );

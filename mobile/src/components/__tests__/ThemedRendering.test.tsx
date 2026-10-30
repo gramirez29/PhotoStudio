@@ -6,9 +6,12 @@ import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { BOOKING_STATUSES } from '../../constants/booking';
 import { DARK_PALETTE, LIGHT_PALETTE } from '../../theme/palettes';
 import type { ColorScheme } from '../../types/theme/palette.types';
+import { useMenuStore } from '../../menu/menuStore';
+import { useSessionStore } from '../../session/sessionStore';
 import { ActionButton } from '../ActionButton';
 import { AmountRow } from '../AmountRow';
 import { AppCard } from '../AppCard';
+import { AppMenu } from '../AppMenu';
 import { AppThemeProvider } from '../AppThemeProvider';
 import { ContractCard } from '../ContractCard';
 import { DurationPicker } from '../DurationPicker';
@@ -16,6 +19,7 @@ import { ExtraRow } from '../ExtraRow';
 import { ExtrasModal } from '../ExtrasModal';
 import { FormInput } from '../FormInput';
 import { HeaderBrand } from '../HeaderBrand';
+import { MenuButton } from '../MenuButton';
 import { Placeholder } from '../Placeholder';
 import { ScreenLoader } from '../ScreenLoader';
 import { ScreenMessage } from '../ScreenMessage';
@@ -23,6 +27,8 @@ import { SelectField } from '../SelectField';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeSelector } from '../ThemeSelector';
 
+jest.mock('../../hooks/useNotifications', () => ({ useNotifications: () => ({ data: { items: [], unreadCount: 2 } }) }));
+jest.mock('../../hooks/useRefunds', () => ({ useRefunds: () => ({ data: { items: [], pendingCount: 1 } }) }));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
@@ -91,6 +97,12 @@ const SCENES: Readonly<Record<string, () => ReactElement>> = {
     </>
   ),
   selector: () => <ThemeSelector />,
+  menu: () => (
+    <>
+      <MenuButton />
+      <AppMenu />
+    </>
+  ),
 };
 
 /**
@@ -101,6 +113,21 @@ const SCENES: Readonly<Record<string, () => ReactElement>> = {
  */
 function paint(scene: string, scheme: ColorScheme): string {
   useAppearanceStore.setState({ preference: scheme });
+  // The menu is drawn only for a signed-in photographer, and it is the scene that opens it.
+  useSessionStore.setState({
+    status: 'signedIn',
+    session: {
+      accessToken: 't',
+      accessTokenExpiresAt: 1,
+      photographerId: 'p',
+      username: 'u',
+      email: 'u@example.com',
+      name: 'Guillermo Ramírez',
+      isSystemOperator: false,
+      emailVerified: true,
+    },
+  });
+  useMenuStore.setState({ open: scene === 'menu' });
   const build = SCENES[scene];
   if (build === undefined) {
     throw new Error(`unknown scene ${scene}`);
