@@ -46,19 +46,13 @@ export default function RootLayout(): ReactElement {
 
   let content: ReactElement;
   if (status === 'restoring' || !fontsReady) {
-    content = (
-      <AppBackground>
-        <ScreenLoader accessibilityLabel="Abriendo tu sesión" />
-      </AppBackground>
-    );
+    content = <ScreenLoader accessibilityLabel="Abriendo tu sesión" />;
   } else if (status === 'offline') {
     content = (
-      <AppBackground>
-        <Placeholder
-          message="No se pudo conectar para abrir tu sesión. Revisa la conexión e inténtalo de nuevo."
-          onRetry={() => void restoreSession()}
-        />
-      </AppBackground>
+      <Placeholder
+        message="No se pudo conectar para abrir tu sesión. Revisa la conexión e inténtalo de nuevo."
+        onRetry={() => void restoreSession()}
+      />
     );
   } else {
     content = (
@@ -102,7 +96,8 @@ export default function RootLayout(): ReactElement {
       <AppThemeProvider>
         <StatusBar style={statusBarStyleFor(status === 'signedIn', scheme)} />
         <PushRegistration />
-        {content}
+        {/* The background of the whole window: it covers what no screen paints, such as the strip under the system bars. */}
+        <AppBackground>{content}</AppBackground>
       </AppThemeProvider>
     </QueryClientProvider>
   );
