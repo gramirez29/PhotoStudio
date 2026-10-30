@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { openNewBooking } from '../../navigation/appNavigation';
@@ -68,6 +68,15 @@ describe('NewBookingFab', () => {
     expect(openNewBooking).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Agregar reserva')).toBeNull();
     expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
+  });
+
+  it('dims the rest of the screen well, so the option stands out', () => {
+    renderFab();
+
+    fireEvent.press(screen.getByLabelText('Nueva reserva'));
+
+    const dimming = screen.getByRole('button', { name: 'Cerrar el menú' });
+    expect(StyleSheet.flatten(dimming.props.style).backgroundColor).toBe('rgba(11, 26, 64, 0.7)');
   });
 
   it('closes the menu, without opening anything, from the cross', () => {

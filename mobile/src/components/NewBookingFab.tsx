@@ -11,6 +11,9 @@ import { withAlpha } from '../utils/color';
 /** Diameter of the round button, the size of a Material floating button. */
 const FAB_SIZE = 56;
 
+/** How dark the rest of the screen gets while the menu is open: 0 leaves it as it is, 1 hides it. */
+const MENU_DIMMING = 0.7;
+
 /**
  * Floating button of the home screen: a round button with a plus that, when tapped, shows the option "Agregar reserva" above it,
  * with the rest of the screen dimmed. Tapping the option opens the create-booking form; tapping the dimmed screen, the cross
@@ -45,7 +48,7 @@ export function NewBookingFab(): ReactElement {
           accessibilityRole="button"
           accessibilityLabel="Cerrar el menú"
           onPress={() => setOpen(false)}
-          style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(palette.scrim, 0.45) }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(palette.scrim, MENU_DIMMING) }]}
         />
       )}
       <View pointerEvents="box-none" style={[styles.stack, { bottom: bottomInset + spacing.md }]}>
