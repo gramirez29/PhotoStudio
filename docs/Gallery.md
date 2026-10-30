@@ -57,10 +57,10 @@ Un agregado = un documento (`galleries`): `photographerId`, `bookingId`, `status
 
 ## 6. Seguridad
 
-- **Sesión web del fotógrafo:** misma cuenta de la app (con correo verificado). La sesión va en una **cookie `HttpOnly; Secure; SameSite=Strict`** (sitio y API comparten dominio raíz, así que funciona); ningún token queda en el navegador. Endpoints propios (`/api/web/auth/*`) y **alcance limitado**: la sesión web solo abre lo de galerías (listar las suyas, subir, publicar, entregar), nunca clientes ni pagos. CORS con credenciales solo para el sitio. Sin segundo factor al inicio; un código por correo en navegadores nuevos queda como mejora.
+- **Sesión web del fotógrafo:** misma cuenta de la app (con correo verificado). La sesión va en una **cookie `HttpOnly; Secure; SameSite=Strict`** (sitio y API comparten dominio raíz, así que funciona); ningún token queda en el navegador. Endpoints propios (`/api/web/auth/*`) y **alcance limitado**: la sesión web solo abre lo de galerías (listar las suyas, subir, publicar, entregar), nunca clientes ni pagos. CORS con credenciales solo para el sitio. **Segundo factor (propuesto, en el PR 3):** un código de 6 dígitos por correo en navegadores nuevos, recordado 30 días en la cookie. Sin costo (Resend, que ya existe; entra en la cuota compartida de 3 000 al mes y 100 al día) y sin cambios en Railway (solo guarda el código temporal y los navegadores recordados en Mongo). Pendiente de confirmar por el fotógrafo; si se omite, se puede agregar después.
 - **R2:** bucket privado; todo acceso por URL firmada; CORS del bucket solo para los orígenes del sitio y de la API; el acceso a R2 es de la API (claves en variables de Railway, nunca en el código).
 - **Ver la galería exige el código por correo** (sesión de portal), no solo el enlace.
-- **Subida:** solo JPEG, tamaño máximo por foto (pruebas ~1 MB, finales 50 MB; por confirmar), máximo 150, la API comprueba con `HEAD` que el objeto existe antes de registrar la foto.
+- **Subida:** solo JPEG, tamaño máximo por foto (**pruebas 1 MB, finales 50 MB**, decidido), máximo 150, la API comprueba con `HEAD` que el objeto existe antes de registrar la foto.
 - **Límites de uso** por IP y por sesión en todos los endpoints nuevos, como en el resto de la API.
 
 ## 7. Costos (estimados)
@@ -94,6 +94,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 
 - **Subida desde el celular (PR 9):** la app debe quedar abierta mientras sube (la subida en segundo plano no es fiable); se muestra el progreso y se reanuda con reintento. Habrá **dos implementaciones** de la misma marca (canvas en la web, Skia en el celular), que se mantienen con una sola especificación (lado largo, calidad, ancho y opacidad de la marca) y se comprueban a ojo con las mismas fotos. RAW no se sube: las pruebas y los finales son JPEG (Lightroom móvil los exporta).
 - **Sin revocación de URLs emitidas:** una URL firmada ya emitida vive hasta que vence; por eso la vida corta, y la API registra cada emisión.
-- **Responsabilidad:** guardamos fotos de los clientes; hace falta una política de borrado (90 días o liberación manual) y mencionarla en el contrato. La cláusula de fotos extra del contrato necesita revisión legal, como las ya pendientes.
-- **Tamaño de los finales:** 50 MB por foto y solo JPEG; si se quiere TIFF o archivos mayores habrá que usar subida en partes.
-- **Pendiente de definir:** segundo factor en la sesión web, tamaño máximo exacto de pruebas y finales, y texto exacto del correo al cliente.
+- **Responsabilidad:** guardamos fotos de los clientes; hace falta una política de borrado (90 días o liberación manual). La cláusula del contrato sobre las fotos extra y la retención **se omite por ahora** (decisión del fotógrafo) y se revisará con las demás cláusulas pendientes.
+- **Tamaño de los finales:** decidido en 50 MB por foto y solo JPEG; si se quiere TIFF o archivos mayores habrá que usar subida en partes.
+- **Correo al cliente:** lo redacta Claude (amable y profesional) como plantilla HTML con la paleta, las fuentes y el logo de la app, junto con el PR 4 (correo al abrir la selección) y el PR 7 (correo de entrega); el fotógrafo lo revisa en cada PR.
+- **Pendiente de definir:** solo el segundo factor de la sesión web (ver §6).
