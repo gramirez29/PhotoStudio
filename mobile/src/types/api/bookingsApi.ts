@@ -1,8 +1,8 @@
 import type {
   BookingContractResponse,
   BookingLinkResponse,
+  BookingListResponse,
   BookingResponse,
-  BookingSummaryResponse,
   CancelBookingRequest,
   CreateBookingRequest,
   EditBookingDetailsRequest,
@@ -112,11 +112,12 @@ export interface BookingsApi {
   rejectPayment(id: string, paymentId: string, request: RejectPaymentRequest, signal?: AbortSignal): Promise<BookingResponse>;
 
   /**
-   * Lists the bookings of the signed-in photographer, earliest session first.
+   * Loads one page of the bookings of the signed-in photographer, the most recently created first.
+   * @param cursor The `nextCursor` of the previous page, or null for the first page.
    * @param signal Optional signal to cancel the request.
-   * @returns The booking summaries.
+   * @returns The page of booking summaries.
    */
-  listBookings(signal?: AbortSignal): Promise<readonly BookingSummaryResponse[]>;
+  listBookings(cursor: string | null, signal?: AbortSignal): Promise<BookingListResponse>;
 
   /**
    * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.

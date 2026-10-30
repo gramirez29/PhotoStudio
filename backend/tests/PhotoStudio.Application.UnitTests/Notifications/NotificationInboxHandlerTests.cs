@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Pagination;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Notifications;
@@ -40,7 +41,7 @@ public sealed class NotificationInboxHandlerTests
     {
         var photographer = Guid.CreateVersion7();
         var notification = Delivered(photographer);
-        _notifications.ListDeliveredAsync(photographer, ListNotificationsHandler.MaxItems, Arg.Any<CancellationToken>()).Returns([notification]);
+        _notifications.ListDeliveredAsync(photographer, null, PageSizes.Default + 1, Arg.Any<CancellationToken>()).Returns([notification]);
         _notifications.CountUnreadAsync(photographer, Arg.Any<CancellationToken>()).Returns(1);
 
         var response = await new ListNotificationsHandler(_notifications)
@@ -48,6 +49,45 @@ public sealed class NotificationInboxHandlerTests
 
         response.UnreadCount.ShouldBe(1);
         response.Items.Single().Id.ShouldBe(notification.Id);
+        response.NextCursor.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// With more notifications than a page, the page is cut and the cursor names its last notification.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task List_WithMoreThanAPage_ReturnsTheCursorOfTheLastOne()
+    {
+        var photographer = Guid.CreateVersion7();
+        var found = Enumerable.Range(0, 3).Select(_ => Delivered(photographer)).ToList();
+        _notifications.ListDeliveredAsync(photographer, null, 3, Arg.Any<CancellationToken>()).Returns(found);
+
+        var response = await new ListNotificationsHandler(_notifications)
+            .HandleAsync(new ListNotificationsQuery(photographer, null, 2), TestContext.Current.CancellationToken);
+
+        response.Items.Select(item => item.Id).ShouldBe([found[0].Id, found[1].Id]);
+        PageCursor.TryParse(response.NextCursor, out var cursor).ShouldBeTrue();
+        cursor.Id.ShouldBe(found[1].Id);
+        cursor.At.ShouldBe(found[1].DeliveredAt!.Value);
+    }
+
+    /// <summary>
+    /// The page that comes after a cursor asks the repository to continue from it.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task List_WithACursor_ContinuesFromIt()
+    {
+        var photographer = Guid.CreateVersion7();
+        var after = new PageCursor(Now, Guid.CreateVersion7());
+        _notifications.ListDeliveredAsync(photographer, after, 3, Arg.Any<CancellationToken>()).Returns([]);
+
+        var response = await new ListNotificationsHandler(_notifications)
+            .HandleAsync(new ListNotificationsQuery(photographer, after, 2), TestContext.Current.CancellationToken);
+
+        response.Items.ShouldBeEmpty();
+        response.NextCursor.ShouldBeNull();
     }
 
     /// <summary>

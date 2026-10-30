@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
+using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Notifications;
 using PhotoStudio.Infrastructure.Persistence.Documents;
 
@@ -110,12 +111,28 @@ public sealed class MongoNotificationRepository(IMongoDatabase database) : INoti
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<Notification>> ListDeliveredAsync(Guid photographerId, int limit, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<Notification>> ListDeliveredAsync(
+        Guid photographerId,
+        PageCursor? after,
+        int limit,
+        CancellationToken cancellationToken)
     {
+        var filters = Builders<NotificationDocument>.Filter;
+        var filter = filters.Eq(notification => notification.PhotographerId, photographerId)
+            & filters.Eq(notification => notification.Status, nameof(NotificationStatus.Delivered));
+        if (after is { } cursor)
+        {
+            // Keyset page: delivered before the cursor, or the same instant with a smaller identifier (the tie-break of the sort).
+            DateTime? at = cursor.At.UtcDateTime;
+            filter &= filters.Lt(notification => notification.DeliveredAt, at)
+                | (filters.Eq(notification => notification.DeliveredAt, at) & filters.Lt(notification => notification.Id, cursor.Id));
+        }
+
         // Served by the (photographerId, status, deliveredAt) index.
         var documents = await _collection
-            .Find(notification => notification.PhotographerId == photographerId && notification.Status == nameof(NotificationStatus.Delivered))
+            .Find(filter)
             .SortByDescending(notification => notification.DeliveredAt)
+            .ThenByDescending(notification => notification.Id)
             .Limit(limit)
             .ToListAsync(cancellationToken);
 

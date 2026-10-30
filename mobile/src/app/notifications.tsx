@@ -2,10 +2,12 @@ import type { ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { ActionButton } from '../components/ActionButton';
 import { ListSeparator } from '../components/ListSeparator';
+import { LoadMoreFooter } from '../components/LoadMoreFooter';
 import { NotificationListItem } from '../components/NotificationListItem';
 import { Placeholder } from '../components/Placeholder';
 import { useNotificationActions } from '../hooks/useNotificationActions';
 import { useNotifications } from '../hooks/useNotifications';
+import { flattenPages } from '../utils/pagination';
 import { spacing } from '../theme/tokens';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
@@ -22,8 +24,8 @@ export default function NotificationsScreen(): ReactElement {
   const { palette } = useAppTheme();
   const query = useNotifications();
   const actions = useNotificationActions();
-  const items = query.data?.items ?? [];
-  const unreadCount = query.data?.unreadCount ?? 0;
+  const items = flattenPages(query.data?.pages);
+  const unreadCount = query.data?.pages[0]?.unreadCount ?? 0;
 
   let empty: ReactElement;
   if (query.isPending) {
@@ -65,7 +67,15 @@ export default function NotificationsScreen(): ReactElement {
         </View>
       }
       ListEmptyComponent={empty}
-      refreshing={query.isRefetching}
+      ListFooterComponent={
+        <LoadMoreFooter
+          hasMore={query.hasNextPage}
+          isLoading={query.isFetchingNextPage}
+          failed={query.isFetchNextPageError}
+          onLoadMore={() => void query.fetchNextPage()}
+        />
+      }
+      refreshing={query.isRefetching && !query.isFetchingNextPage}
       onRefresh={() => void query.refetch()}
       contentContainerStyle={[styles.container, { paddingBottom: spacing.md + bottomInset }]}
     />

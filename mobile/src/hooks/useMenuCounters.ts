@@ -8,7 +8,7 @@ import { useRefunds } from './useRefunds';
  * @returns The unread notices, the refunds still owed and whether either is waiting.
  */
 export function useMenuCounters(): MenuCounters {
-  const unreadCount = useNotifications().data?.unreadCount ?? 0;
+  const unreadCount = useNotifications().data?.pages[0]?.unreadCount ?? 0;
   const pendingRefunds = useRefunds().data?.pendingCount ?? 0;
 
   return { unreadCount, pendingRefunds, needsAttention: unreadCount > 0 || pendingRefunds > 0 };

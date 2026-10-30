@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Common;
 
@@ -17,16 +18,18 @@ public interface IBookingRepository
     Task<Booking?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Lists a photographer's bookings whose session has not ended before the given instant, earliest session first.
+    /// Lists a photographer's bookings whose session has not ended before the given instant, the most recently created first.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>
     /// <param name="endingAfter">Sessions that ended before this instant are left out.</param>
+    /// <param name="after">The last booking the caller already has; the list continues right after it. <see langword="null"/> starts at the newest.</param>
     /// <param name="limit">Maximum number of bookings to return.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The bookings, possibly empty.</returns>
     Task<IReadOnlyList<Booking>> ListByPhotographerAsync(
         Guid photographerId,
         DateTimeOffset endingAfter,
+        PageCursor? after,
         int limit,
         CancellationToken cancellationToken);
 

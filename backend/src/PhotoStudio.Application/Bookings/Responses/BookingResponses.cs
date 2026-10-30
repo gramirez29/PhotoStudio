@@ -137,3 +137,10 @@ public sealed record BookingSummaryResponse(
     DateTimeOffset SessionEnd,
     MoneyResponse PackagePrice,
     MoneyResponse Balance);
+
+/// <summary>
+/// One page of the bookings of a photographer, the most recently created first.
+/// </summary>
+/// <param name="Items">The bookings of this page.</param>
+/// <param name="NextCursor">What to send back to get the next page, or <see langword="null"/> when this is the last one.</param>
+public sealed record BookingListResponse(IReadOnlyList<BookingSummaryResponse> Items, string? NextCursor);

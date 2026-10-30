@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Pagination;
 using MongoDB.Driver;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Domain.Bookings;
@@ -187,25 +188,25 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
-    /// The list returns only the photographer's own bookings, earliest session first.
+    /// The list returns only the photographer's own bookings, the most recently created first.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task ListByPhotographerAsync_ReturnsOnlyOwnBookingsOrderedBySessionStart()
+    public async Task ListByPhotographerAsync_ReturnsOnlyOwnBookingsNewestFirst()
     {
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var photographerId = Guid.CreateVersion7();
-        var later = NewBooking(photographerId, SessionStart.AddDays(3), SessionStart.AddDays(3).AddHours(2));
-        var earlier = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2));
+        var older = NewBooking(photographerId, SessionStart.AddDays(3), SessionStart.AddDays(3).AddHours(2), Now.AddMinutes(-5));
+        var newer = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2), Now);
         var foreign = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2));
         var repository = NewRepository();
-        await repository.AddAsync(later, TestContext.Current.CancellationToken);
-        await repository.AddAsync(earlier, TestContext.Current.CancellationToken);
+        await repository.AddAsync(older, TestContext.Current.CancellationToken);
+        await repository.AddAsync(newer, TestContext.Current.CancellationToken);
         await repository.AddAsync(foreign, TestContext.Current.CancellationToken);
 
-        var bookings = await repository.ListByPhotographerAsync(photographerId, Now, 50, TestContext.Current.CancellationToken);
+        var bookings = await repository.ListByPhotographerAsync(photographerId, Now, null, 50, TestContext.Current.CancellationToken);
 
-        bookings.Select(booking => booking.Id).ShouldBe([earlier.Id, later.Id]);
+        bookings.Select(booking => booking.Id).ShouldBe([newer.Id, older.Id]);
     }
 
     /// <summary>
@@ -226,6 +227,7 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
         var bookings = await repository.ListByPhotographerAsync(
             photographerId,
             SessionStart.AddDays(5),
+            null,
             50,
             TestContext.Current.CancellationToken);
 
@@ -233,7 +235,7 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
-    /// The list never returns more bookings than the limit, keeping the earliest sessions.
+    /// The list never returns more bookings than the limit, keeping the newest.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
@@ -242,7 +244,7 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
         Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
         var photographerId = Guid.CreateVersion7();
         var bookings = Enumerable.Range(0, 4)
-            .Select(day => NewBooking(photographerId, SessionStart.AddDays(day), SessionStart.AddDays(day).AddHours(2)))
+            .Select(day => NewBooking(photographerId, SessionStart.AddDays(day), SessionStart.AddDays(day).AddHours(2), Now.AddMinutes(day)))
             .ToList();
         var repository = NewRepository();
         foreach (var booking in bookings)
@@ -250,9 +252,37 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
             await repository.AddAsync(booking, TestContext.Current.CancellationToken);
         }
 
-        var listed = await repository.ListByPhotographerAsync(photographerId, Now, 2, TestContext.Current.CancellationToken);
+        var listed = await repository.ListByPhotographerAsync(photographerId, Now, null, 2, TestContext.Current.CancellationToken);
 
-        listed.Select(booking => booking.Id).ShouldBe([bookings[0].Id, bookings[1].Id]);
+        listed.Select(booking => booking.Id).ShouldBe([bookings[3].Id, bookings[2].Id]);
+    }
+
+    /// <summary>
+    /// A cursor continues the list right after the booking it names, with no repeats and no gaps, even when several bookings
+    /// were created at the same instant (the identifier breaks the tie).
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListByPhotographerAsync_WithACursor_ContinuesRightAfterIt()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var sameInstant = Enumerable.Range(0, 3)
+            .Select(day => NewBooking(photographerId, SessionStart.AddDays(day), SessionStart.AddDays(day).AddHours(2), Now))
+            .ToList();
+        var older = NewBooking(photographerId, SessionStart.AddDays(5), SessionStart.AddDays(5).AddHours(2), Now.AddMinutes(-1));
+        var repository = NewRepository();
+        foreach (var booking in sameInstant.Append(older))
+        {
+            await repository.AddAsync(booking, TestContext.Current.CancellationToken);
+        }
+
+        var first = await repository.ListByPhotographerAsync(photographerId, Now, null, 2, TestContext.Current.CancellationToken);
+        var cursor = new PageCursor(first[^1].CreatedAt, first[^1].Id);
+        var second = await repository.ListByPhotographerAsync(photographerId, Now, cursor, 2, TestContext.Current.CancellationToken);
+
+        var expected = sameInstant.OrderByDescending(booking => booking.Id).Select(booking => booking.Id).Append(older.Id).ToList();
+        first.Concat(second).Select(booking => booking.Id).ShouldBe(expected);
     }
 
     /// <summary>
@@ -724,8 +754,9 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     /// <param name="photographerId">Photographer (tenant) identifier.</param>
     /// <param name="start">Session start.</param>
     /// <param name="end">Session end.</param>
+    /// <param name="createdAt">Creation instant; <see cref="Now"/> when omitted.</param>
     /// <returns>The new booking.</returns>
-    private static Booking NewBooking(Guid photographerId, DateTimeOffset start, DateTimeOffset end) => Booking.Create(
+    private static Booking NewBooking(Guid photographerId, DateTimeOffset start, DateTimeOffset end, DateTimeOffset? createdAt = null) => Booking.Create(
         Guid.CreateVersion7(),
         photographerId,
         ClientContact.Create("María Pérez", "+506 8888-8888"),
@@ -733,5 +764,5 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
         Money.Create(100_000m, "CRC"),
         TimeSlot.Create(start, end),
         BookingPolicy.Default,
-        Now);
+        createdAt ?? Now);
 }

@@ -203,7 +203,7 @@ public sealed class RegistrationApiTests(ApiFixture fixture)
         var luisRead = await client.SendAsync(HttpMethod.Get, $"/api/bookings/{booking.GetProperty("id").GetGuid()}", luis.AccessToken);
 
         ana.PhotographerId.ShouldNotBe(luis.PhotographerId);
-        (await luisList.ReadJsonAsync()).GetArrayLength().ShouldBe(0);
+        (await luisList.ReadJsonAsync()).GetProperty("items").GetArrayLength().ShouldBe(0);
         luisRead.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import HomeScreen from '../../app/index';
 import { useBookings } from '../../hooks/useBookings';
 import { useSessionStore } from '../../session/sessionStore';
@@ -7,12 +7,35 @@ jest.mock('../../hooks/useBookings');
 jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn() }));
 
 /**
+ * Builds the pages of bookings a query holds.
+ * @param names Client names, one booking each, all in a single page.
+ * @returns The query data.
+ */
+function pagesOf(...names: string[]): unknown {
+  const items = names.map((clientName, index) => ({
+    id: `b${index}`,
+    clientName,
+    packageName: 'Retrato Familiar',
+    status: 'Tentative',
+    sessionStart: '2026-10-17T21:00:00+00:00',
+    sessionEnd: '2026-10-17T23:00:00+00:00',
+    packagePrice: { amount: 100000, currency: 'CRC' },
+    balance: { amount: 100000, currency: 'CRC' },
+  }));
+  return { pages: [{ items, nextCursor: null }], pageParams: [null] };
+}
+
+/**
  * Makes the list of bookings answer with what the test needs.
  * @param state Parts of the query to replace.
  */
 function bookingsAre(state: Partial<ReturnType<typeof useBookings>>): void {
   jest.mocked(useBookings).mockReturnValue({
-    data: [],
+    data: pagesOf(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    isFetchNextPageError: false,
+    fetchNextPage: jest.fn(),
     isPending: false,
     isError: false,
     isRefetching: false,
@@ -36,13 +59,13 @@ describe('HomeScreen', () => {
     rerender(<HomeScreen />);
     expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
 
-    bookingsAre({ data: [] });
+    bookingsAre({ data: pagesOf() as never });
     rerender(<HomeScreen />);
     expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
   });
 
   it('says there are no bookings when there are none', () => {
-    bookingsAre({ data: [] });
+    bookingsAre({ data: pagesOf() as never });
 
     render(<HomeScreen />);
 
@@ -51,7 +74,7 @@ describe('HomeScreen', () => {
   });
 
   it('is only the list of bookings: notices, refunds, settings and signing out are in the side menu', () => {
-    bookingsAre({ data: [] });
+    bookingsAre({ data: pagesOf() as never });
     useSessionStore.setState({
       session: {
         accessToken: 't',
@@ -73,6 +96,39 @@ describe('HomeScreen', () => {
     expect(screen.queryByText(/Servidor/)).toBeNull();
     expect(screen.queryByText('Apariencia')).toBeNull();
     expect(screen.queryByText('Cambiar contraseña')).toBeNull();
+  });
+
+  it('shows the bookings of every page loaded, and the button to see more only while there is another page', () => {
+    const fetchNextPage = jest.fn();
+    bookingsAre({ data: pagesOf('Ana Vargas', 'Luis Mora') as never, hasNextPage: true, fetchNextPage });
+
+    const { rerender } = render(<HomeScreen />);
+
+    expect(screen.getByText('Ana Vargas')).toBeTruthy();
+    expect(screen.getByText('Luis Mora')).toBeTruthy();
+    fireEvent.press(screen.getByText('Ver más'));
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+    bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: false });
+    rerender(<HomeScreen />);
+    expect(screen.queryByText('Ver más')).toBeNull();
+  });
+
+  it('says it is loading the next page while it comes', () => {
+    bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: true, isFetchingNextPage: true });
+
+    render(<HomeScreen />);
+
+    expect(screen.getByText('Cargando…')).toBeTruthy();
+  });
+
+  it('keeps what is shown and offers to try again when the next page fails', () => {
+    bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: true, isFetchNextPageError: true });
+
+    render(<HomeScreen />);
+
+    expect(screen.getByText('Ana Vargas')).toBeTruthy();
+    expect(screen.getByText('Reintentar')).toBeTruthy();
   });
 
   it('offers to retry when the bookings could not be loaded', () => {

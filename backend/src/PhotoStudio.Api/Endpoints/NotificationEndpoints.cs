@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using PhotoStudio.Api.Auth;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Notifications;
+using PhotoStudio.Application.Pagination;
 using PhotoStudio.Application.Notifications.List;
 using PhotoStudio.Application.Notifications.MarkRead;
 
@@ -33,17 +34,23 @@ public static class NotificationEndpoints
     }
 
     /// <summary>
-    /// Lists the inbox: the latest delivered notifications and how many are unread.
+    /// Lists one page of the inbox: the delivered notifications, the most recent first, and how many are unread.
     /// </summary>
     /// <param name="user">Authenticated photographer.</param>
     /// <param name="handler">Query handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
-    /// <returns>200 with the inbox.</returns>
+    /// <param name="cursor">The <c>nextCursor</c> of the previous page; omitted for the first page. 400 when it is not valid.</param>
+    /// <param name="limit">How many notifications the page has (5 by default, at most 50).</param>
+    /// <returns>200 with the page of the inbox and the cursor of the next one, if any.</returns>
     private static async Task<Ok<NotificationListResponse>> ListAsync(
         ClaimsPrincipal user,
         IQueryHandler<ListNotificationsQuery, NotificationListResponse> handler,
-        CancellationToken cancellationToken) =>
-        TypedResults.Ok(await handler.HandleAsync(new ListNotificationsQuery(user.GetPhotographerId()), cancellationToken));
+        CancellationToken cancellationToken,
+        string? cursor = null,
+        int? limit = null) =>
+        TypedResults.Ok(await handler.HandleAsync(
+            new ListNotificationsQuery(user.GetPhotographerId(), PageCursors.Read(cursor), PageSizes.Resolve(limit)),
+            cancellationToken));
 
     /// <summary>
     /// Marks one notification as read.

@@ -1,4 +1,4 @@
-import { createBookingsApi, parseBooking, parseBookingContract, parseBookingSummaries } from '../bookingsApi';
+import { createBookingsApi, parseBooking, parseBookingContract, parseBookingList } from '../bookingsApi';
 import { ResponseShapeError } from '../guards';
 import { createHttpClient } from '../httpClient';
 import { bookingPayload, bookingSummaryPayload, jsonResponse, stubFetch } from '../__fixtures__/testResponses';
@@ -126,29 +126,36 @@ describe('parseBooking', () => {
   });
 });
 
-describe('parseBookingSummaries', () => {
-  it('parses a list and keeps the order sent by the backend', () => {
+describe('parseBookingList', () => {
+  it('parses a page and keeps the order sent by the backend', () => {
     const second = { ...bookingSummaryPayload, id: 'second', clientName: 'Luis Mora', status: 'Tentative' };
 
-    const summaries = parseBookingSummaries([bookingSummaryPayload, second]);
+    const page = parseBookingList({ items: [bookingSummaryPayload, second], nextCursor: '123.abc' });
 
-    expect(summaries.map((summary) => summary.clientName)).toEqual(['María Pérez', 'Luis Mora']);
-    expect(summaries[1]?.status).toBe('Tentative');
-    expect(summaries[0]?.balance).toEqual({ amount: 50000, currency: 'CRC' });
+    expect(page.items.map((summary) => summary.clientName)).toEqual(['María Pérez', 'Luis Mora']);
+    expect(page.items[1]?.status).toBe('Tentative');
+    expect(page.items[0]?.balance).toEqual({ amount: 50000, currency: 'CRC' });
+    expect(page.nextCursor).toBe('123.abc');
   });
 
-  it('accepts an empty list', () => {
-    expect(parseBookingSummaries([])).toEqual([]);
+  it('has no next cursor on the last page', () => {
+    expect(parseBookingList({ items: [], nextCursor: null })).toEqual({ items: [], nextCursor: null });
   });
 
-  it('rejects a body that is not an array', () => {
-    expect(() => parseBookingSummaries({ items: [] })).toThrow('bookings should be an array');
+  it('takes a missing cursor as the last page', () => {
+    expect(parseBookingList({ items: [] }).nextCursor).toBeNull();
+  });
+
+  it('rejects a body that is not a page', () => {
+    expect(() => parseBookingList([])).toThrow('bookings should be an object');
+    expect(() => parseBookingList({ nextCursor: null })).toThrow('bookings.items should be an array');
+    expect(() => parseBookingList({ items: [], nextCursor: 5 })).toThrow('bookings.nextCursor');
   });
 
   it('points to the element that is invalid', () => {
-    expect(() => parseBookingSummaries([bookingSummaryPayload, { ...bookingSummaryPayload, status: 'Archived' }])).toThrow(
-      'bookings[1].status',
-    );
+    expect(() =>
+      parseBookingList({ items: [bookingSummaryPayload, { ...bookingSummaryPayload, status: 'Archived' }], nextCursor: null }),
+    ).toThrow('bookings.items[1].status');
   });
 });
 
@@ -164,13 +171,22 @@ describe('createBookingsApi', () => {
   });
 
   it('lists the bookings of the signed-in photographer without sending an identifier', async () => {
-    const { fetchFn, urls } = stubFetch(jsonResponse(200, [bookingSummaryPayload]));
+    const { fetchFn, urls } = stubFetch(jsonResponse(200, { items: [bookingSummaryPayload], nextCursor: null }));
     const api = createBookingsApi(createHttpClient('https://api.example.test', { fetchFn }));
 
-    const bookings = await api.listBookings();
+    const page = await api.listBookings(null);
 
-    expect(urls).toEqual(['https://api.example.test/api/bookings']);
-    expect(bookings).toHaveLength(1);
+    expect(urls).toEqual(['https://api.example.test/api/bookings?limit=5']);
+    expect(page.items).toHaveLength(1);
+  });
+
+  it('asks for the next page with the cursor of the previous one, encoded', async () => {
+    const { fetchFn, urls } = stubFetch(jsonResponse(200, { items: [], nextCursor: null }));
+    const api = createBookingsApi(createHttpClient('https://api.example.test', { fetchFn }));
+
+    await api.listBookings('639.0197a000/+x');
+
+    expect(urls).toEqual(['https://api.example.test/api/bookings?limit=5&cursor=639.0197a000%2F%2Bx']);
   });
 
   it('posts the booking request as JSON and parses the created booking', async () => {

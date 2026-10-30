@@ -44,9 +44,9 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
         var ownList = await client.SendAsync(HttpMethod.Get, "/api/bookings", owner.AccessToken);
         var otherList = await client.SendAsync(HttpMethod.Get, $"/api/bookings?photographerId={owner.PhotographerId}", other.AccessToken);
 
-        (await ownList.ReadJsonAsync()).EnumerateArray().Select(item => item.GetProperty("id").GetGuid())
+        (await ownList.ReadJsonAsync()).GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetGuid())
             .ShouldContain(ownerBooking.GetProperty("id").GetGuid());
-        (await otherList.ReadJsonAsync()).GetArrayLength().ShouldBe(0);
+        (await otherList.ReadJsonAsync()).GetProperty("items").GetArrayLength().ShouldBe(0);
     }
 
     /// <summary>
