@@ -12,6 +12,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Infrastructure;
 using PhotoStudio.Infrastructure.Identity;
 using PhotoStudio.Infrastructure.Portal;
+using PhotoStudio.Api.Documentation;
 using PhotoStudio.Infrastructure.Storage;
 
 // Composition root of the PhotoStudio API. Configuration comes from environment variables (Railway service variables).
@@ -52,7 +53,7 @@ builder.Services.AddPortalCors(builder.Environment.IsDevelopment());
 builder.Services.AddProblemDetails();
 builder.Services.AddApiRateLimiting();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddOpenApi();
+builder.Services.AddApiDocs();
 
 var app = builder.Build();
 
@@ -75,6 +76,9 @@ app.Use(async (context, next) =>
 // token. The policy itself is attached only to the portal endpoints.
 app.UseCors();
 app.UseExceptionHandler();
+
+// Swagger UI (only where the documentation is on) is middleware before authorization: its files are public.
+app.UseApiDocsUi();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -83,8 +87,9 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 // Every endpoint requires a signed-in photographer by default (fallback policy); the ones below opt out explicitly.
-// The OpenAPI document is the source for the generated TypeScript types of the mobile app and the client portal.
-app.MapOpenApi().AllowAnonymous();
+// The OpenAPI document (the source for the generated TypeScript types) and Swagger UI to try the endpoints by hand: only in
+// Development and where API_DOCS_ENABLED=true (develop); off in production unless the variable turns them on.
+app.MapApiDocument();
 
 // Liveness: the process answers. Readiness: dependencies (MongoDB) answer. Railway probes them without credentials.
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
