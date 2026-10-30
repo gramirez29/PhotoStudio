@@ -59,8 +59,6 @@ export interface Palette {
   readonly muted: string;
   /** Shade behind dialogs and sheets. */
   readonly scrim: string;
-  /** Color laid over the blurred picture behind the app, so text stays readable. */
-  readonly wash: string;
   /** The slate blue of the logo. */
   readonly brand: string;
   /** Text and icons on `brand`. */

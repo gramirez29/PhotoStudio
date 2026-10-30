@@ -17,7 +17,7 @@ export const BOOKING_ACTION_LABELS: Readonly<Record<BookingAction, string>> = {
   VerifyPayment: 'Verificar pago',
   RecordInPersonPayment: 'Registrar pago presencial',
   Reschedule: 'Reprogramar',
-  Cancel: 'Cancelar',
+  Cancel: 'Cancelar reserva',
   Complete: 'Marcar sesión completada',
   MarkClientAbsent: 'Marcar cliente ausente',
   RevertClientAbsent: 'Revertir ausencia',

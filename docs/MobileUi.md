@@ -13,7 +13,7 @@ conservan su contrato.
 | Temas | **Claro** (crema y terracota) y **oscuro** (azul noche y cobre), los de la marca (`portal/src/theme/tokens.css`). Con un **selector** en la app: Sistema / Claro / Oscuro, que se recuerda. |
 | Tipografía | **Josefin Sans** (títulos) y **DM Sans** (texto), las mismas de la web, dentro de la app (`@expo-google-fonts`). |
 | Color dinámico de Android (Material You) | **No.** Pisaría la paleta de la marca. |
-| Fondo | La foto `camera-background.jpg` **difuminada y lavada en blanco (78 % de lavado en los dos temas, con la foto `camera-background-2` (una cámara con una mano que baja hacia ella, 1638×2048, fondo blanco liso), escalada a 540 px de ancho y con un desenfoque de radio 4: la cámara se reconoce y el resto es blanco limpio, que deja sitio para el texto; se recorta por los lados en los teléfonos, pero cámara y mano están al centro. La foto anterior, un montón de equipo de 303×660, quedaba confusa y se pixelaba con poco desenfoque)** en todas las pantallas (en el tema oscuro, lavada en azul noche). |
+| Fondo | El color liso del tema con el **logo** (el avatar de la marca) grande, tenue y centrado en todas las pantallas, pintado con el color principal del tema (azul del logo en claro, cobre en oscuro; 7 % y 10 % de opacidad). Antes era una foto de cámara difuminada y lavada: se quitó porque pesaba y competía con el contenido. |
 
 ## 2. Cómo está hecho (fase 1, ya en el código)
 
@@ -25,9 +25,11 @@ conservan su contrato.
   (`system` / `light` / `dark`) vive en un store de Zustand y se guarda en `expo-secure-store`. **Por defecto es `light`**, no lo
   que diga el teléfono, y no hay selector todavía: hasta la fase 5 la app se ve siempre clara.
 - **Fuentes** (`src/theme/fonts.ts`, `useAppFonts`): se cargan al abrir; si fallan, la app abre con la fuente del sistema.
-- **Fondo** (`src/components/AppBackground.tsx`, `src/navigation/appScreenLayout.tsx`): la foto va **ya difuminada** en
-  `assets/background.jpg` (se genera con `scripts/blur-background.ps1` desde `assets/background-source.jpg`; un desenfoque en
-  tiempo de ejecución costaría memoria y se vería distinto en Android y en iOS) con un lavado encima (`src/theme/background.ts`).
+- **Fondo** (`src/components/AppBackground.tsx`, `src/navigation/appScreenLayout.tsx`): el color liso del tema con el logo como marca de
+  agua. `assets/watermark.png` es el logo en blanco sobre transparente (se genera con `scripts/make-watermark.ps1` desde
+  `photosense_avatar_1080.png`: cada pixel queda blanco con la opacidad que se aleje del azul noche de fondo) y se pinta con
+  `tintColor` del tema, así un solo archivo sirve para los dos temas. Tamaño y opacidad en `src/theme/background.ts`
+  (`WATERMARK_SCALE`, `WATERMARK_OPACITY`); su prueba comprueba que el texto se lee también sobre el logo en su punto más fuerte.
   Se pone **una sola vez**, en el `screenLayout` del `Stack`: cada pantalla lleva su propia copia, opaca, para que una pantalla no
   deje ver la anterior mientras se desliza. Es decoración: oculta del lector de pantalla y sin recibir toques.
 - **Compatibilidad** (`src/theme/tokens.ts`): `colors` sigue existiendo con los mismos nombres, ahora con los valores de la paleta

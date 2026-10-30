@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { appScreenLayout } from '../../navigation/appScreenLayout';
-import { WASH_OPACITY } from '../../theme/background';
+import { WATERMARK_OPACITY, WATERMARK_SCALE } from '../../theme/background';
 import { DARK_PALETTE, LIGHT_PALETTE } from '../../theme/palettes';
 import { AppBackground } from '../AppBackground';
 
@@ -11,7 +11,7 @@ describe('AppBackground', () => {
     useAppearanceStore.setState({ preference: 'light' });
   });
 
-  it('shows the screen on top of the picture', () => {
+  it('shows the screen on top of the logo', () => {
     render(
       <AppBackground>
         <Text>contenido</Text>
@@ -22,26 +22,27 @@ describe('AppBackground', () => {
     expect(screen.UNSAFE_getAllByType(Image)).toHaveLength(1);
   });
 
-  it('washes the picture in white in the light theme, so the text reads over it', () => {
+  it('tints the logo with the main color of the light theme, faintly', () => {
     render(<AppBackground />);
 
-    const views = screen.UNSAFE_getAllByType(View);
-    const wash = views.find((view) => StyleSheet.flatten(view.props.style)?.opacity === WASH_OPACITY.light);
-    expect(StyleSheet.flatten(wash?.props.style)).toMatchObject({ backgroundColor: LIGHT_PALETTE.wash });
-    expect(LIGHT_PALETTE.wash).toBe('#ffffff');
+    expect(StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style)).toMatchObject({
+      tintColor: LIGHT_PALETTE.primary,
+      opacity: WATERMARK_OPACITY.light,
+    });
   });
 
-  it('washes it in navy in the dark theme', () => {
+  it('tints it with the main color of the dark theme', () => {
     useAppearanceStore.setState({ preference: 'dark' });
 
     render(<AppBackground />);
 
-    const views = screen.UNSAFE_getAllByType(View);
-    const wash = views.find((view) => StyleSheet.flatten(view.props.style)?.opacity === WASH_OPACITY.dark);
-    expect(StyleSheet.flatten(wash?.props.style)).toMatchObject({ backgroundColor: DARK_PALETTE.wash });
+    expect(StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style)).toMatchObject({
+      tintColor: DARK_PALETTE.primary,
+      opacity: WATERMARK_OPACITY.dark,
+    });
   });
 
-  it('is opaque under the picture, so a screen never shows the one below it while sliding', () => {
+  it('is opaque under the logo, so a screen never shows the one below it while sliding', () => {
     const { toJSON } = render(<AppBackground />);
 
     const root = toJSON();
@@ -49,7 +50,7 @@ describe('AppBackground', () => {
     expect(rootStyle).toMatchObject({ backgroundColor: LIGHT_PALETTE.background, flex: 1 });
   });
 
-  it('makes the picture and the wash as big as the window, so they reach the bottom even if their container does not', () => {
+  it('sizes and centers the logo from the window, not from its container', () => {
     let window = { width: 0, height: 0 };
     function Probe(): null {
       window = useWindowDimensions();
@@ -62,19 +63,34 @@ describe('AppBackground', () => {
       </>,
     );
 
-    const picture = StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style);
-    expect(picture).toMatchObject({ width: window.width, height: window.height, top: 0, left: 0, position: 'absolute' });
-    const wash = screen.UNSAFE_getAllByType(View).find((view) => view.props.pointerEvents === 'none');
-    expect(StyleSheet.flatten(wash?.props.style)).toMatchObject({ width: window.width, height: window.height });
+    const size = Math.min(window.width, window.height) * WATERMARK_SCALE;
+    expect(StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style)).toMatchObject({
+      position: 'absolute',
+      width: size,
+      height: size,
+      left: (window.width - size) / 2,
+      top: (window.height - size) / 2,
+    });
     expect(window.height).toBeGreaterThan(0);
   });
 
-  it('is decoration: hidden from the screen reader and never takes a touch', () => {
+  it('centers the logo in the space below the header once it is measured, which is higher than the window', () => {
+    const { toJSON } = render(<AppBackground />);
+    const root = toJSON();
+    expect(root).not.toBeNull();
+
+    fireEvent(screen.UNSAFE_getAllByType(View)[0]!, 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 600 } } });
+
+    const logo = StyleSheet.flatten(screen.UNSAFE_getByType(Image).props.style);
+    expect(logo.top).toBe((600 - logo.height) / 2);
+  });
+
+  it('is decoration: hidden from the screen reader', () => {
     render(<AppBackground />);
 
-    expect(screen.UNSAFE_getByType(Image).props.accessible).toBe(false);
-    const wash = screen.UNSAFE_getAllByType(View).find((view) => view.props.pointerEvents === 'none');
-    expect(wash?.props.importantForAccessibility).toBe('no-hide-descendants');
+    const logo = screen.UNSAFE_getByType(Image);
+    expect(logo.props.accessible).toBe(false);
+    expect(logo.props.importantForAccessibility).toBe('no');
   });
 
   it('is what the stack puts under each of its screens', () => {
