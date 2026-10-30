@@ -4,7 +4,7 @@ import { HelperText, Text, useTheme } from 'react-native-paper';
 import { spacing } from '../theme/tokens';
 import type { SelectFieldProps } from '../types/components/SelectField.types';
 
-/** Height of the field, the same as an outlined Material text field. */
+/** Minimum height of the field, the same as an outlined Material text field; with larger letters it grows. */
 const FIELD_HEIGHT = 56;
 
 /**
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     flexDirection: 'row',
-    height: FIELD_HEIGHT,
+    minHeight: FIELD_HEIGHT,
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
   },

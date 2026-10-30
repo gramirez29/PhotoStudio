@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { Switch, Text, View } from 'react-native';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { useContractForm } from '../hooks/useContractForm';
 import { spacing } from '../theme/tokens';
 import type { ContractFormProps } from '../types/components/ContractForm.types';
@@ -22,6 +23,7 @@ import { FONT_FAMILIES } from '../theme/fonts';
  * @returns The form.
  */
 export function ContractForm({ booking }: ContractFormProps): ReactElement {
+  const { palette } = useAppTheme();
   const styles = useStyles();
   const form = useContractForm(booking);
   const paper = form.values.kind === 'Paper';
@@ -118,6 +120,8 @@ export function ContractForm({ booking }: ContractFormProps): ReactElement {
                 <Switch
                   accessibilityLabel="El cliente leyó el contrato y lo acepta"
                   value={form.values.accepted}
+                  trackColor={{ false: palette.outlineVariant, true: palette.primary }}
+                  thumbColor={form.values.accepted ? palette.onPrimary : palette.outline}
                   onValueChange={(accepted) => form.setChoice('accepted', accepted)}
                 />
                 <Text style={styles.acceptanceLabel}>El cliente leyó el contrato completo y lo acepta.</Text>

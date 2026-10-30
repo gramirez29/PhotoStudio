@@ -5,27 +5,6 @@ import { useSessionStore } from '../../session/sessionStore';
 
 jest.mock('../../hooks/useBookings');
 jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn() }));
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
-}));
-/**
- * Makes the module of a shortcut a stand-in that shows a text, so the test sees where the shortcut goes without its hooks.
- * @param name Name the module exports.
- * @param text Text the stand-in shows.
- * @returns The module.
- */
-function mockStandIn(name: string, text: string): Record<string, () => unknown> {
-  // The factory of jest.mock cannot use what is imported above, so what it needs is loaded inside.
-  const React: typeof import('react') = jest.requireActual('react');
-  const { Text }: typeof import('react-native') = jest.requireActual('react-native');
-  return { [name]: () => React.createElement(Text, null, text) };
-}
-
-jest.mock('../ApiStatus', () => mockStandIn('ApiStatus', 'estado del servidor'));
-jest.mock('../NotificationsButton', () => mockStandIn('NotificationsButton', 'botón de avisos'));
-jest.mock('../RefundsButton', () => mockStandIn('RefundsButton', 'botón de reembolsos'));
-jest.mock('../ChangePasswordButton', () => mockStandIn('ChangePasswordButton', 'cambiar contraseña'));
-jest.mock('../MaintenanceButton', () => mockStandIn('MaintenanceButton', 'mantenimiento'));
 
 /**
  * Makes the list of bookings answer with what the test needs.
@@ -71,18 +50,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Mis reservas')).toBeTruthy();
   });
 
-  it('shows the shortcuts above the list', () => {
-    bookingsAre({ data: [] });
-
-    render(<HomeScreen />);
-
-    expect(screen.getByText('botón de avisos')).toBeTruthy();
-    expect(screen.getByText('botón de reembolsos')).toBeTruthy();
-    expect(screen.getByText('cambiar contraseña')).toBeTruthy();
-    expect(screen.queryByText('mantenimiento')).toBeNull();
-  });
-
-  it('shows the maintenance shortcut only to a system operator', () => {
+  it('is only the list of bookings: notices, refunds, settings and signing out are in the side menu', () => {
     bookingsAre({ data: [] });
     useSessionStore.setState({
       session: {
@@ -99,7 +67,12 @@ describe('HomeScreen', () => {
 
     render(<HomeScreen />);
 
-    expect(screen.getByText('mantenimiento')).toBeTruthy();
+    expect(screen.queryByText(/Avisos/)).toBeNull();
+    expect(screen.queryByText(/Reembolsos pendientes/)).toBeNull();
+    expect(screen.queryByText('Liberar reservas vencidas')).toBeNull();
+    expect(screen.queryByText(/Servidor/)).toBeNull();
+    expect(screen.queryByText('Apariencia')).toBeNull();
+    expect(screen.queryByText('Cambiar contraseña')).toBeNull();
   });
 
   it('offers to retry when the bookings could not be loaded', () => {

@@ -44,7 +44,7 @@ Un PR por fase, hacia `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas
 | 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | **Hecha** (ver §3.1) |
 | 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`makeStyles`) | **Hecha** (ver §3.2) |
 | 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | **Hecha** (ver §3.3) |
-| 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | Pendiente |
+| 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en la pantalla de Ajustes), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | **Hecha** (ver §3.4) |
 | 6 | Limpieza: regla de ESLint contra colores fijos (hoy lo hace `noFixedColors.test.ts`), actualizar documentos. `colors` de `tokens.ts` ya se quitó en la fase 4 | Pendiente |
 
 ### 3.1 Fase 2: qué cambió en los componentes base
@@ -62,13 +62,13 @@ Por dentro, con las mismas props y las mismas etiquetas de accesibilidad (las 71
 | `ScreenLoader`, `ScreenMessage`, `Placeholder`, `AmountRow` | Los de Paper (indicador, texto con la fuente del tema, botón) |
 | **`AppCard`** (nuevo) | Tarjeta tonal de Material 3 (`surfaceVariant`, esquinas de 16); la usan `BookingActions`, `BookingDetails`, `ContractCard`, `EditBookingForm` (bloqueado), `NotificationListItem`, `PendingPaymentsCard`, `RefundListItem`, `RescheduleForm`, `SettlementCard` y `ShareLinkCard` |
 
-Todos leen sus colores del tema, así que ya siguen el tema claro y el oscuro. **Quedan para la fase 3 y la 4** las tarjetas que se tocan (`BookingListItem`, `NotificationsButton`), `ContractText`, `ExtrasModal`, `ExtraRow` y `ExtrasFields`, los textos sueltos de las pantallas (que aún usan `Text` de React Native con colores de `tokens.ts`) y las cabeceras.
+Todos leen sus colores del tema, así que ya siguen el tema claro y el oscuro. **Quedan para la fase 3 y la 4** las tarjetas que se tocan (`BookingListItem`), `ContractText`, `ExtrasModal`, `ExtraRow` y `ExtrasFields`, los textos sueltos de las pantallas (que aún usan `Text` de React Native con colores de `tokens.ts`) y las cabeceras.
 
 ### 3.2 Fase 3: qué cambió en la estructura
 
 - **Cabecera de la app** (`src/navigation/headerOptions.ts`): la banda azul pizarra `#3A4466` del logo, con el título en blanco y Josefin Sans, **igual en los dos temas** (como la banda de la web). Sin línea debajo. La flecha de volver y los botones del encabezado van en blanco.
-- **Inicio** (`HeaderBrand`): en la banda va el logo con su borde plateado y "PHOTOSENSE STUDIO" en mayúsculas con espacio entre letras, igual que en la web. "Salir" queda a la izquierda, en blanco.
-- **Botón flotante "Nueva reserva"** (`NewBookingFab`, el `FAB` extendido de Material 3 en el color principal) en la esquina de abajo a la derecha, sobre la barra de navegación del sistema; reemplaza el "+ Nueva" que estaba en la cabecera (`NewBookingButton`, eliminado). La lista deja espacio al final para que no tape la última reserva.
+- **Inicio** (`HeaderBrand`): en la banda va el logo con su borde plateado y "PHOTOSENSE STUDIO" en mayúsculas con espacio entre letras, igual que en la web. A la izquierda va la **hamburguesa** (`MenuButton`, ícono `menu` de Material, en blanco), que abre el menú lateral (§3.5). Si hay avisos sin leer o reembolsos pendientes lleva un **puntito rojo** y el lector de pantalla lo dice. El logo y el nombre quedan al centro; no hay nada a la derecha.
+- **Botón flotante** (`NewBookingFab`): un botón **redondo con un +** (`FAB` de Material 3 en el color principal) en la esquina de abajo a la derecha, sobre la barra de navegación del sistema. Al tocarlo **muestra la opción "Agregar reserva"** encima, con el resto de la pantalla atenuada, y el + pasa a ser una ×. Tocar la opción abre el formulario; tocar la pantalla atenuada, la × o el botón de atrás del teléfono cierra el menú sin hacer nada. El menú vive dentro de la pantalla (no usa el portal de Paper) para que nunca se quede encima de otra pantalla. Reemplaza el "+ Nueva" que estaba en la cabecera (`NewBookingButton`, eliminado). La lista deja espacio al final para que no tape la última reserva.
 - **Barra de estado** (`statusBarStyleFor`): íconos claros sobre la banda, en cualquier tema; sin banda (acceso, cargando, sin conexión) siguen el tema.
 - **`makeStyles`** (`src/theme/makeStyles.ts`): la forma de escribir estilos que dependen del tema. `const useStyles = makeStyles((palette, scheme) => ({ title: { color: palette.onSurface } }))` y, dentro del componente, `const styles = useStyles();`. Se recalculan solo cuando cambia el tema. Lo usan `HeaderBrand` y `SignOutButton`; las fases 4 y 5 lo usan en las pantallas.
 
@@ -84,7 +84,24 @@ Todas las pantallas y componentes con estilos propios pasaron de los colores fij
 - **`tokens.ts` ya no tiene `colors`**: solo quedan `spacing` y `radius`. `src/theme/__tests__/noFixedColors.test.ts` impide que vuelvan: ninguna pantalla ni componente puede escribir un color (hex o `rgb()`), importar `colors` ni usar un `fontWeight`.
 - Comportamiento, rutas, hooks, formularios y API: sin cambios.
 
-**Recorridos a repetir en el teléfono** (antes de fusionar las fases 2 a 5): iniciar sesión y salir; crear una reserva con
+### 3.4 Fase 5: el tema oscuro, activado
+
+- **Selector de apariencia** (`ThemeSelector`, en la pantalla de **Ajustes**, `SettingsList`; se entra con "Ajustes" del menú lateral; allí también están "Cambiar contraseña", el estado del servidor ("Servidor conectado", `ApiStatus`) y, solo para un operador de sistema, "Mantenimiento" (`MaintenanceButton`), que ya no están en el inicio, para que esa pantalla solo tenga lo que se usa a diario): tres botones, **Sistema / Claro / Oscuro**. La elección se aplica al instante a todas las pantallas y se recuerda (`expo-secure-store`). El valor de partida sigue siendo **Claro**, no lo que diga el teléfono, hasta que se elija otra cosa. "Sistema" sigue el tema del teléfono y cambia con él.
+- **Revisión de las dos variaciones:** `ThemedRendering.test.tsx` renderiza 10 escenas (cabecera, estados, botones, tarjetas, campos, selector, mensajes, contrato, extras, selector de tema) en cada tema y comprueba que **no aparece ningún color del otro tema**; también que cada tema sí pinta colores propios, para que esa ausencia signifique algo. Un color que se quedara fijo en claro haría fallar la prueba.
+- **Botón flotante:** usa el color principal del tema: azul del logo en claro, cobre en oscuro.
+- **Interruptor del contrato:** sigue el tema.
+- **Letra grande:** la altura fija del selector pasó a mínima (crece con la letra) y el nombre de la cabecera deja de crecer a partir de 1,2 veces.
+- **Android a borde completo** (`useBottomInset`): las pantallas que se desplazan (inicio, avisos, reembolsos, detalle, reprogramar y todos los formularios) dejan al final el espacio de la barra de navegación del sistema. Sin barra, no cambian.
+- **Lo que no sigue el tema de la app**, porque lo dibuja el sistema: el diálogo de fecha y hora de Android, las alertas (`Alert`) y los íconos de la barra de navegación del sistema siguen el tema **del teléfono**. Con la app en oscuro y el teléfono en claro, esos diálogos salen claros.
+
+### 3.5 El menú lateral
+
+- **`AppMenu`** (con `menuStore`, `MenuButton`, `useMenuCounters`): un panel que se desliza desde la izquierda sobre toda la app, dentro de un `Modal` (así nunca queda debajo de otra pantalla), con el resto atenuado (`MENU_DIMMING` 0,7). Se cierra tocando lo atenuado, con el botón de atrás o al elegir una opción. Solo existe con una sesión iniciada y el correo verificado; en `verify-email` sigue el ícono de salir (`SignOutButton`).
+- **Arriba:** una banda `brand` con el logo, "PhotoSense Studio", el nombre del usuario y su correo (si lo tiene).
+- **Opciones:** Inicio, Avisos (con el contador de no leídos), Reembolsos pendientes (con el contador, en rojo) y Ajustes; separado, al final, **Cerrar sesión**, que pide confirmación (`confirmSignOut`). Avisos y Reembolsos ya no tienen botón en el inicio: solo se entra por aquí.
+- **Botón flotante:** al tocar el + el resto de la pantalla se atenúa más (`MENU_DIMMING` 0,85 en `NewBookingFab`).
+
+**Recorridos a repetir en el teléfono** (antes de fusionar las fases 2 a 5): iniciar sesión; abrir el menú lateral, ir a cada opción y salir desde él; crear una reserva con
 paquete, extras y descuento; editarla; firmar el contrato en el celular; registrar un pago; completar; cancelar con motivo;
 reembolsos; avisos y push; enlace al cliente; cambiar la contraseña; verificar el correo.
 

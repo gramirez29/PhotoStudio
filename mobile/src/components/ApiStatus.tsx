@@ -3,11 +3,10 @@ import { StyleSheet, Text } from 'react-native';
 import { useApiHealth } from '../hooks/useApiHealth';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { FONT_FAMILIES } from '../theme/fonts';
-import { spacing } from '../theme/tokens';
 import { describeApiHealth } from '../utils/apiHealth';
 
 /**
- * Shows whether the backend is reachable and ready.
+ * Shows whether the backend is reachable and ready. It lives in the settings screen.
  * @returns The status line.
  */
 export function ApiStatus(): ReactElement {
@@ -23,6 +22,5 @@ const styles = StyleSheet.create({
   status: {
     fontFamily: FONT_FAMILIES.body,
     fontSize: 14,
-    marginBottom: spacing.md,
   },
 });

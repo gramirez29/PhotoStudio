@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet } from 'react-native';
 import { spacing } from '../theme/tokens';
 import type { KeyboardAwareScreenProps } from '../types/components/KeyboardAwareScreen.types';
+import { useBottomInset } from '../hooks/useBottomInset';
 
 /**
  * Screen container for forms that keeps the field being typed visible above the keyboard.
@@ -9,16 +10,17 @@ import type { KeyboardAwareScreenProps } from '../types/components/KeyboardAware
  * The container shrinks to the space the keyboard leaves free (`KeyboardAvoidingView` with `padding`) and the content
  * scrolls inside it. `padding` is needed on Android as well as on iOS: Android draws the app edge to edge, so it no longer
  * resizes the window when the keyboard opens, and without this the keyboard covers the lower half of the screen. Taps keep
- * working while the keyboard is open, and dragging the form closes it.
+ * working while the keyboard is open, and dragging the form closes it. At its end it leaves room for the navigation bar.
  * @param props Component props.
  * @returns The container with its content.
  */
 export function KeyboardAwareScreen({ children, align = 'center' }: KeyboardAwareScreenProps): ReactElement {
+  const bottomInset = useBottomInset();
   return (
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView
         style={styles.flex}
-        contentContainerStyle={[styles.content, align === 'top' && styles.top]}
+        contentContainerStyle={[styles.content, align === 'top' && styles.top, { paddingBottom: (align === 'top' ? spacing.md : spacing.lg) + bottomInset }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets

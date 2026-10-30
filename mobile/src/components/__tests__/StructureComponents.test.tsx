@@ -1,16 +1,11 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { render, screen } from '@testing-library/react-native';
 import { Image, StyleSheet } from 'react-native';
-import { openNewBooking } from '../../navigation/appNavigation';
 import { LIGHT_PALETTE } from '../../theme/palettes';
 import { HeaderBrand } from '../HeaderBrand';
-import { NewBookingFab } from '../NewBookingFab';
 import { SignOutButton } from '../SignOutButton';
 
-jest.mock('../../navigation/appNavigation', () => ({ openNewBooking: jest.fn() }));
 jest.mock('../../push/pushSignOut', () => ({ signOutOfDevice: jest.fn() }));
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }),
-}));
 
 describe('the structure of the app', () => {
   describe('HeaderBrand', () => {
@@ -39,52 +34,20 @@ describe('the structure of the app', () => {
   });
 
   describe('SignOutButton on the band', () => {
-    it('writes its label in the color of the text of the band', () => {
+    it('is an icon of leaving, in the color of the text of the band, and has no text of its own', () => {
       render(<SignOutButton />);
 
-      const label = screen.getByText('Salir');
-      expect(StyleSheet.flatten(label.props.style)).toMatchObject({ color: LIGHT_PALETTE.onBrand });
-    });
-  });
-
-  describe('NewBookingFab', () => {
-    beforeEach(() => {
-      jest.clearAllMocks();
+      const icon = screen.UNSAFE_getByType(MaterialIcons);
+      expect(icon.props.name).toBe('logout');
+      expect(icon.props.color).toBe(LIGHT_PALETTE.onBrand);
+      expect(screen.queryByText('Salir')).toBeNull();
     });
 
-    it('offers to create a booking, with its name for the screen reader', () => {
-      render(<NewBookingFab />);
+    it('is named for the screen reader, and the drawing is hidden from it', () => {
+      render(<SignOutButton />);
 
-      expect(screen.getByText('Nueva reserva')).toBeTruthy();
-      expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
-    });
-
-    it('opens the create-booking form when it is tapped', () => {
-      render(<NewBookingFab />);
-
-      fireEvent.press(screen.getByLabelText('Nueva reserva'));
-
-      expect(openNewBooking).toHaveBeenCalledTimes(1);
-    });
-
-    it('is the blue of the logo, not the terracotta', () => {
-      render(<NewBookingFab />);
-
-      const painted = JSON.stringify(screen.toJSON());
-      expect(painted).toContain(`"backgroundColor":"${LIGHT_PALETTE.brand}"`);
-      expect(painted).toContain(`"color":"${LIGHT_PALETTE.onBrand}"`);
-      expect(painted).not.toContain(LIGHT_PALETTE.secondary);
-    });
-
-    it('floats at the right, above the system navigation bar', () => {
-      render(<NewBookingFab />);
-
-      const fab = screen.getByLabelText('Nueva reserva');
-      const flat = StyleSheet.flatten(fab.props.style);
-      const placed = JSON.stringify(screen.toJSON());
-      expect(flat).toBeDefined();
-      expect(placed).toContain('"bottom":36');
-      expect(placed).toContain('"position":"absolute"');
+      expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeTruthy();
+      expect(screen.UNSAFE_getByType(MaterialIcons).props.accessible).toBe(false);
     });
   });
 });

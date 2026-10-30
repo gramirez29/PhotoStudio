@@ -9,6 +9,7 @@ import { AppCard } from './AppCard';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useBottomInset } from '../hooks/useBottomInset';
 
 /**
  * Form shown once the booking is loaded: the current date, a picker for the new one and the confirm button.
@@ -16,12 +17,13 @@ import { useAppTheme } from '../hooks/useAppTheme';
  * @returns The form.
  */
 export function RescheduleForm({ booking }: RescheduleFormProps): ReactElement {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const { palette } = useAppTheme();
   const form = useRescheduleForm(booking);
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.md + bottomInset }]} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{booking.clientName}</Text>
       <Text style={styles.subtitle}>{booking.packageName}</Text>
 

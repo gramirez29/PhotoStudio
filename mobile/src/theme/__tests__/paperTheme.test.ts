@@ -54,6 +54,8 @@ describe('buildPaperTheme', () => {
 
   it('asks only for fonts that the app loads', () => {
     const loaded = Object.keys(FONT_ASSETS);
+    // The font of the icons (the gear of the header) is loaded with the fonts of the brand.
+    expect(loaded).toContain('material');
     const asked = Object.values(buildPaperTheme('dark').fonts).map((font) => font.fontFamily);
 
     expect(asked.every((family) => loaded.includes(family))).toBe(true);

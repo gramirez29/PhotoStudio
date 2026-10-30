@@ -9,6 +9,7 @@ import { spacing } from '../theme/tokens';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useBottomInset } from '../hooks/useBottomInset';
 
 /**
  * Pending refunds: money that belongs to clients whose booking ended (cancelled, expired or absent) and that the
@@ -16,6 +17,7 @@ import { useAppTheme } from '../hooks/useAppTheme';
  * @returns The screen.
  */
 export default function RefundsScreen(): ReactElement {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const { palette } = useAppTheme();
   const query = useRefunds();
@@ -53,7 +55,7 @@ export default function RefundsScreen(): ReactElement {
       ListEmptyComponent={empty}
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: spacing.md + bottomInset }]}
     />
   );
 }
