@@ -6,6 +6,7 @@ import { useSessionStore } from '../../session/sessionStore';
 jest.mock('../../hooks/useBookings');
 jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
+  ...jest.requireActual('react-native-safe-area-context'),
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 /**
@@ -80,6 +81,15 @@ describe('HomeScreen', () => {
     expect(screen.getByText('botón de reembolsos')).toBeTruthy();
     expect(screen.getByText('cambiar contraseña')).toBeTruthy();
     expect(screen.queryByText('mantenimiento')).toBeNull();
+  });
+
+  it('offers the selector of the appearance next to the shortcuts', () => {
+    bookingsAre({ data: [] });
+
+    render(<HomeScreen />);
+
+    expect(screen.getByText('Apariencia')).toBeTruthy();
+    expect(screen.getByLabelText('Apariencia: Oscuro')).toBeTruthy();
   });
 
   it('shows the maintenance shortcut only to a system operator', () => {

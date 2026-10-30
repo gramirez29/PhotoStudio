@@ -44,7 +44,7 @@ Un PR por fase, hacia `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas
 | 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | **Hecha** (ver §3.1) |
 | 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`makeStyles`) | **Hecha** (ver §3.2) |
 | 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | **Hecha** (ver §3.3) |
-| 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | Pendiente |
+| 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | **Hecha** (ver §3.4) |
 | 6 | Limpieza: regla de ESLint contra colores fijos (hoy lo hace `noFixedColors.test.ts`), actualizar documentos. `colors` de `tokens.ts` ya se quitó en la fase 4 | Pendiente |
 
 ### 3.1 Fase 2: qué cambió en los componentes base
@@ -83,6 +83,16 @@ Todas las pantallas y componentes con estilos propios pasaron de los colores fij
 - **Los colores dinámicos** (`ApiStatus`, los estados) ahora son roles de la paleta (`ApiHealthDescription.color` es una clave de `Palette`).
 - **`tokens.ts` ya no tiene `colors`**: solo quedan `spacing` y `radius`. `src/theme/__tests__/noFixedColors.test.ts` impide que vuelvan: ninguna pantalla ni componente puede escribir un color (hex o `rgb()`), importar `colors` ni usar un `fontWeight`.
 - Comportamiento, rutas, hooks, formularios y API: sin cambios.
+
+### 3.4 Fase 5: el tema oscuro, activado
+
+- **Selector de apariencia** (`ThemeSelector`, en el inicio debajo de "Cambiar contraseña"): tres botones, **Sistema / Claro / Oscuro**. La elección se aplica al instante a todas las pantallas y se recuerda (`expo-secure-store`). El valor de partida sigue siendo **Claro**, no lo que diga el teléfono, hasta que se elija otra cosa. "Sistema" sigue el tema del teléfono y cambia con él.
+- **Revisión de las dos variaciones:** `ThemedRendering.test.tsx` renderiza 10 escenas (cabecera, estados, botones, tarjetas, campos, selector, mensajes, contrato, extras, selector de tema) en cada tema y comprueba que **no aparece ningún color del otro tema**; también que cada tema sí pinta colores propios, para que esa ausencia signifique algo. Un color que se quedara fijo en claro haría fallar la prueba.
+- **Botón flotante:** usa el color principal del tema: azul del logo en claro, cobre en oscuro.
+- **Interruptor del contrato:** sigue el tema.
+- **Letra grande:** la altura fija del selector pasó a mínima (crece con la letra) y el nombre de la cabecera deja de crecer a partir de 1,2 veces.
+- **Android a borde completo** (`useBottomInset`): las pantallas que se desplazan (inicio, avisos, reembolsos, detalle, reprogramar y todos los formularios) dejan al final el espacio de la barra de navegación del sistema. Sin barra, no cambian.
+- **Lo que no sigue el tema de la app**, porque lo dibuja el sistema: el diálogo de fecha y hora de Android, las alertas (`Alert`) y los íconos de la barra de navegación del sistema siguen el tema **del teléfono**. Con la app en oscuro y el teléfono en claro, esos diálogos salen claros.
 
 **Recorridos a repetir en el teléfono** (antes de fusionar las fases 2 a 5): iniciar sesión y salir; crear una reserva con
 paquete, extras y descuento; editarla; firmar el contrato en el celular; registrar un pago; completar; cancelar con motivo;

@@ -8,7 +8,7 @@ import { spacing } from '../theme/tokens';
 
 /**
  * Floating button of the home screen that opens the create-booking form: the main action of the app, always within reach of the
- * thumb, in the slate blue of the logo. It sits above the system navigation bar.
+ * thumb, in the main color of the theme (the slate blue of the logo in light, copper in dark). It sits above the system navigation bar.
  * @returns The button.
  */
 export function NewBookingFab(): ReactElement {
@@ -18,10 +18,10 @@ export function NewBookingFab(): ReactElement {
   return (
     <FAB
       label="Nueva reserva"
-      color={palette.onBrand}
+      color={palette.onPrimary}
       accessibilityLabel="Nueva reserva"
       onPress={openNewBooking}
-      style={[styles.fab, { backgroundColor: palette.brand, bottom: insets.bottom + spacing.md }]}
+      style={[styles.fab, { backgroundColor: palette.primary, bottom: insets.bottom + spacing.md }]}
     />
   );
 }

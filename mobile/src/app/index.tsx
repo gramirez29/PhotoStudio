@@ -9,6 +9,7 @@ import { NewBookingFab } from '../components/NewBookingFab';
 import { NotificationsButton } from '../components/NotificationsButton';
 import { Placeholder } from '../components/Placeholder';
 import { RefundsButton } from '../components/RefundsButton';
+import { ThemeSelector } from '../components/ThemeSelector';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
 import { useSessionStore } from '../session/sessionStore';
@@ -17,6 +18,7 @@ import type { BookingSummaryResponse } from '../types/api/booking';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useBottomInset } from '../hooks/useBottomInset';
 
 /** Room left at the end of the list so the floating button never hides the last booking. */
 const LIST_END_SPACE = 96;
@@ -26,6 +28,7 @@ const LIST_END_SPACE = 96;
  * @returns The screen.
  */
 export default function HomeScreen(): ReactElement {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const { palette } = useAppTheme();
   const query = useBookings();
@@ -61,13 +64,14 @@ export default function HomeScreen(): ReactElement {
             <RefundsButton />
             {isSystemOperator && <MaintenanceButton />}
             <ChangePasswordButton />
+            <ThemeSelector />
             <Text style={styles.sectionTitle}>Mis reservas</Text>
           </View>
         }
         ListEmptyComponent={empty}
         refreshing={query.isRefetching}
         onRefresh={() => void query.refetch()}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { paddingBottom: LIST_END_SPACE + bottomInset }]}
       />
       <NewBookingFab />
     </View>

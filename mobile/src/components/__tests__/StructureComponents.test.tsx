@@ -9,6 +9,7 @@ import { SignOutButton } from '../SignOutButton';
 jest.mock('../../navigation/appNavigation', () => ({ openNewBooking: jest.fn() }));
 jest.mock('../../push/pushSignOut', () => ({ signOutOfDevice: jest.fn() }));
 jest.mock('react-native-safe-area-context', () => ({
+  ...jest.requireActual('react-native-safe-area-context'),
   useSafeAreaInsets: () => ({ top: 24, bottom: 20, left: 0, right: 0 }),
 }));
 
@@ -71,8 +72,8 @@ describe('the structure of the app', () => {
       render(<NewBookingFab />);
 
       const painted = JSON.stringify(screen.toJSON());
-      expect(painted).toContain(`"backgroundColor":"${LIGHT_PALETTE.brand}"`);
-      expect(painted).toContain(`"color":"${LIGHT_PALETTE.onBrand}"`);
+      expect(painted).toContain(`"backgroundColor":"${LIGHT_PALETTE.primary}"`);
+      expect(painted).toContain(`"color":"${LIGHT_PALETTE.onPrimary}"`);
       expect(painted).not.toContain(LIGHT_PALETTE.secondary);
     });
 

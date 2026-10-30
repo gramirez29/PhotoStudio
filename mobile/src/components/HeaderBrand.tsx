@@ -19,7 +19,7 @@ export function HeaderBrand(): ReactElement {
   return (
     <View accessibilityRole="header" accessibilityLabel="PhotoSense Studio" style={styles.row}>
       <Image source={LOGO_MARK} accessible={false} importantForAccessibility="no" style={styles.logo} />
-      <Text style={styles.name} accessible={false}>
+      <Text style={styles.name} accessible={false} numberOfLines={1} maxFontSizeMultiplier={1.2}>
         PHOTOSENSE STUDIO
       </Text>
     </View>

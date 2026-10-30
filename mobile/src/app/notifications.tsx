@@ -10,12 +10,14 @@ import { spacing } from '../theme/tokens';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { useAppTheme } from '../hooks/useAppTheme';
+import { useBottomInset } from '../hooks/useBottomInset';
 
 /**
  * Inbox of notices: session reminders and balances still owed, with the actions to message the client on WhatsApp.
  * @returns The screen.
  */
 export default function NotificationsScreen(): ReactElement {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const { palette } = useAppTheme();
   const query = useNotifications();
@@ -65,7 +67,7 @@ export default function NotificationsScreen(): ReactElement {
       ListEmptyComponent={empty}
       refreshing={query.isRefetching}
       onRefresh={() => void query.refetch()}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: spacing.md + bottomInset }]}
     />
   );
 }

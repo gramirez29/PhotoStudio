@@ -13,6 +13,7 @@ import { StatusBadge } from './StatusBadge';
 import { AppCard } from './AppCard';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
+import { useBottomInset } from '../hooks/useBottomInset';
 
 /**
  * Body of the booking screen once the booking is loaded: status, client, amounts, contract and available actions.
@@ -20,9 +21,10 @@ import { FONT_FAMILIES } from '../theme/fonts';
  * @returns The booking details.
  */
 export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.md + bottomInset }]}>
       <StatusBadge status={booking.status} />
       <Text style={styles.title}>{booking.clientName}</Text>
       <Text style={styles.subtitle}>{booking.packageName}</Text>
