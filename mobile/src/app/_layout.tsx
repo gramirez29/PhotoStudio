@@ -7,6 +7,7 @@ import { restoreAppearance } from '../appearance/appearanceManager';
 import { AppBackground } from '../components/AppBackground';
 import { AppThemeProvider } from '../components/AppThemeProvider';
 import { HeaderBrand } from '../components/HeaderBrand';
+import { SettingsButton } from '../components/SettingsButton';
 import { Placeholder } from '../components/Placeholder';
 import { PushRegistration } from '../components/PushRegistration';
 import { ScreenLoader } from '../components/ScreenLoader';
@@ -67,9 +68,10 @@ export default function RootLayout(): ReactElement {
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
           <Stack.Screen
             name="index"
-            options={{ title: 'PhotoSense Studio', headerTitle: HeaderBrand, headerLeft: SignOutButton }}
+            options={{ title: 'PhotoSense Studio', headerTitle: HeaderBrand, headerLeft: SignOutButton, headerRight: SettingsButton }}
           />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
+          <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />
           <Stack.Screen name="bookings/new" options={{ title: 'Nueva reserva' }} />
           <Stack.Screen name="bookings/reschedule" options={{ title: 'Reprogramar' }} />

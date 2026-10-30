@@ -25,7 +25,6 @@ function mockStandIn(name: string, text: string): Record<string, () => unknown> 
 jest.mock('../ApiStatus', () => mockStandIn('ApiStatus', 'estado del servidor'));
 jest.mock('../NotificationsButton', () => mockStandIn('NotificationsButton', 'botón de avisos'));
 jest.mock('../RefundsButton', () => mockStandIn('RefundsButton', 'botón de reembolsos'));
-jest.mock('../ChangePasswordButton', () => mockStandIn('ChangePasswordButton', 'cambiar contraseña'));
 jest.mock('../MaintenanceButton', () => mockStandIn('MaintenanceButton', 'mantenimiento'));
 
 /**
@@ -79,17 +78,17 @@ describe('HomeScreen', () => {
 
     expect(screen.getByText('botón de avisos')).toBeTruthy();
     expect(screen.getByText('botón de reembolsos')).toBeTruthy();
-    expect(screen.getByText('cambiar contraseña')).toBeTruthy();
     expect(screen.queryByText('mantenimiento')).toBeNull();
   });
 
-  it('offers the selector of the appearance next to the shortcuts', () => {
+  it('does not carry the settings: the appearance and the password are in their own screen', () => {
     bookingsAre({ data: [] });
 
     render(<HomeScreen />);
 
-    expect(screen.getByText('Apariencia')).toBeTruthy();
-    expect(screen.getByLabelText('Apariencia: Oscuro')).toBeTruthy();
+    expect(screen.queryByText('Apariencia')).toBeNull();
+    expect(screen.queryByLabelText('Apariencia: Oscuro')).toBeNull();
+    expect(screen.queryByText('Cambiar contraseña')).toBeNull();
   });
 
   it('shows the maintenance shortcut only to a system operator', () => {

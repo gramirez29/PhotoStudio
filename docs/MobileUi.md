@@ -44,7 +44,7 @@ Un PR por fase, hacia `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas
 | 2 | Componentes base por dentro: botón, campo de texto, selector, fecha, duración, estado, tarjetas, cargando y mensajes | **Hecha** (ver §3.1) |
 | 3 | Estructura: cabeceras (banda `#3A4466` con el logo, como en la web), botón flotante de "Nueva reserva", y los estilos pasan a depender del tema (`makeStyles`) | **Hecha** (ver §3.2) |
 | 4 | Pantallas, de menor a mayor riesgo: lista y avisos; detalle de la reserva; formularios (nueva, editar, reprogramar, motivo); contrato, pago y reembolsos; acceso, verificación y contraseña | **Hecha** (ver §3.3) |
-| 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en el inicio, junto a "Cambiar contraseña"), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | **Hecha** (ver §3.4) |
+| 5 | Activar el tema oscuro: **selector** Sistema / Claro / Oscuro (en la pantalla de Ajustes), revisión de cada pantalla en los dos temas, letra grande, Android a borde completo | **Hecha** (ver §3.4) |
 | 6 | Limpieza: regla de ESLint contra colores fijos (hoy lo hace `noFixedColors.test.ts`), actualizar documentos. `colors` de `tokens.ts` ya se quitó en la fase 4 | Pendiente |
 
 ### 3.1 Fase 2: qué cambió en los componentes base
@@ -86,7 +86,7 @@ Todas las pantallas y componentes con estilos propios pasaron de los colores fij
 
 ### 3.4 Fase 5: el tema oscuro, activado
 
-- **Selector de apariencia** (`ThemeSelector`, en el inicio debajo de "Cambiar contraseña"): tres botones, **Sistema / Claro / Oscuro**. La elección se aplica al instante a todas las pantallas y se recuerda (`expo-secure-store`). El valor de partida sigue siendo **Claro**, no lo que diga el teléfono, hasta que se elija otra cosa. "Sistema" sigue el tema del teléfono y cambia con él.
+- **Selector de apariencia** (`ThemeSelector`, en la pantalla de **Ajustes**, `SettingsList`; se entra con el botón "Ajustes" a la derecha de la cabecera del inicio, frente a "Salir"; allí también está "Cambiar contraseña", que ya no está en el inicio, para que esa pantalla solo tenga lo que se usa a diario): tres botones, **Sistema / Claro / Oscuro**. La elección se aplica al instante a todas las pantallas y se recuerda (`expo-secure-store`). El valor de partida sigue siendo **Claro**, no lo que diga el teléfono, hasta que se elija otra cosa. "Sistema" sigue el tema del teléfono y cambia con él.
 - **Revisión de las dos variaciones:** `ThemedRendering.test.tsx` renderiza 10 escenas (cabecera, estados, botones, tarjetas, campos, selector, mensajes, contrato, extras, selector de tema) en cada tema y comprueba que **no aparece ningún color del otro tema**; también que cada tema sí pinta colores propios, para que esa ausencia signifique algo. Un color que se quedara fijo en claro haría fallar la prueba.
 - **Botón flotante:** usa el color principal del tema: azul del logo en claro, cobre en oscuro.
 - **Interruptor del contrato:** sigue el tema.

@@ -8,7 +8,7 @@ import { isThemePreference, themePreferenceLabel } from '../utils/appearance';
 
 /**
  * The selector of the appearance: follow the phone, always light or always dark. A choice applies right away, to every screen,
- * and is remembered.
+ * and is remembered. It lives in the settings screen.
  * @returns The selector with its title.
  */
 export function ThemeSelector(): ReactElement {
@@ -41,6 +41,5 @@ export function ThemeSelector(): ReactElement {
 const styles = StyleSheet.create({
   container: {
     gap: spacing.xs,
-    marginBottom: spacing.md,
   },
 });

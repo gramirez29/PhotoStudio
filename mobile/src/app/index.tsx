@@ -2,14 +2,12 @@ import type { ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { ApiStatus } from '../components/ApiStatus';
 import { BookingListItem } from '../components/BookingListItem';
-import { ChangePasswordButton } from '../components/ChangePasswordButton';
 import { ListSeparator } from '../components/ListSeparator';
 import { MaintenanceButton } from '../components/MaintenanceButton';
 import { NewBookingFab } from '../components/NewBookingFab';
 import { NotificationsButton } from '../components/NotificationsButton';
 import { Placeholder } from '../components/Placeholder';
 import { RefundsButton } from '../components/RefundsButton';
-import { ThemeSelector } from '../components/ThemeSelector';
 import { useBookings } from '../hooks/useBookings';
 import { openBooking } from '../navigation/appNavigation';
 import { useSessionStore } from '../session/sessionStore';
@@ -63,8 +61,6 @@ export default function HomeScreen(): ReactElement {
             <NotificationsButton />
             <RefundsButton />
             {isSystemOperator && <MaintenanceButton />}
-            <ChangePasswordButton />
-            <ThemeSelector />
             <Text style={styles.sectionTitle}>Mis reservas</Text>
           </View>
         }

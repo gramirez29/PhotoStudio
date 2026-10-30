@@ -99,6 +99,11 @@ export function openChangePassword(): void {
   router.push('/change-password');
 }
 
+/** Opens the settings: the appearance of the app and the account. */
+export function openSettings(): void {
+  router.push('/settings');
+}
+
 /** Opens the inbox of notices. */
 export function openNotifications(): void {
   router.push('/notifications');
