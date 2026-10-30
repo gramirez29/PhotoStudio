@@ -9,7 +9,11 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "MONGODB_CONNECTION_STRING": "mongodb://localhost:27019/?directConnection=true",
         "MONGODB_DATABASE_NAME": "photostudio_dev",
-        "JWT_SIGNING_KEY": "dev-only-signing-key-not-a-secret-0123456789abcdef"
+        "JWT_SIGNING_KEY": "dev-only-signing-key-not-a-secret-0123456789abcdef",
+        "R2_ENDPOINT": "http://127.0.0.1:9020",
+        "R2_BUCKET": "photostudio-dev",
+        "R2_ACCESS_KEY_ID": "dev-storage-access-key",
+        "R2_SECRET_ACCESS_KEY": "dev-storage-secret-key-0123456789"
       }
     }
   }

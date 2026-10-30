@@ -28,6 +28,29 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # S3-compatible object storage standing in for Cloudflare R2 (SeaweedFS: MinIO stopped publishing images). It checks the
+  # signature of every request, so the signed addresses the API hands out are tested for real. Published on loopback only; the
+  # keys are development-only and are refused by the production configuration (they are not secrets of anything).
+  storage:
+    image: chrislusf/seaweedfs:4.20
+    container_name: photostudio-storage
+    command: ["server", "-s3", "-s3.port=8333", "-ip.bind=0.0.0.0", "-dir=/data", "-volume.max=8"]
+    environment:
+      AWS_ACCESS_KEY_ID: dev-storage-access-key
+      AWS_SECRET_ACCESS_KEY: dev-storage-secret-key-0123456789
+    ports:
+      - "127.0.0.1:9020:8333"
+    volumes:
+      - storage-data:/data
+    healthcheck:
+      # Any HTTP answer (the server answers 403 to an unsigned request) means the S3 gateway is serving.
+      test: ["CMD-SHELL", "wget -S --spider -T 2 http://127.0.0.1:8333/ 2>&1 | grep -q 'HTTP/'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
   # Production image of the API. Only started with `--profile api`.
   api:
     profiles: ["api"]
@@ -45,8 +68,11 @@ services:
       MONGODB_DATABASE_NAME: photostudio_dev
       # Development-only signing key (refused outside Development). Never reuse it anywhere else.
       JWT_SIGNING_KEY: dev-only-signing-key-for-docker-compose-0123456789abcdef
+      # No R2_* variables on purpose: the storage above is another machine for the API, and the keys are never sent over plain http
+      # to another machine (only to this one). Photo features answer 503 in this profile; use `dotnet run` against the storage instead.
     ports:
       - "8080:8080"
 
 volumes:
   mongo-data:
+  storage-data:

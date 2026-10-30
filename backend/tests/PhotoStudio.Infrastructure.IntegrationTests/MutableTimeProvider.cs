@@ -19,4 +19,10 @@ internal sealed class MutableTimeProvider(DateTimeOffset now) : TimeProvider
     /// </summary>
     /// <param name="amount">Time to add.</param>
     public void Advance(TimeSpan amount) => _now += amount;
+
+    /// <summary>
+    /// Sets the current instant of the clock.
+    /// </summary>
+    /// <param name="now">The new instant.</param>
+    public void SetNow(DateTimeOffset now) => _now = now;
 }

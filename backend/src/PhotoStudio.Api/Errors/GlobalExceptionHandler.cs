@@ -45,6 +45,8 @@ public sealed partial class GlobalExceptionHandler(
                 (StatusCodes.Status429TooManyRequests, "Too many verification codes requested.", limited.Code),
             EmailDeliveryException delivery =>
                 (StatusCodes.Status503ServiceUnavailable, "The email could not be sent.", delivery.Code),
+            StorageUnavailableException unavailable =>
+                (StatusCodes.Status503ServiceUnavailable, "The file storage is not available right now.", unavailable.Code),
             NotFoundException =>
                 (StatusCodes.Status404NotFound, "The resource was not found.", ApplicationErrorCodes.NotFound),
             BadHttpRequestException badRequest =>

@@ -38,6 +38,9 @@ public static class ApplicationErrorCodes
     /// <summary>The email could not be sent (provider not configured or it refused the message).</summary>
     public const string EmailDeliveryFailed = "email.delivery_failed";
 
+    /// <summary>The object storage that holds the photos is not configured or did not answer.</summary>
+    public const string StorageUnavailable = "storage.unavailable";
+
     /// <summary>A verification code was requested too soon or too many times.</summary>
     public const string OtpRateLimited = "portal.otp_rate_limited";
 
