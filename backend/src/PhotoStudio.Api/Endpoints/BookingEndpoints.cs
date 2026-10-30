@@ -15,6 +15,7 @@ using PhotoStudio.Application.Bookings.GetContract;
 using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.RevertClientAbsent;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
+using PhotoStudio.Application.Pagination;
 
 namespace PhotoStudio.Api.Endpoints;
 
@@ -70,17 +71,23 @@ public static class BookingEndpoints
     }
 
     /// <summary>
-    /// Lists the bookings of the authenticated photographer.
+    /// Lists one page of the bookings of the authenticated photographer, the most recently created first.
     /// </summary>
     /// <param name="user">Authenticated photographer.</param>
     /// <param name="handler">Query handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
-    /// <returns>200 with the booking summaries, earliest session first.</returns>
-    private static async Task<Ok<IReadOnlyList<BookingSummaryResponse>>> ListAsync(
+    /// <param name="cursor">The <c>nextCursor</c> of the previous page; omitted for the first page. 400 when it is not valid.</param>
+    /// <param name="limit">How many bookings the page has (5 by default, at most 50).</param>
+    /// <returns>200 with the page of booking summaries and the cursor of the next one, if any.</returns>
+    private static async Task<Ok<BookingListResponse>> ListAsync(
         ClaimsPrincipal user,
-        IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>> handler,
-        CancellationToken cancellationToken) =>
-        TypedResults.Ok(await handler.HandleAsync(new ListBookingsQuery(user.GetPhotographerId()), cancellationToken));
+        IQueryHandler<ListBookingsQuery, BookingListResponse> handler,
+        CancellationToken cancellationToken,
+        string? cursor = null,
+        int? limit = null) =>
+        TypedResults.Ok(await handler.HandleAsync(
+            new ListBookingsQuery(user.GetPhotographerId(), PageCursors.Read(cursor), PageSizes.Resolve(limit)),
+            cancellationToken));
 
     /// <summary>
     /// Reads a booking.

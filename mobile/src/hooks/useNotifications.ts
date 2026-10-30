@@ -1,4 +1,4 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { notificationsApi } from '../api/client';
 import { useSessionStore } from '../session/sessionStore';
 import type { NotificationListResponse } from '../types/api/notifications';
@@ -20,16 +20,20 @@ export function notificationsQueryKey(photographerId: string): readonly ['notifi
 }
 
 /**
- * Loads the inbox of the signed-in photographer and reloads it every minute, so a notice delivered by the background job
- * shows up without pulling to refresh.
- * @returns The TanStack Query result; the query is disabled while there is no session.
+ * Loads the inbox of the signed-in photographer a page at a time, the most recent first, and reloads the pages already shown
+ * every minute, so a notice delivered by the background job shows up without pulling to refresh. Every page carries the
+ * unread count; the first one is the freshest.
+ * @returns The TanStack Query result, whose `fetchNextPage` loads the page after the last one; the query is disabled while
+ * there is no session.
  */
-export function useNotifications(): UseQueryResult<NotificationListResponse, Error> {
+export function useNotifications(): UseInfiniteQueryResult<InfiniteData<NotificationListResponse, string | null>, Error> {
   const photographerId = useSessionStore((state) => state.session?.photographerId ?? null);
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: notificationsQueryKey(photographerId ?? ''),
-    queryFn: ({ signal }) => notificationsApi.listNotifications(signal),
+    queryFn: ({ pageParam, signal }) => notificationsApi.listNotifications(pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: photographerId !== null,
     refetchInterval: NOTIFICATIONS_REFETCH_MS,
   });

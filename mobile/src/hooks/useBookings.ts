@@ -1,7 +1,7 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useInfiniteQuery, type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
 import { bookingsApi } from '../api/client';
 import { useSessionStore } from '../session/sessionStore';
-import type { BookingSummaryResponse } from '../types/api/booking';
+import type { BookingListResponse } from '../types/api/booking';
 
 /** Prefix shared by the cache keys of every booking list, to refresh them all at once. */
 export const BOOKINGS_QUERY_PREFIX = ['bookings'] as const;
@@ -17,16 +17,20 @@ export function bookingsQueryKey(photographerId: string): readonly ['bookings', 
 }
 
 /**
- * Loads the bookings of the signed-in photographer and keeps them cached. The backend decides whose bookings to return
- * from the access token; the photographer in the key only separates the cache.
- * @returns The TanStack Query result; the query is disabled while there is no session.
+ * Loads the bookings of the signed-in photographer a page at a time, the most recently created first, and keeps the pages
+ * cached. The backend decides whose bookings to return from the access token; the photographer in the key only separates the
+ * cache. Refreshing the list reloads the pages already shown.
+ * @returns The TanStack Query result, whose `fetchNextPage` loads the page after the last one; the query is disabled while
+ * there is no session.
  */
-export function useBookings(): UseQueryResult<readonly BookingSummaryResponse[], Error> {
+export function useBookings(): UseInfiniteQueryResult<InfiniteData<BookingListResponse, string | null>, Error> {
   const photographerId = useSessionStore((state) => state.session?.photographerId ?? null);
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: bookingsQueryKey(photographerId ?? ''),
-    queryFn: ({ signal }) => bookingsApi.listBookings(signal),
+    queryFn: ({ pageParam, signal }) => bookingsApi.listBookings(pageParam, signal),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: photographerId !== null,
   });
 }

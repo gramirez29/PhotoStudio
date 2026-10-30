@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Pagination;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -139,7 +140,7 @@ public sealed class MongoNotificationRepositoryTests(MongoFixture fixture) : ICl
             await repository.TryAddAsync(notification, TestContext.Current.CancellationToken);
         }
 
-        var listed = await repository.ListDeliveredAsync(mine, 50, TestContext.Current.CancellationToken);
+        var listed = await repository.ListDeliveredAsync(mine, null, 50, TestContext.Current.CancellationToken);
         var unread = await repository.CountUnreadAsync(mine, TestContext.Current.CancellationToken);
         var marked = await repository.MarkAllReadAsync(mine, Now.AddHours(1), TestContext.Current.CancellationToken);
 
@@ -148,6 +149,38 @@ public sealed class MongoNotificationRepositoryTests(MongoFixture fixture) : ICl
         marked.ShouldBe(2);
         (await repository.CountUnreadAsync(mine, TestContext.Current.CancellationToken)).ShouldBe(0);
         (await repository.CountUnreadAsync(other, TestContext.Current.CancellationToken)).ShouldBe(1);
+    }
+
+    /// <summary>
+    /// A cursor continues the inbox right after the notification it names, with no repeats and no gaps, even when several
+    /// were delivered at the same instant (the identifier breaks the tie).
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListDeliveredAsync_WithACursor_ContinuesRightAfterIt()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var mine = Guid.CreateVersion7();
+        var sameInstant = Enumerable.Range(0, 3).Select(_ => Reminder(mine, Guid.CreateVersion7(), Now.AddDays(3), Now)).ToList();
+        var older = Reminder(mine, Guid.CreateVersion7(), Now.AddDays(3), Now);
+        foreach (var notification in sameInstant)
+        {
+            notification.Deliver(Details, Now.AddMinutes(5));
+        }
+
+        older.Deliver(Details, Now.AddMinutes(1));
+        foreach (var notification in sameInstant.Append(older))
+        {
+            await repository.TryAddAsync(notification, TestContext.Current.CancellationToken);
+        }
+
+        var first = await repository.ListDeliveredAsync(mine, null, 2, TestContext.Current.CancellationToken);
+        var cursor = new PageCursor(first[^1].DeliveredAt!.Value, first[^1].Id);
+        var second = await repository.ListDeliveredAsync(mine, cursor, 2, TestContext.Current.CancellationToken);
+
+        var expected = sameInstant.OrderByDescending(notification => notification.Id).Select(notification => notification.Id).Append(older.Id).ToList();
+        first.Concat(second).Select(notification => notification.Id).ShouldBe(expected);
     }
 
     /// <summary>

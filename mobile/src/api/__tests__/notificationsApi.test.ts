@@ -41,12 +41,21 @@ describe('parseNotification', () => {
 
 describe('parseNotificationList and parseMarkAllRead', () => {
   it('parses the inbox with its unread counter', () => {
-    expect(parseNotificationList({ items: [reminder], unreadCount: 1 })).toEqual({ items: [reminder], unreadCount: 1 });
+    expect(parseNotificationList({ items: [reminder], unreadCount: 1, nextCursor: '9.abc' })).toEqual({
+      items: [reminder],
+      unreadCount: 1,
+      nextCursor: '9.abc',
+    });
+    expect(parseNotificationList({ items: [], unreadCount: 0, nextCursor: null }).nextCursor).toBeNull();
   });
 
   it('points at the element that is invalid', () => {
-    expect(() => parseNotificationList({ items: [{ ...reminder, id: 1 }], unreadCount: 1 })).toThrow('notifications.items[0].id');
-    expect(() => parseNotificationList({ items: [], unreadCount: '1' })).toThrow('notifications.unreadCount');
+    expect(() => parseNotificationList({ items: [{ ...reminder, id: 1 }], unreadCount: 1, nextCursor: null })).toThrow(
+      'notifications.items[0].id',
+    );
+    expect(() => parseNotificationList({ items: [], unreadCount: '1', nextCursor: null })).toThrow('notifications.unreadCount');
+    expect(() => parseNotificationList({ items: [], unreadCount: 1, nextCursor: 5 })).toThrow('notifications.nextCursor');
+    expect(parseNotificationList({ items: [], unreadCount: 1 }).nextCursor).toBeNull();
   });
 
   it('parses how many were marked', () => {
@@ -57,11 +66,20 @@ describe('parseNotificationList and parseMarkAllRead', () => {
 
 describe('createNotificationsApi', () => {
   it('lists the inbox with GET', async () => {
-    const { fetchFn, urls } = stubFetch(jsonResponse(200, { items: [reminder], unreadCount: 1 }));
+    const { fetchFn, urls } = stubFetch(jsonResponse(200, { items: [reminder], unreadCount: 1, nextCursor: null }));
     const api = createNotificationsApi(createHttpClient('https://api.example.test', { fetchFn }));
 
-    await expect(api.listNotifications()).resolves.toEqual({ items: [reminder], unreadCount: 1 });
-    expect(urls).toEqual(['https://api.example.test/api/notifications']);
+    await expect(api.listNotifications(null)).resolves.toEqual({ items: [reminder], unreadCount: 1, nextCursor: null });
+    expect(urls).toEqual(['https://api.example.test/api/notifications?limit=5']);
+  });
+
+  it('asks for the next page with the cursor of the previous one', async () => {
+    const { fetchFn, urls } = stubFetch(jsonResponse(200, { items: [], unreadCount: 0, nextCursor: null }));
+    const api = createNotificationsApi(createHttpClient('https://api.example.test', { fetchFn }));
+
+    await api.listNotifications('9.abc');
+
+    expect(urls).toEqual(['https://api.example.test/api/notifications?limit=5&cursor=9.abc']);
   });
 
   it('marks one notification as read with POST', async () => {

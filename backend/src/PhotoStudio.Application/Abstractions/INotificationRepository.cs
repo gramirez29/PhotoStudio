@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Notifications;
 
 namespace PhotoStudio.Application.Abstractions;
@@ -58,10 +59,11 @@ public interface INotificationRepository
     /// Lists the delivered notifications of a photographer, the most recent first.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="after">The last notification the caller already has; the list continues right after it. <see langword="null"/> starts at the newest.</param>
     /// <param name="limit">Maximum number of notifications to return.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The inbox, possibly empty.</returns>
-    Task<IReadOnlyList<Notification>> ListDeliveredAsync(Guid photographerId, int limit, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Notification>> ListDeliveredAsync(Guid photographerId, PageCursor? after, int limit, CancellationToken cancellationToken);
 
     /// <summary>
     /// Counts the delivered notifications of a photographer that were not read yet.

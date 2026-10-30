@@ -34,9 +34,10 @@ public sealed record NotificationResponse(
 /// <summary>
 /// The inbox of a photographer.
 /// </summary>
-/// <param name="Items">Delivered notifications, the most recent first.</param>
+/// <param name="Items">Delivered notifications of this page, the most recent first.</param>
 /// <param name="UnreadCount">How many of the photographer's notifications are unread (not only the ones listed).</param>
-public sealed record NotificationListResponse(IReadOnlyList<NotificationResponse> Items, int UnreadCount);
+/// <param name="NextCursor">What to send back to get the next page, or <see langword="null"/> when this is the last one.</param>
+public sealed record NotificationListResponse(IReadOnlyList<NotificationResponse> Items, int UnreadCount, string? NextCursor = null);
 
 /// <summary>
 /// Outcome of marking every notification as read.

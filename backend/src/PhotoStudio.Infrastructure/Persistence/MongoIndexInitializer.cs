@@ -37,6 +37,14 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
                 .Ascending(booking => booking.SlotStart),
             new CreateIndexOptions { Name = "ix_photographer_slot" });
 
+        // Serves the list of bookings of a photographer, the most recently created first, page by page.
+        var photographerCreatedIndex = new CreateIndexModel<BookingDocument>(
+            Builders<BookingDocument>.IndexKeys
+                .Ascending(booking => booking.PhotographerId)
+                .Descending(booking => booking.CreatedAt)
+                .Descending(booking => booking.Id),
+            new CreateIndexOptions { Name = "ix_photographer_created" });
+
         // Serves the expiration job: tentative bookings whose hold ended.
         var expirationIndex = new CreateIndexModel<BookingDocument>(
             Builders<BookingDocument>.IndexKeys
@@ -194,7 +202,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             await portalOtps.Indexes.CreateManyAsync([otpRetentionIndex], cancellationToken: cancellationToken);
             await emailVerifications.Indexes.CreateManyAsync([emailVerificationRetentionIndex], cancellationToken: cancellationToken);
             await pushDevices.Indexes.CreateManyAsync([pushPhotographerIndex], cancellationToken: cancellationToken);
-            await bookings.Indexes.CreateManyAsync([photographerSlotIndex, expirationIndex], cancellationToken: cancellationToken);
+            await bookings.Indexes.CreateManyAsync([photographerSlotIndex, photographerCreatedIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
             await users.Indexes.CreateManyAsync([usernameIndex, emailIndex], cancellationToken: cancellationToken);
             await notifications.Indexes.CreateManyAsync(

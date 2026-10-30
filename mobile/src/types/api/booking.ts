@@ -164,6 +164,14 @@ export interface RejectPaymentRequest {
   readonly reason: string;
 }
 
+/** One page of bookings (backend `BookingListResponse`), the most recently created first. */
+export interface BookingListResponse {
+  /** The bookings of this page. */
+  readonly items: readonly BookingSummaryResponse[];
+  /** What to send back to get the next page, or null when this is the last one. */
+  readonly nextCursor: string | null;
+}
+
 /** Compact booking used in lists (backend `BookingSummaryResponse`). */
 export interface BookingSummaryResponse {
   /** Booking identifier (GUID). */

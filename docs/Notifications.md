@@ -59,7 +59,7 @@ Todas requieren sesión; todo se acota al fotógrafo del token (otro fotógrafo 
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/notifications` | Hasta 50 avisos entregados, el más reciente primero, y `unreadCount` |
+| GET | `/api/notifications` | Una página de avisos entregados (5 por defecto, máx. 50), el más reciente primero, con `unreadCount` y `nextCursor`; `?limit=` y `?cursor=` (el `nextCursor` de la página anterior; uno inválido da 400). La app muestra 5 y carga de 5 en 5 con "Ver más" |
 | POST | `/api/notifications/{id}/read` | Marca uno como leído (idempotente). 404 si no existe, es de otro fotógrafo o no se entregó |
 | POST | `/api/notifications/read-all` | Marca todos como leídos; responde `{ "marked": n }` |
 | POST | `/api/push-devices` | Registra el teléfono para recibir push: `{ token, platform: Android | Ios }` → 204. Es idempotente; un token que era de otro fotógrafo pasa a este. 422 `push.invalid_token` si no es un token de Expo |

@@ -12,6 +12,7 @@ import type {
   BookingContractResponse,
   BookingExtraResponse,
   BookingLinkResponse,
+  BookingListResponse,
   BookingResponse,
   BookingSummaryResponse,
   ClientDeclarationResponse,
@@ -21,8 +22,8 @@ import type {
 } from '../types/api/booking';
 import type { BookingsApi } from '../types/api/bookingsApi';
 import type { HttpClient } from '../types/api/http';
+import { buildPagedPath } from '../utils/pagination';
 import {
-  expectArray,
   expectRecord,
   readArray,
   readBoolean,
@@ -215,12 +216,17 @@ export function parseBookingSummary(value: unknown, path: string): BookingSummar
 }
 
 /**
- * Parses the list of compact bookings.
+ * Parses one page of compact bookings.
  * @param value Unknown response body.
- * @returns The typed summaries, in the order the backend sent them.
+ * @returns The typed page: the summaries in the order the backend sent them and the cursor of the next page.
  */
-export function parseBookingSummaries(value: unknown): readonly BookingSummaryResponse[] {
-  return expectArray(value, 'bookings').map((item, index) => parseBookingSummary(item, `bookings[${index}]`));
+export function parseBookingList(value: unknown): BookingListResponse {
+  const path = 'bookings';
+  const record = expectRecord(value, path);
+  return {
+    items: readArray(record, 'items', path).map((item, index) => parseBookingSummary(item, `${path}.items[${index}]`)),
+    nextCursor: readNullableString(record, 'nextCursor', path),
+  };
 }
 
 /**
@@ -263,7 +269,7 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
         parseBooking,
         signal,
       ),
-    listBookings: (signal) => client.get('/api/bookings', parseBookingSummaries, signal),
+    listBookings: (cursor, signal) => client.get(buildPagedPath('/api/bookings', cursor), parseBookingList, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
     getContract: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}/contract`, parseBookingContract, signal),
   };

@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
+using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Common;
 using PhotoStudio.Infrastructure.Persistence.Documents;
@@ -53,13 +54,25 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     public async Task<IReadOnlyList<Booking>> ListByPhotographerAsync(
         Guid photographerId,
         DateTimeOffset endingAfter,
+        PageCursor? after,
         int limit,
         CancellationToken cancellationToken)
     {
-        // Served by the (photographerId, slotStart) index created at startup.
+        var filters = Builders<BookingDocument>.Filter;
+        var filter = filters.Eq(booking => booking.PhotographerId, photographerId) & filters.Gte(booking => booking.SlotEnd, endingAfter.UtcDateTime);
+        if (after is { } cursor)
+        {
+            // Keyset page: older than the cursor, or the same instant with a smaller identifier (the tie-break of the sort).
+            var at = cursor.At.UtcDateTime;
+            filter &= filters.Lt(booking => booking.CreatedAt, at)
+                | (filters.Eq(booking => booking.CreatedAt, at) & filters.Lt(booking => booking.Id, cursor.Id));
+        }
+
+        // Served by the (photographerId, createdAt, _id) index created at startup.
         var documents = await _collection
-            .Find(booking => booking.PhotographerId == photographerId && booking.SlotEnd >= endingAfter.UtcDateTime)
-            .SortBy(booking => booking.SlotStart)
+            .Find(filter)
+            .SortByDescending(booking => booking.CreatedAt)
+            .ThenByDescending(booking => booking.Id)
             .Limit(limit)
             .ToListAsync(cancellationToken);
 

@@ -113,7 +113,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<EditBookingDetailsCommand, BookingResponse>, EditBookingDetailsHandler>();
         services.AddScoped<IQueryHandler<GetBookingQuery, BookingResponse>, GetBookingHandler>();
         services.AddScoped<IQueryHandler<GetBookingContractQuery, BookingContractResponse>, GetBookingContractHandler>();
-        services.AddScoped<IQueryHandler<ListBookingsQuery, IReadOnlyList<BookingSummaryResponse>>, ListBookingsHandler>();
+        services.AddScoped<IQueryHandler<ListBookingsQuery, BookingListResponse>, ListBookingsHandler>();
 
         return services;
     }

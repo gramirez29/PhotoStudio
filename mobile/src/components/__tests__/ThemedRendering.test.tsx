@@ -27,7 +27,7 @@ import { SelectField } from '../SelectField';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeSelector } from '../ThemeSelector';
 
-jest.mock('../../hooks/useNotifications', () => ({ useNotifications: () => ({ data: { items: [], unreadCount: 2 } }) }));
+jest.mock('../../hooks/useNotifications', () => ({ useNotifications: () => ({ data: { pages: [{ items: [], unreadCount: 2, nextCursor: null }] } }) }));
 jest.mock('../../hooks/useRefunds', () => ({ useRefunds: () => ({ data: { items: [], pendingCount: 1 } }) }));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),

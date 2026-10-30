@@ -3,11 +3,12 @@ import type { MarkAllReadResponse, NotificationListResponse, NotificationRespons
 /** Notification endpoints used by the photographer app. */
 export interface NotificationsApi {
   /**
-   * Loads the inbox.
+   * Loads one page of the inbox.
+   * @param cursor The `nextCursor` of the previous page, or null for the first page.
    * @param signal Optional signal to cancel the request.
-   * @returns The notifications and the unread count.
+   * @returns The notifications of the page, the unread count and the cursor of the next page.
    */
-  listNotifications(signal?: AbortSignal): Promise<NotificationListResponse>;
+  listNotifications(cursor: string | null, signal?: AbortSignal): Promise<NotificationListResponse>;
 
   /**
    * Marks one notification as read.

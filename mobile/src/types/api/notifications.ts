@@ -30,12 +30,14 @@ export interface NotificationResponse {
   readonly readAt: string | null;
 }
 
-/** The inbox of the photographer. */
+/** One page of the inbox of the photographer. */
 export interface NotificationListResponse {
-  /** Delivered notifications, the most recent first. */
+  /** Delivered notifications of this page, the most recent first. */
   readonly items: readonly NotificationResponse[];
   /** How many notifications are unread (not only the ones listed). */
   readonly unreadCount: number;
+  /** What to send back to get the next page, or null when this is the last one. */
+  readonly nextCursor: string | null;
 }
 
 /** Outcome of marking the whole inbox as read. */

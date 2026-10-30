@@ -2,6 +2,7 @@ import { NOTIFICATION_TYPES } from '../constants/notifications';
 import type { HttpClient } from '../types/api/http';
 import type { MarkAllReadResponse, NotificationListResponse, NotificationResponse } from '../types/api/notifications';
 import type { NotificationsApi } from '../types/api/notificationsApi';
+import { buildPagedPath } from '../utils/pagination';
 import { parseMoney } from './bookingsApi';
 import { expectRecord, readArray, readLiteral, readNullableString, readNumber, readString } from './guards';
 
@@ -41,6 +42,7 @@ export function parseNotificationList(value: unknown): NotificationListResponse 
   return {
     items: readArray(record, 'items', path).map((item, index) => parseNotification(item, `${path}.items[${index}]`)),
     unreadCount: readNumber(record, 'unreadCount', path),
+    nextCursor: readNullableString(record, 'nextCursor', path),
   };
 }
 
@@ -61,7 +63,7 @@ export function parseMarkAllRead(value: unknown): MarkAllReadResponse {
  */
 export function createNotificationsApi(client: HttpClient): NotificationsApi {
   return {
-    listNotifications: (signal) => client.get('/api/notifications', parseNotificationList, signal),
+    listNotifications: (cursor, signal) => client.get(buildPagedPath('/api/notifications', cursor), parseNotificationList, signal),
     markRead: (notificationId, signal) =>
       client.post(
         `/api/notifications/${encodeURIComponent(notificationId)}/read`,

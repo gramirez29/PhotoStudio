@@ -25,7 +25,9 @@ jest.mock('../../navigation/appNavigation', () => ({ openNotifications: jest.fn(
  * @param pending Refunds still owed.
  */
 function waiting(unread: number, pending: number): void {
-  jest.mocked(useNotifications).mockReturnValue({ data: { items: [], unreadCount: unread } } as unknown as ReturnType<typeof useNotifications>);
+  jest.mocked(useNotifications).mockReturnValue({
+    data: { pages: [{ items: [], unreadCount: unread, nextCursor: null }] },
+  } as unknown as ReturnType<typeof useNotifications>);
   jest.mocked(useRefunds).mockReturnValue({ data: { items: [], pendingCount: pending } } as unknown as ReturnType<typeof useRefunds>);
 }
 
