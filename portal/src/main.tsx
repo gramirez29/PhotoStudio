@@ -8,6 +8,7 @@ import './theme/global.css';
 import './theme/booking.css';
 import './theme/forms.css';
 import './theme/contract.css';
+import './theme/studio.css';
 
 const container = document.getElementById('root');
 if (container === null) {

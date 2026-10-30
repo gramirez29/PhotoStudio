@@ -14,13 +14,18 @@ export function parseTokenFromPath(pathname: string): string | null {
 }
 
 /**
- * Decides which page an address shows: the main page at the root, a booking when the path is a link, or "not found".
+ * Decides which page an address shows: the main page at the root, the web area of the photographer at `/studio`, a booking
+ * when the path is a link, or "not found".
  * @param pathname Path of the page.
  * @returns The route.
  */
 export function resolveRoute(pathname: string): Route {
   if (pathname === '/' || pathname === '') {
     return { kind: 'home' };
+  }
+
+  if (pathname === '/studio' || pathname === '/studio/') {
+    return { kind: 'studio' };
   }
 
   const token = parseTokenFromPath(pathname);

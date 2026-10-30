@@ -5,6 +5,8 @@ export type ResponseParser<T> = (body: unknown) => T;
 export interface HttpClientOptions {
   /** Function that sends the request; defaults to the global `fetch`. Tests replace it. */
   readonly fetchFn?: typeof fetch;
+  /** Whether requests carry the cookies of the API (`credentials: 'include'`). Only the web area of the photographer uses them. */
+  readonly withCredentials?: boolean;
 }
 
 /** Options of one request. */

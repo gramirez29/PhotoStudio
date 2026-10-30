@@ -1,0 +1,44 @@
+/* The web area of the photographer (/studio): the bar with the greeting and the way out, and the card of a gallery. Colors come
+   only from the tokens; every pair used here (text on the page, text on a card) is one that tokens.test.ts already checks. */
+.studio-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.studio-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.studio-bar__actions .button {
+  font-size: 1rem;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+}
+
+.gallery-card__head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: space-between;
+}
+
+.gallery-card__head h3 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.gallery-card p {
+  margin: 0;
+}
+
+@media (min-width: 30rem) {
+  .studio-bar {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
