@@ -18,6 +18,8 @@ using PhotoStudio.Application.Galleries.EditTerms;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.ListGalleries;
 using PhotoStudio.Application.Galleries.Proofs;
+using PhotoStudio.Application.Galleries.Selection;
+using PhotoStudio.Application.Portal.Galleries;
 using PhotoStudio.Domain.Galleries.Events;
 using PhotoStudio.Application.Contracts;
 using PhotoStudio.Application.Identity;
@@ -113,6 +115,7 @@ public static class DependencyInjection
         services.AddScoped<IDomainEventHandler<ClientMarkedAbsent>, BookingNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<SessionCompleted>, SessionCompletedNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<PaymentSubmitted>, PaymentNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<SelectionSubmitted>, SelectionNotificationsHandler>();
 
         // Contracts: the client gets an email copy of the contract they signed through the portal.
         services.AddScoped<IDomainEventHandler<ContractSigned>, ContractCopyHandler>();
@@ -133,6 +136,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<ListProofsQuery, ProofListResponse>, ListProofsHandler>();
         services.AddScoped<ICommandHandler<RemoveProofCommand, GalleryResponse>, RemoveProofHandler>();
         services.AddScoped<ICommandHandler<OpenSelectionCommand, GalleryResponse>, OpenSelectionHandler>();
+        services.AddScoped<IQueryHandler<GetSelectionQuery, SelectionResponse>, GetSelectionHandler>();
+        services.AddScoped<IQueryHandler<GetPortalGallerySummaryQuery, PortalGallerySummaryResponse>, GetPortalGallerySummaryHandler>();
+        services.AddScoped<IQueryHandler<GetPortalGalleryQuery, PortalGalleryResponse>, GetPortalGalleryHandler>();
+        services.AddScoped<ICommandHandler<SubmitPortalSelectionCommand, PortalGalleryResponse>, SubmitPortalSelectionHandler>();
         services.AddScoped<IDomainEventHandler<SelectionOpened>, SelectionOpenedEmailHandler>();
 
         return services;

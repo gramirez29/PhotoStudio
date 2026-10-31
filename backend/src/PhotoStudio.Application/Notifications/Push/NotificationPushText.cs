@@ -42,6 +42,10 @@ public static class NotificationPushText
             case NotificationType.PaymentProofSubmitted when details.ProofAmount is not null:
                 return ("Comprobante por verificar", $"{details.ClientName} envió un comprobante de {FormatMoney(details.ProofAmount)}.");
 
+            case NotificationType.SelectionSubmitted when details.SelectedPhotos is { } selected:
+                var extra = details.ExtraPhotos is > 0 ? $" ({details.ExtraPhotos} extra)" : string.Empty;
+                return ("Selección recibida", $"{details.ClientName} eligió {selected} {(selected == 1 ? "foto" : "fotos")}{extra}.");
+
             default:
                 return ("Sesión próxima", $"{details.ClientName} · {details.PackageName} · {FormatDateTime(details.SessionStart)}");
         }

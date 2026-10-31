@@ -7,6 +7,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.Proofs;
+using PhotoStudio.Application.Galleries.Selection;
 using PhotoStudio.Application.Galleries.ListGalleries;
 using PhotoStudio.Application.Identity.Studio;
 using PhotoStudio.Application.Pagination;
@@ -109,6 +110,7 @@ public static class StudioEndpoints
         galleries.MapGet("/", ListGalleriesAsync).WithName("StudioListGalleries");
         galleries.MapGet("/{id:guid}", GetGalleryAsync).WithName("StudioGetGallery");
         galleries.MapGet("/{id:guid}/proofs", ListProofsAsync).WithName("StudioListProofs");
+        galleries.MapGet("/{id:guid}/selection", GetSelectionAsync).WithName("StudioGetSelection");
         galleries.MapPost("/{id:guid}/proofs/uploads", RequestUploadsAsync).WithName("StudioRequestProofUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/proofs", RegisterProofsAsync).WithName("StudioRegisterProofs").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/proofs/{photoId:guid}/remove", RemoveProofAsync).WithName("StudioRemoveProof").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
@@ -280,6 +282,21 @@ public static class StudioEndpoints
         IQueryHandler<ListProofsQuery, ProofListResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new ListProofsQuery(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Reads the photos the client chose, with the names of their original files.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">Authenticated web session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the selection (empty until the client sends it); 404 when the gallery does not exist or is another photographer's.</returns>
+    private static async Task<Ok<SelectionResponse>> GetSelectionAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IQueryHandler<GetSelectionQuery, SelectionResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetSelectionQuery(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Asks for the places to upload proofs, one per file. The bytes go straight to the storage, not through the API.

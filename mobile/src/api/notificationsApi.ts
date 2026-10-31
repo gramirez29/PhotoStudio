@@ -26,9 +26,33 @@ export function parseNotification(value: unknown, path = 'notification'): Notifi
     sessionStart: readString(record, 'sessionStart', path),
     balance: balance === null || balance === undefined ? null : parseMoney(balance, `${path}.balance`),
     proofAmount: proofAmount === null || proofAmount === undefined ? null : parseMoney(proofAmount, `${path}.proofAmount`),
+    selectedPhotos: readOptionalCount(record, 'selectedPhotos', path),
+    extraPhotos: readOptionalCount(record, 'extraPhotos', path),
     deliveredAt: readString(record, 'deliveredAt', path),
     readAt: readNullableString(record, 'readAt', path),
   };
+}
+
+/**
+ * Reads a count that is only present for some notifications.
+ * @param record Object to read from.
+ * @param key Property name.
+ * @param path Location of the object, for error messages.
+ * @returns The count, or null when the notification does not carry one.
+ */
+function readOptionalCount(record: Record<string, unknown>, key: string, path: string): number | null {
+  const value = record[key];
+  return value === null || value === undefined ? null : readNumber(record, key, path);
+}
+
+/**
+ * Tells whether a list element is a notification of a type this version of the app knows. The backend may learn to send a new type
+ * before the app learns to word it; such a notice is left out of the inbox instead of breaking the whole list.
+ * @param value Unknown list element.
+ * @returns True when the element has a known type.
+ */
+function hasKnownType(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && NOTIFICATION_TYPES.some((type) => type === (value as { type?: unknown }).type);
 }
 
 /**
@@ -40,7 +64,10 @@ export function parseNotificationList(value: unknown): NotificationListResponse 
   const path = 'notifications';
   const record = expectRecord(value, path);
   return {
-    items: readArray(record, 'items', path).map((item, index) => parseNotification(item, `${path}.items[${index}]`)),
+    items: readArray(record, 'items', path)
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => hasKnownType(item) || typeof item !== 'object' || item === null)
+      .map(({ item, index }) => parseNotification(item, `${path}.items[${index}]`)),
     unreadCount: readNumber(record, 'unreadCount', path),
     nextCursor: readNullableString(record, 'nextCursor', path),
   };

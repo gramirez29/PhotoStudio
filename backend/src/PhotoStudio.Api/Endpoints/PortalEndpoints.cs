@@ -6,6 +6,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Portal;
 using PhotoStudio.Application.Portal.GetBooking;
 using PhotoStudio.Application.Portal.GetContract;
+using PhotoStudio.Application.Portal.Galleries;
 using PhotoStudio.Application.Portal.RequestCode;
 using PhotoStudio.Application.Portal.SignContract;
 using PhotoStudio.Application.Portal.SubmitProof;
@@ -49,6 +50,12 @@ public sealed record PortalSignContractRequest(
     bool AcceptsTerms);
 
 /// <summary>
+/// HTTP body for the client to send the photos they chose.
+/// </summary>
+/// <param name="PhotoIds">Identifiers of the photos chosen.</param>
+public sealed record SubmitSelectionRequest(IReadOnlyList<Guid>? PhotoIds);
+
+/// <summary>
 /// Endpoints of the client portal under <c>/public/bookings/{token}</c>. The token of the link is the credential for reading
 /// the booking and asking for a code; every action that changes something also needs the portal session obtained by verifying
 /// that code. All of them are rate limited per client address, and none of them accepts a photographer token.
@@ -83,8 +90,63 @@ public static class PortalEndpoints
             .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
             .RequireRateLimiting(RateLimitingExtensions.PortalActionPolicy);
 
+        group.MapGet("/gallery/summary", GetGallerySummaryAsync).WithName("GetPortalGallerySummary").AllowAnonymous().RequireRateLimiting(RateLimitingExtensions.PortalReadPolicy);
+        group.MapGet("/gallery", GetGalleryAsync)
+            .WithName("GetPortalGallery")
+            .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
+            .RequireRateLimiting(RateLimitingExtensions.PortalReadPolicy);
+        group.MapPost("/gallery/selection", SubmitSelectionAsync)
+            .WithName("SubmitPortalSelection")
+            .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
+            .RequireRateLimiting(RateLimitingExtensions.PortalActionPolicy);
+
         return endpoints;
     }
+
+    /// <summary>
+    /// Tells whether the booking the link opens has a gallery the client can look at, and where it is. It needs only the link.
+    /// </summary>
+    /// <param name="token">Secret token of the link.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the state of the gallery; 404 when the token opens nothing or the gallery is not ready for the client.</returns>
+    private static async Task<Ok<PortalGallerySummaryResponse>> GetGallerySummaryAsync(
+        string token,
+        IQueryHandler<GetPortalGallerySummaryQuery, PortalGallerySummaryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetPortalGallerySummaryQuery(token), cancellationToken));
+
+    /// <summary>
+    /// Reads the gallery of the booking: the proofs and the terms to choose them. Needs the portal session.
+    /// </summary>
+    /// <param name="token">Secret token of the link.</param>
+    /// <param name="user">Authenticated portal session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 401 without a valid session; 404 when the session is for another booking or there is no gallery yet.</returns>
+    private static async Task<Ok<PortalGalleryResponse>> GetGalleryAsync(
+        string token,
+        ClaimsPrincipal user,
+        IQueryHandler<GetPortalGalleryQuery, PortalGalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetPortalGalleryQuery(token, user.GetPortalBookingId()), cancellationToken));
+
+    /// <summary>
+    /// Sends the photos the client chose. From then on the selection is locked. Needs the portal session.
+    /// </summary>
+    /// <param name="token">Secret token of the link.</param>
+    /// <param name="request">The photos chosen.</param>
+    /// <param name="user">Authenticated portal session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery after the selection; 401 without a valid session; 404 when the session is for another booking; 409 when the selection is not open; 422 <c>gallery.invalid_selection</c> for photos that are none, repeated or not of the gallery.</returns>
+    private static async Task<Ok<PortalGalleryResponse>> SubmitSelectionAsync(
+        string token,
+        SubmitSelectionRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<SubmitPortalSelectionCommand, PortalGalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new SubmitPortalSelectionCommand(token, user.GetPortalBookingId(), request.PhotoIds ?? []), cancellationToken));
 
     /// <summary>
     /// Reads the booking the link opens.

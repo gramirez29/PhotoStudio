@@ -18,6 +18,8 @@ namespace PhotoStudio.Application.Notifications;
 /// <param name="ProofAmount">Amount the client declared; present only for <see cref="NotificationType.PaymentProofSubmitted"/>.</param>
 /// <param name="DeliveredAt">Instant it reached the inbox (UTC).</param>
 /// <param name="ReadAt">Instant the photographer read it (UTC), or <see langword="null"/> while it is unread.</param>
+/// <param name="SelectedPhotos">How many photos the client chose; present only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
+/// <param name="ExtraPhotos">How many of them are extra; present only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
 public sealed record NotificationResponse(
     Guid Id,
     NotificationType Type,
@@ -29,7 +31,9 @@ public sealed record NotificationResponse(
     MoneyResponse? Balance,
     MoneyResponse? ProofAmount,
     DateTimeOffset DeliveredAt,
-    DateTimeOffset? ReadAt);
+    DateTimeOffset? ReadAt,
+    int? SelectedPhotos = null,
+    int? ExtraPhotos = null);
 
 /// <summary>
 /// The inbox of a photographer.
@@ -77,6 +81,8 @@ public static class NotificationResponseMappings
             details.Balance is null ? null : new MoneyResponse(details.Balance.Amount, details.Balance.Currency),
             details.ProofAmount is null ? null : new MoneyResponse(details.ProofAmount.Amount, details.ProofAmount.Currency),
             notification.DeliveredAt.Value,
-            notification.ReadAt);
+            notification.ReadAt,
+            details.SelectedPhotos,
+            details.ExtraPhotos);
     }
 }
