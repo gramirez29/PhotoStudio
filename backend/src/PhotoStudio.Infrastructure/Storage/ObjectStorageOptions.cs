@@ -10,6 +10,15 @@ namespace PhotoStudio.Infrastructure.Storage;
 /// <param name="SecretAccessKey">Secret of that token.</param>
 public sealed record ObjectStorageOptions(Uri Endpoint, string Bucket, string AccessKeyId, string SecretAccessKey)
 {
+    /// <summary>Characters of a Cloudflare account id.</summary>
+    private const int AccountIdLength = 32;
+
+    /// <summary>Characters of the Access Key ID of an R2 token.</summary>
+    private const int AccessKeyIdLength = 32;
+
+    /// <summary>Characters of the Secret Access Key of an R2 token.</summary>
+    private const int SecretLength = 64;
+
     /// <summary>Environment variable with the Cloudflare account id, from which the R2 address is built.</summary>
     public const string AccountIdVariable = "R2_ACCOUNT_ID";
 
@@ -30,7 +39,7 @@ public sealed record ObjectStorageOptions(Uri Endpoint, string Bucket, string Ac
     /// configured storage is a deployment mistake and fails loudly at startup instead of silently not working.
     /// </summary>
     /// <returns>The options, or <see langword="null"/> when none of the variables is set.</returns>
-    /// <exception cref="InvalidOperationException">When some variables are set and others are missing, or the address is not safe.</exception>
+    /// <exception cref="InvalidOperationException">When some variables are set and others are missing, the address is not safe, or the credentials of R2 do not have the shape R2 issues.</exception>
     public static ObjectStorageOptions? FromEnvironment()
     {
         var accountId = Read(AccountIdVariable);
@@ -70,6 +79,16 @@ public sealed record ObjectStorageOptions(Uri Endpoint, string Bucket, string Ac
             throw new InvalidOperationException($"The object storage is partly configured; these variables are missing: {string.Join(", ", missing)}.");
         }
 
+        if (endpoint is null)
+        {
+            // Against the real R2 the three values have a fixed shape. The usual mistakes (the whole address in the account id, the
+            // value of the API token in the key id) otherwise only show up as an opaque 400 in the browser, so they fail here, naming
+            // the variable and never its value. A custom address is the local emulator, whose development keys have any shape.
+            RequireHex(AccountIdVariable, accountId!, AccountIdLength, "the Cloudflare account id, without the address");
+            RequireHex(AccessKeyIdVariable, accessKeyId!, AccessKeyIdLength, "the Access Key ID shown when the token was created, not the token value");
+            RequireHex(SecretAccessKeyVariable, secret!, SecretLength, "the Secret Access Key shown when the token was created");
+        }
+
         return Create(endpoint ?? $"https://{accountId}.r2.cloudflarestorage.com", bucket!, accessKeyId!, secret!);
     }
 
@@ -100,6 +119,22 @@ public sealed record ObjectStorageOptions(Uri Endpoint, string Bucket, string Ac
         }
 
         return new ObjectStorageOptions(uri, bucket, accessKeyId, secretAccessKey);
+    }
+
+    /// <summary>
+    /// Checks that a value is a hexadecimal string of an exact length. The value is never part of the message.
+    /// </summary>
+    /// <param name="variable">Name of the variable, for the message.</param>
+    /// <param name="value">The value.</param>
+    /// <param name="length">Characters it must have.</param>
+    /// <param name="meaning">What the variable must hold, for the message.</param>
+    /// <exception cref="InvalidOperationException">When the value is not hexadecimal or does not have that length.</exception>
+    private static void RequireHex(string variable, string value, int length, string meaning)
+    {
+        if (value.Length != length || !value.All(Uri.IsHexDigit))
+        {
+            throw new InvalidOperationException($"'{variable}' must be {length} hexadecimal characters: {meaning}. It has {value.Length} characters.");
+        }
     }
 
     /// <summary>

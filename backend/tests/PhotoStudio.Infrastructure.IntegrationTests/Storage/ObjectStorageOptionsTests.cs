@@ -17,6 +17,12 @@ public sealed class ObjectStorageOptionsTests : IDisposable
         ObjectStorageOptions.SecretAccessKeyVariable,
     ];
 
+    /// <summary>A well formed Cloudflare account id, which has the same shape as an access key id.</summary>
+    private const string AccountId = "0123456789abcdef0123456789abcdef";
+
+    /// <summary>A well formed secret access key.</summary>
+    private const string Secret = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
     private readonly Dictionary<string, string?> _saved = Variables.ToDictionary(name => name, Environment.GetEnvironmentVariable);
 
     /// <summary>
@@ -53,12 +59,12 @@ public sealed class ObjectStorageOptionsTests : IDisposable
     [Fact]
     public void FromEnvironment_BuildsTheR2AddressFromTheAccountId()
     {
-        Set(account: "abc123", bucket: "photostudio-media", key: "key", secret: "secret");
+        Set(account: AccountId, bucket: "photostudio-media", key: AccountId, secret: Secret);
 
         var options = ObjectStorageOptions.FromEnvironment();
 
         options.ShouldNotBeNull();
-        options.Endpoint.ToString().ShouldBe("https://abc123.r2.cloudflarestorage.com/");
+        options.Endpoint.ToString().ShouldBe($"https://{AccountId}.r2.cloudflarestorage.com/");
         options.Bucket.ShouldBe("photostudio-media");
     }
 
@@ -79,12 +85,47 @@ public sealed class ObjectStorageOptionsTests : IDisposable
     [Fact]
     public void FromEnvironment_WithSomeVariablesMissing_FailsNamingThem()
     {
-        Set(account: "abc123", bucket: "photostudio-media", secret: "top-secret-value");
+        Set(account: AccountId, bucket: "photostudio-media", secret: "top-secret-value");
 
         var error = Should.Throw<InvalidOperationException>(() => ObjectStorageOptions.FromEnvironment());
 
         error.Message.ShouldContain(ObjectStorageOptions.AccessKeyIdVariable);
         error.Message.ShouldNotContain("top-secret-value");
+    }
+
+    /// <summary>
+    /// The usual mistakes with the credentials of R2 stop the start and name the variable, never its value: the whole address in the
+    /// account id, and the value of the API token (<c>cfat_…</c>) in the key id.
+    /// </summary>
+    /// <param name="variable">Variable that is wrong.</param>
+    /// <param name="account">Account id.</param>
+    /// <param name="key">Access key id.</param>
+    /// <param name="secret">Secret access key.</param>
+    [Theory]
+    [InlineData(ObjectStorageOptions.AccountIdVariable, "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com", AccountId, Secret)]
+    [InlineData(ObjectStorageOptions.AccountIdVariable, "0123456789abcdef", AccountId, Secret)]
+    [InlineData(ObjectStorageOptions.AccessKeyIdVariable, AccountId, "cfat_NotARealTokenValueJustAnExampleOfItsShape00", Secret)]
+    [InlineData(ObjectStorageOptions.SecretAccessKeyVariable, AccountId, AccountId, "short-secret")]
+    public void FromEnvironment_WithCredentialsOfTheWrongShape_FailsNamingTheVariableButNotTheValue(string variable, string account, string key, string secret)
+    {
+        Set(account: account, bucket: "photostudio-media", key: key, secret: secret);
+
+        var error = Should.Throw<InvalidOperationException>(() => ObjectStorageOptions.FromEnvironment());
+
+        error.Message.ShouldContain($"'{variable}'");
+        error.Message.ShouldNotContain("cfat_");
+        error.Message.ShouldNotContain("short-secret");
+    }
+
+    /// <summary>
+    /// A custom address is the local emulator, whose development keys have any shape.
+    /// </summary>
+    [Fact]
+    public void FromEnvironment_WithACustomAddress_DoesNotRequireTheShapeOfR2()
+    {
+        Set(endpoint: "http://127.0.0.1:9020", bucket: "photostudio-dev", key: "dev-key", secret: "dev-secret");
+
+        ObjectStorageOptions.FromEnvironment().ShouldNotBeNull();
     }
 
     /// <summary>
