@@ -1,4 +1,5 @@
-import type { StudioCodeSent, StudioGalleryPage, StudioLoginResult, StudioUser } from './studio';
+import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from './proofs';
+import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioUser } from './studio';
 
 /** Endpoints of the web area of the photographer. */
 export interface StudioApi {
@@ -45,4 +46,53 @@ export interface StudioApi {
    * @returns The page.
    */
   listGalleries(cursor: string | null, signal?: AbortSignal): Promise<StudioGalleryPage>;
+
+  /**
+   * Loads one gallery of the photographer.
+   * @param galleryId Gallery identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The gallery; the request fails with a 404 when it does not exist or is another photographer's.
+   */
+  getGallery(galleryId: string, signal?: AbortSignal): Promise<StudioGallery>;
+
+  /**
+   * Loads the proofs of a gallery, each with a signed address that works for a few minutes.
+   * @param galleryId Gallery identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The proofs, in the order they were registered.
+   */
+  listProofs(galleryId: string, signal?: AbortSignal): Promise<readonly StudioProof[]>;
+
+  /**
+   * Asks for the places to upload proofs, one per file. The bytes go straight to the storage, not through the API.
+   * @param galleryId Gallery identifier.
+   * @param files The proofs about to be uploaded, 1 to 50.
+   * @param signal Optional signal to cancel the request.
+   * @returns One slot per file, in the same order.
+   */
+  requestProofUploads(galleryId: string, files: readonly ProofFileInfo[], signal?: AbortSignal): Promise<readonly ProofUploadSlot[]>;
+
+  /**
+   * Registers the proofs that were uploaded; the API looks at what is really in the storage first.
+   * @param galleryId Gallery identifier.
+   * @param photos The uploads, 1 to 50.
+   * @param signal Optional signal to cancel the request.
+   * @returns The gallery and the proofs that were not accepted.
+   */
+  registerProofs(galleryId: string, photos: readonly ProofRegistration[], signal?: AbortSignal): Promise<RegisterProofsResult>;
+
+  /**
+   * Removes a proof, while the selection is not open.
+   * @param galleryId Gallery identifier.
+   * @param photoId Identifier of the proof.
+   * @returns The gallery after removing it.
+   */
+  removeProof(galleryId: string, photoId: string): Promise<StudioGallery>;
+
+  /**
+   * Opens the selection: the proofs are published and the client is told by email.
+   * @param galleryId Gallery identifier.
+   * @returns The gallery, now in selection.
+   */
+  openSelection(galleryId: string): Promise<StudioGallery>;
 }

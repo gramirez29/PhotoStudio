@@ -23,6 +23,9 @@ export function StudioGalleryCard({ gallery }: StudioGalleryCardProps): ReactEle
       <p className="muted">{formatDateTime(gallery.sessionStart)}</p>
       <p>{describePhotos(gallery)}</p>
       <p className="muted">{describeExtraPhoto(gallery)}</p>
+      <a className="button button--secondary button-link" href={`/studio/galleries/${gallery.id}`} aria-label={`Abrir la galería de ${gallery.clientName}`}>
+        Abrir galería
+      </a>
     </article>
   );
 }

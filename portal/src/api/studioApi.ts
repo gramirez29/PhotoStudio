@@ -1,8 +1,9 @@
 import { GALLERIES_PAGE_SIZE, GALLERY_ACTIONS, GALLERY_STATUSES } from '../constants/gallery';
 import type { HttpClient } from '../types/api/http';
+import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from '../types/api/proofs';
 import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioUser } from '../types/api/studio';
 import type { StudioApi } from '../types/api/studioApi';
-import { expectRecord, readArray, readLiteral, readNullableString, readString } from './guards';
+import { expectRecord, readArray, readLiteral, readNullableString, readNumber, readString } from './guards';
 import { parseMoney } from './portalApi';
 
 /**
@@ -78,6 +79,7 @@ export function parseStudioGallery(value: unknown, path: string): StudioGallery 
     selectablePhotos: readCount(record, 'selectablePhotos', path),
     extraPhotoPrice: parseMoney(record.extraPhotoPrice, `${path}.extraPhotoPrice`),
     maxPhotos: readCount(record, 'maxPhotos', path),
+    photoCount: readCount(record, 'photoCount', path),
     createdAt: readString(record, 'createdAt', path),
     allowedActions: readArray(record, 'allowedActions', path).flatMap(knownAction),
   };
@@ -95,6 +97,73 @@ export function parseStudioGalleryPage(value: unknown): StudioGalleryPage {
     items: readArray(record, 'items', path).map((item, index) => parseStudioGallery(item, `${path}.items[${index}]`)),
     nextCursor: readNullableString(record, 'nextCursor', path),
   };
+}
+
+/**
+ * Parses the places to upload the proofs of a request.
+ * @param value Unknown response body.
+ * @returns One slot per file, in the order of the request.
+ */
+export function parseProofSlots(value: unknown): readonly ProofUploadSlot[] {
+  const path = 'proofUploads';
+  return readArray(expectRecord(value, path), 'slots', path).map((item, index): ProofUploadSlot => {
+    const slotPath = `${path}.slots[${index}]`;
+    const record = expectRecord(item, slotPath);
+    const headers = expectRecord(record.headers, `${slotPath}.headers`);
+    return {
+      photoId: readString(record, 'photoId', slotPath),
+      url: readString(record, 'url', slotPath),
+      headers: Object.fromEntries(Object.keys(headers).map((name) => [name, readString(headers, name, `${slotPath}.headers`)])),
+      expiresAt: readString(record, 'expiresAt', slotPath),
+    };
+  });
+}
+
+/**
+ * Parses the outcome of registering a batch of proofs.
+ * @param value Unknown response body.
+ * @returns The gallery and the proofs that were not registered.
+ */
+export function parseRegisterProofs(value: unknown): RegisterProofsResult {
+  const path = 'registerProofs';
+  const record = expectRecord(value, path);
+  return {
+    gallery: parseStudioGallery(record.gallery, `${path}.gallery`),
+    rejected: readArray(record, 'rejected', path).map((item, index) => {
+      const itemPath = `${path}.rejected[${index}]`;
+      const rejection = expectRecord(item, itemPath);
+      return { photoId: readString(rejection, 'photoId', itemPath), reason: readString(rejection, 'reason', itemPath) };
+    }),
+  };
+}
+
+/**
+ * Parses the proofs of a gallery.
+ * @param value Unknown response body.
+ * @returns The proofs, in the order they were registered.
+ */
+export function parseProofList(value: unknown): readonly StudioProof[] {
+  const path = 'proofs';
+  return readArray(expectRecord(value, path), 'items', path).map((item, index): StudioProof => {
+    const itemPath = `${path}.items[${index}]`;
+    const record = expectRecord(item, itemPath);
+    return {
+      id: readString(record, 'id', itemPath),
+      name: readString(record, 'name', itemPath),
+      bytes: readNumber(record, 'bytes', itemPath),
+      url: readString(record, 'url', itemPath),
+      expiresAt: readString(record, 'expiresAt', itemPath),
+    };
+  });
+}
+
+/**
+ * Parses a single gallery answer.
+ * @param value Unknown response body.
+ * @returns The typed gallery.
+ */
+export function parseStudioGalleryBody(value: unknown): StudioGallery {
+  return parseStudioGallery(value, 'gallery');
 }
 
 /**
@@ -142,5 +211,13 @@ export function createStudioApi(client: HttpClient): StudioApi {
         parseStudioGalleryPage,
         { signal },
       ),
+    getGallery: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}`, parseStudioGalleryBody, { signal }),
+    listProofs: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}/proofs`, parseProofList, { signal }),
+    requestProofUploads: (galleryId, files: readonly ProofFileInfo[], signal) =>
+      client.post(`/api/web/galleries/${galleryId}/proofs/uploads`, { files }, parseProofSlots, { signal }),
+    registerProofs: (galleryId, photos: readonly ProofRegistration[], signal) =>
+      client.post(`/api/web/galleries/${galleryId}/proofs`, { photos }, parseRegisterProofs, { signal }),
+    removeProof: (galleryId, photoId) => client.post(`/api/web/galleries/${galleryId}/proofs/${photoId}/remove`, {}, parseStudioGalleryBody),
+    openSelection: (galleryId) => client.post(`/api/web/galleries/${galleryId}/selection/open`, {}, parseStudioGalleryBody),
   };
 }

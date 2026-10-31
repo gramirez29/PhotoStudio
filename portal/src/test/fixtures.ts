@@ -64,6 +64,7 @@ export const galleryPayload = {
   selectablePhotos: 35,
   extraPhotoPrice: { amount: 3000, currency: 'CRC' },
   maxPhotos: 150,
+  photoCount: 0,
   createdAt: '2026-10-17T23:45:00+00:00',
   allowedActions: ['EditTerms'],
 } as const;

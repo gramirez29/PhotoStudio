@@ -72,6 +72,8 @@ export interface StudioGallery {
   readonly extraPhotoPrice: Money;
   /** Most photos a gallery holds. */
   readonly maxPhotos: number;
+  /** Proofs registered so far. */
+  readonly photoCount: number;
   /** Instant it was created, ISO 8601. */
   readonly createdAt: string;
   /** What the photographer can do with it now. */
