@@ -26,6 +26,9 @@ export default function App(): ReactElement {
     case 'studio':
       content = <StudioPage />;
       break;
+    case 'studioGallery':
+      content = <StudioPage galleryId={route.galleryId} />;
+      break;
     case 'booking':
       content = <BookingPage token={route.token} />;
       break;

@@ -6,7 +6,9 @@ import { LoadErrorScreen } from './LoadErrorScreen';
 import { LoadingScreen } from './LoadingScreen';
 import { StudioCodeForm } from './StudioCodeForm';
 import { StudioGalleries } from './StudioGalleries';
+import { StudioGalleryDetail } from './StudioGalleryDetail';
 import { StudioLoginForm } from './StudioLoginForm';
+import type { StudioPageProps } from '../types/components/StudioComponents.types';
 import { describeLoadError } from '../utils/apiErrors';
 
 /** Title of the tab while the web area is open. */
@@ -14,10 +16,12 @@ const TITLE = 'Tu estudio · PhotoSense Studio';
 
 /**
  * The web area of the photographer, at `/studio`. It asks the server who is signed in and shows one of three things: the password,
- * the code (when one is waiting, which it remembers across a reload), or the galleries. It tells search engines to keep out.
+ * the code (when one is waiting, which it remembers across a reload), the galleries, or one gallery when the address names it.
+ * It tells search engines to keep out.
+ * @param props Component props.
  * @returns The page.
  */
-export function StudioPage(): ReactElement {
+export function StudioPage({ galleryId }: StudioPageProps): ReactElement {
   const session = useStudioSession();
   const [pending, setPending] = useState<PendingCode | null>(() => readPendingCode());
 
@@ -44,7 +48,7 @@ export function StudioPage(): ReactElement {
   }
 
   if (session.data !== null) {
-    return <StudioGalleries user={session.data} />;
+    return galleryId === undefined ? <StudioGalleries user={session.data} /> : <StudioGalleryDetail galleryId={galleryId} user={session.data} />;
   }
 
   if (pending !== null) {
