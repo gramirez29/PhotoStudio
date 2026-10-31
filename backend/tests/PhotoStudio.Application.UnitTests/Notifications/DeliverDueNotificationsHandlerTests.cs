@@ -16,6 +16,7 @@ namespace PhotoStudio.Application.UnitTests.Notifications;
 public sealed class DeliverDueNotificationsHandlerTests
 {
     private readonly IBookingRepository _bookings = Substitute.For<IBookingRepository>();
+    private readonly IGalleryRepository _galleries = Substitute.For<IGalleryRepository>();
     private readonly INotificationRepository _notifications = Substitute.For<INotificationRepository>();
     private readonly IPushDeviceRepository _devices = Substitute.For<IPushDeviceRepository>();
     private readonly IPushSender _sender = Substitute.For<IPushSender>();
@@ -311,5 +312,5 @@ public sealed class DeliverDueNotificationsHandlerTests
     /// </summary>
     /// <param name="now">Instant the clock reports.</param>
     /// <returns>The handler.</returns>
-    private DeliverDueNotificationsHandler HandlerAt(DateTimeOffset now) => new(_bookings, _notifications, new NotificationPusher(_devices, _sender, NullLogger<NotificationPusher>.Instance), new FixedTimeProvider(now));
+    private DeliverDueNotificationsHandler HandlerAt(DateTimeOffset now) => new(_bookings, _galleries, _notifications, new NotificationPusher(_devices, _sender, NullLogger<NotificationPusher>.Instance), new FixedTimeProvider(now));
 }

@@ -12,13 +12,17 @@ namespace PhotoStudio.Domain.Notifications;
 /// <param name="SessionStart">Start of the session (UTC).</param>
 /// <param name="Balance">Amount still owed; set only for <see cref="NotificationType.BalanceDue"/>.</param>
 /// <param name="ProofAmount">Amount the client declared in the proof of payment; set only for <see cref="NotificationType.PaymentProofSubmitted"/>.</param>
+/// <param name="SelectedPhotos">How many photos the client chose; set only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
+/// <param name="ExtraPhotos">How many of them go beyond what the package includes; set only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
 public sealed record NotificationDetails(
     string ClientName,
     string ClientPhone,
     string PackageName,
     DateTimeOffset SessionStart,
     Money? Balance,
-    Money? ProofAmount = null);
+    Money? ProofAmount = null,
+    int? SelectedPhotos = null,
+    int? ExtraPhotos = null);
 
 /// <summary>
 /// A notice for the photographer about one of their bookings. It is created <see cref="NotificationStatus.Scheduled"/> for a
@@ -150,6 +154,14 @@ public sealed class Notification : AggregateRoot<Guid>
     /// <param name="paymentId">Payment the proof belongs to.</param>
     /// <returns>The key.</returns>
     public static string PaymentProofKey(Guid paymentId) => $"{NotificationType.PaymentProofSubmitted}:{paymentId:N}";
+
+    /// <summary>
+    /// Builds the key that identifies the notice of a selection: there is one per gallery, so the same selection delivered twice by
+    /// the outbox is one notice.
+    /// </summary>
+    /// <param name="galleryId">Gallery whose selection was sent.</param>
+    /// <returns>The key.</returns>
+    public static string SelectionSubmittedKey(Guid galleryId) => $"{NotificationType.SelectionSubmitted}:{galleryId:N}";
 
     /// <summary>
     /// Reads the payment a proof notice is about from its key, the same way a reminder key holds the session start it was

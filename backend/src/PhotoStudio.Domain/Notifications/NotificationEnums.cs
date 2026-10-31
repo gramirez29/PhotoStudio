@@ -13,6 +13,9 @@ public enum NotificationType
 
     /// <summary>A client uploaded a proof of payment that waits for the photographer to verify it.</summary>
     PaymentProofSubmitted,
+
+    /// <summary>A client sent the photos they chose from their gallery: time to edit them.</summary>
+    SelectionSubmitted,
 }
 
 /// <summary>

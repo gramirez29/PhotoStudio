@@ -20,6 +20,9 @@ namespace PhotoStudio.Application.Galleries;
 /// <param name="PhotoCount">Proofs registered so far.</param>
 /// <param name="CreatedAt">Instant it was created (UTC).</param>
 /// <param name="AllowedActions">What the photographer can do with it now.</param>
+/// <param name="SelectedPhotoCount">How many photos the client chose; 0 until they send the selection.</param>
+/// <param name="ExtraPhotoCount">How many of those go beyond what the package includes.</param>
+/// <param name="SelectionSubmittedAt">Instant the client sent the selection (UTC), or <see langword="null"/> while they did not.</param>
 public sealed record GalleryResponse(
     Guid Id,
     Guid BookingId,
@@ -34,7 +37,10 @@ public sealed record GalleryResponse(
     int MaxPhotos,
     int PhotoCount,
     DateTimeOffset CreatedAt,
-    IReadOnlyList<GalleryAction> AllowedActions);
+    IReadOnlyList<GalleryAction> AllowedActions,
+    int SelectedPhotoCount = 0,
+    int ExtraPhotoCount = 0,
+    DateTimeOffset? SelectionSubmittedAt = null);
 
 /// <summary>
 /// One page of the galleries of a photographer, the most recently created first.
@@ -71,6 +77,9 @@ public static class GalleryResponseMappings
             Gallery.MaxPhotos,
             gallery.Photos.Count,
             gallery.CreatedAt,
-            gallery.GetAllowedActions());
+            gallery.GetAllowedActions(),
+            gallery.SelectedPhotoIds.Count,
+            gallery.ExtraPhotoCount,
+            gallery.SelectionSubmittedAt);
     }
 }

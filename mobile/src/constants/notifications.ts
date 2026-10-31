@@ -4,4 +4,4 @@
  */
 
 /** Every value of the backend `NotificationType` enum. */
-export const NOTIFICATION_TYPES = ['SessionReminder', 'BalanceDue', 'PaymentProofSubmitted'] as const;
+export const NOTIFICATION_TYPES = ['SessionReminder', 'BalanceDue', 'PaymentProofSubmitted', 'SelectionSubmitted'] as const;

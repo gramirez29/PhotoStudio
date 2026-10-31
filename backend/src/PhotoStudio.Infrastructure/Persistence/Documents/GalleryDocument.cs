@@ -71,6 +71,15 @@ public sealed class GalleryDocument
     [BsonElement("selectionNotifiedAt")]
     public DateTime? SelectionNotifiedAt { get; set; }
 
+    /// <summary>Gets or sets the photos the client chose, in the order they were chosen.</summary>
+    [BsonElement("selectedPhotoIds")]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
+    public List<Guid> SelectedPhotoIds { get; set; } = [];
+
+    /// <summary>Gets or sets the instant the client sent the selection (UTC), if they did.</summary>
+    [BsonElement("selectionSubmittedAt")]
+    public DateTime? SelectionSubmittedAt { get; set; }
+
     /// <summary>Gets or sets the instant the gallery was created (UTC).</summary>
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }
@@ -140,6 +149,8 @@ public static class GalleryDocumentMappings
                 UploadedAt = photo.UploadedAt.UtcDateTime,
             })],
             SelectionNotifiedAt = gallery.SelectionNotifiedAt?.UtcDateTime,
+            SelectedPhotoIds = [.. gallery.SelectedPhotoIds],
+            SelectionSubmittedAt = gallery.SelectionSubmittedAt?.UtcDateTime,
             CreatedAt = gallery.CreatedAt.UtcDateTime,
             UpdatedAt = gallery.UpdatedAt.UtcDateTime,
         };
@@ -167,7 +178,9 @@ public static class GalleryDocumentMappings
             ToOffset(document.CreatedAt),
             ToOffset(document.UpdatedAt),
             document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt))),
-            document.SelectionNotifiedAt is null ? null : ToOffset(document.SelectionNotifiedAt.Value));
+            document.SelectionNotifiedAt is null ? null : ToOffset(document.SelectionNotifiedAt.Value),
+            document.SelectedPhotoIds,
+            document.SelectionSubmittedAt is null ? null : ToOffset(document.SelectionSubmittedAt.Value));
     }
 
     /// <summary>

@@ -24,6 +24,8 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
     sessionStart: '2026-10-17T21:00:00+00:00',
     balance: null,
     proofAmount: null,
+    selectedPhotos: null,
+    extraPhotos: null,
     deliveredAt: '2026-10-16T21:00:00+00:00',
     readAt: null,
     ...overrides,
@@ -35,6 +37,26 @@ const balanceDue = notification({ type: 'BalanceDue', balance: { amount: 50000, 
 
 /** A proof-of-payment notice for 25 000 colones. */
 const paymentProof = notification({ type: 'PaymentProofSubmitted', proofAmount: { amount: 25000, currency: 'CRC' } });
+
+/** A selection notice: the client chose 12 photos, 2 of them extra. */
+const selection = notification({ type: 'SelectionSubmitted', selectedPhotos: 12, extraPhotos: 2 });
+
+describe('the notice of a selection', () => {
+  it('says how many photos the client chose and how many are extra', () => {
+    expect(describeNotification(selection)).toEqual({
+      title: 'Selección recibida',
+      detail: 'María Pérez Solano eligió 12 fotos (2 extra) (Retrato Familiar).',
+    });
+    expect(describeNotification(notification({ type: 'SelectionSubmitted', selectedPhotos: 1, extraPhotos: 0 })).detail).toContain('eligió 1 foto (Retrato');
+  });
+
+  it('writes the WhatsApp message that thanks the client and says the editing starts', () => {
+    const message = buildWhatsAppMessage(selection);
+    expect(message).toContain('Hola María');
+    expect(message).toContain('recibí tu selección de 12 fotos (2 extra)');
+    expect(message).toContain('Ya empiezo con la edición');
+  });
+});
 
 describe('describeNotification', () => {
   it('words a session reminder with the client, package and date', () => {

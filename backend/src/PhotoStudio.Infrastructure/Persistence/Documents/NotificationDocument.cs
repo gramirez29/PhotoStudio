@@ -106,6 +106,14 @@ public sealed class NotificationDetailsDocument
     [BsonRepresentation(BsonType.Decimal128)]
     public decimal? ProofAmount { get; set; }
 
+    /// <summary>Gets or sets how many photos the client chose, for selection notices.</summary>
+    [BsonElement("selectedPhotos")]
+    public int? SelectedPhotos { get; set; }
+
+    /// <summary>Gets or sets how many of the chosen photos are extra, for selection notices.</summary>
+    [BsonElement("extraPhotos")]
+    public int? ExtraPhotos { get; set; }
+
     /// <summary>Gets or sets the currency of the declared amount.</summary>
     [BsonElement("proofCurrency")]
     public string? ProofCurrency { get; set; }
@@ -185,6 +193,8 @@ public static class NotificationDocumentMappings
         BalanceCurrency = details.Balance?.Currency,
         ProofAmount = details.ProofAmount?.Amount,
         ProofCurrency = details.ProofAmount?.Currency,
+        SelectedPhotos = details.SelectedPhotos,
+        ExtraPhotos = details.ExtraPhotos,
     };
 
     /// <summary>
@@ -198,7 +208,9 @@ public static class NotificationDocumentMappings
         document.PackageName,
         ToOffset(document.SessionStart),
         document.BalanceAmount is { } amount && document.BalanceCurrency is { } currency ? Money.Restore(amount, currency) : null,
-        document.ProofAmount is { } proof && document.ProofCurrency is { } proofCurrency ? Money.Restore(proof, proofCurrency) : null);
+        document.ProofAmount is { } proof && document.ProofCurrency is { } proofCurrency ? Money.Restore(proof, proofCurrency) : null,
+        document.SelectedPhotos,
+        document.ExtraPhotos);
 
     /// <summary>
     /// Converts a stored date, which MongoDB returns as UTC, to a UTC offset instant.

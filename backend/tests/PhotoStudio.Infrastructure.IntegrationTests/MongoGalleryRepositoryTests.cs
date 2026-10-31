@@ -225,6 +225,39 @@ public sealed class MongoGalleryRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The selection the client sent survives being saved and read, with its order and the instant it was sent, and its event goes to
+    /// the outbox in the same transaction as the change.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheSelection_SurvivesASaveAndARead_AndItsEventGoesToTheOutbox()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var gallery = NewGallery(Guid.CreateVersion7(), Now);
+        await repository.TryAddAsync(gallery, TestContext.Current.CancellationToken);
+        var stored = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        var photos = Enumerable.Range(0, 3).Select(_ => Guid.CreateVersion7()).ToList();
+        foreach (var photo in photos)
+        {
+            stored.RegisterProof(photo, $"{photo:N}.jpg", 10, Now);
+        }
+
+        stored.OpenSelection(Now.AddHours(1));
+        await repository.UpdateAsync(stored, TestContext.Current.CancellationToken);
+        var opened = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        opened.SubmitSelection([photos[2], photos[0]], Now.AddHours(2));
+        await repository.UpdateAsync(opened, TestContext.Current.CancellationToken);
+
+        var read = (await repository.GetByIdAsync(gallery.Id, TestContext.Current.CancellationToken))!;
+        read.Status.ShouldBe(GalleryStatus.InEditing);
+        read.SelectedPhotoIds.ShouldBe([photos[2], photos[0]]);
+        read.SelectionSubmittedAt.ShouldBe(Now.AddHours(2));
+        read.ExtraPhotoCount.ShouldBe(0);
+        (await OutboxMessagesOfAsync(gallery.Id)).ShouldBe(2);
+    }
+
+    /// <summary>
     /// If the version is stale the change is refused and its event is not stored: the outbox never announces a change that did not happen.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>

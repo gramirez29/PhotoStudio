@@ -25,10 +25,28 @@ export function describeNotification(notification: NotificationResponse): Notifi
     };
   }
 
+  if (notification.type === 'SelectionSubmitted' && notification.selectedPhotos !== null) {
+    return {
+      title: 'Selección recibida',
+      detail: `${notification.clientName} eligió ${describeChosenPhotos(notification)} (${notification.packageName}).`,
+    };
+  }
+
   return {
     title: 'Sesión próxima',
     detail: `${notification.clientName} · ${notification.packageName} · ${formatDateTime(notification.sessionStart)}`,
   };
+}
+
+/**
+ * Words how many photos a client chose, mentioning the extra ones only when there are.
+ * @param notification A selection notification.
+ * @returns For example "12 fotos (2 extra)" or "1 foto".
+ */
+function describeChosenPhotos(notification: NotificationResponse): string {
+  const selected = notification.selectedPhotos ?? 0;
+  const photos = `${selected} ${selected === 1 ? 'foto' : 'fotos'}`;
+  return notification.extraPhotos !== null && notification.extraPhotos > 0 ? `${photos} (${notification.extraPhotos} extra)` : photos;
 }
 
 /**
@@ -59,6 +77,13 @@ export function buildWhatsAppMessage(notification: NotificationResponse): string
     return (
       `${greeting}, recibí tu comprobante de ${formatMoney(notification.proofAmount)} ` +
       `de tu sesión de ${notification.packageName}. Lo reviso y te confirmo apenas lo verifique. ¡Gracias!`
+    );
+  }
+
+  if (notification.type === 'SelectionSubmitted' && notification.selectedPhotos !== null) {
+    return (
+      `${greeting}, recibí tu selección de ${describeChosenPhotos(notification)} de tu sesión de ${notification.packageName}. ` +
+      'Ya empiezo con la edición y te aviso apenas estén listas. ¡Gracias!'
     );
   }
 

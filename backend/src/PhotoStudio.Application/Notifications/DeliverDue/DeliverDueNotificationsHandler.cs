@@ -2,6 +2,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Notifications.Push;
 using PhotoStudio.Domain.Bookings;
+using PhotoStudio.Domain.Galleries;
 using PhotoStudio.Domain.Notifications;
 
 namespace PhotoStudio.Application.Notifications.DeliverDue;
@@ -13,11 +14,13 @@ namespace PhotoStudio.Application.Notifications.DeliverDue;
 /// notification is dropped. The job is idempotent: a delivered or dropped notification is never due again.
 /// </summary>
 /// <param name="bookings">Booking repository.</param>
+/// <param name="galleries">Gallery repository, for the notices about a selection.</param>
 /// <param name="notifications">Notification repository.</param>
 /// <param name="pusher">Sends the push of the notifications that reached the inbox.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class DeliverDueNotificationsHandler(
     IBookingRepository bookings,
+    IGalleryRepository galleries,
     INotificationRepository notifications,
     NotificationPusher pusher,
     TimeProvider timeProvider) : ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult>
@@ -42,7 +45,10 @@ public sealed class DeliverDueNotificationsHandler(
         foreach (var notification in due)
         {
             var booking = await bookings.GetByIdAsync(notification.BookingId, cancellationToken);
-            var details = DetailsIfRelevant(notification, booking, now);
+            var gallery = notification.Type == NotificationType.SelectionSubmitted && booking is not null
+                ? await galleries.GetByBookingIdAsync(booking.Id, cancellationToken)
+                : null;
+            var details = DetailsIfRelevant(notification, booking, gallery, now);
 
             if (details is null)
             {
@@ -89,9 +95,10 @@ public sealed class DeliverDueNotificationsHandler(
     /// </summary>
     /// <param name="notification">Notification that came due.</param>
     /// <param name="booking">Current state of its booking, or <see langword="null"/> when it no longer exists.</param>
+    /// <param name="gallery">Current state of its gallery; loaded only for the notices about a selection.</param>
     /// <param name="now">Current instant.</param>
     /// <returns>The snapshot to deliver, or <see langword="null"/> when the notification should be dropped.</returns>
-    private static NotificationDetails? DetailsIfRelevant(Notification notification, Booking? booking, DateTimeOffset now)
+    private static NotificationDetails? DetailsIfRelevant(Notification notification, Booking? booking, Gallery? gallery, DateTimeOffset now)
     {
         if (booking is null)
         {
@@ -120,6 +127,12 @@ public sealed class DeliverDueNotificationsHandler(
                 return proof is { Status: PaymentStatus.PendingVerification } && booking.Status is
                     BookingStatus.Tentative or BookingStatus.Confirmed or BookingStatus.Completed
                     ? Snapshot(booking, balance: null, proofAmount: proof.Amount)
+                    : null;
+
+            case NotificationType.SelectionSubmitted:
+                // Relevant while the client's selection stands; if the photographer reopened it, the notice is stale.
+                return gallery is { SelectionSubmittedAt: not null } && Notification.SelectionSubmittedKey(gallery.Id) == notification.DedupKey
+                    ? Snapshot(booking, balance: null) with { SelectedPhotos = gallery.SelectedPhotoIds.Count, ExtraPhotos = gallery.ExtraPhotoCount }
                     : null;
 
             default:

@@ -13,6 +13,8 @@ const reminder = {
   sessionStart: '2026-10-17T21:00:00+00:00',
   balance: null,
   proofAmount: null,
+  selectedPhotos: null,
+  extraPhotos: null,
   deliveredAt: '2026-10-16T21:00:00+00:00',
   readAt: null,
 } as const;
@@ -32,6 +34,15 @@ describe('parseNotification', () => {
     expect(() => parseNotification({ ...reminder, proofAmount: { amount: 'x', currency: 'CRC' } })).toThrow(ResponseShapeError);
   });
 
+  it('parses a selection notice with its counts', () => {
+    expect(parseNotification({ ...reminder, type: 'SelectionSubmitted', selectedPhotos: 12, extraPhotos: 2 })).toMatchObject({
+      type: 'SelectionSubmitted',
+      selectedPhotos: 12,
+      extraPhotos: 2,
+    });
+    expect(() => parseNotification({ ...reminder, selectedPhotos: 'many' })).toThrow(ResponseShapeError);
+  });
+
   it('rejects an unknown type or a mistyped field', () => {
     expect(() => parseNotification({ ...reminder, type: 'Other' })).toThrow('notification.type');
     expect(() => parseNotification({ ...reminder, clientName: 3 })).toThrow(ResponseShapeError);
@@ -40,6 +51,12 @@ describe('parseNotification', () => {
 });
 
 describe('parseNotificationList and parseMarkAllRead', () => {
+  it('leaves out a notice of a type this version does not know, instead of failing the whole inbox', () => {
+    const parsed = parseNotificationList({ items: [reminder, { ...reminder, id: 'n2', type: 'SomethingNew' }], unreadCount: 2, nextCursor: null });
+    expect(parsed.items.map((item) => item.id)).toEqual(['n1']);
+    expect(() => parseNotificationList({ items: [reminder, 7], unreadCount: 1, nextCursor: null })).toThrow(ResponseShapeError);
+  });
+
   it('parses the inbox with its unread counter', () => {
     expect(parseNotificationList({ items: [reminder], unreadCount: 1, nextCursor: '9.abc' })).toEqual({
       items: [reminder],

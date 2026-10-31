@@ -20,6 +20,9 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// </summary>
     private readonly List<GalleryPhoto> _photos;
 
+    /// <summary>The photos the client chose, in the order they were chosen.</summary>
+    private readonly List<Guid> _selectedPhotoIds;
+
     private Gallery(
         Guid id,
         long version,
@@ -33,7 +36,9 @@ public sealed class Gallery : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
         IEnumerable<GalleryPhoto> photos,
-        DateTimeOffset? selectionNotifiedAt)
+        DateTimeOffset? selectionNotifiedAt,
+        IEnumerable<Guid> selectedPhotoIds,
+        DateTimeOffset? selectionSubmittedAt)
         : base(id, version)
     {
         PhotographerId = photographerId;
@@ -47,6 +52,8 @@ public sealed class Gallery : AggregateRoot<Guid>
         UpdatedAt = updatedAt;
         _photos = [.. photos];
         SelectionNotifiedAt = selectionNotifiedAt;
+        _selectedPhotoIds = [.. selectedPhotoIds];
+        SelectionSubmittedAt = selectionSubmittedAt;
     }
 
     /// <summary>
@@ -101,6 +108,26 @@ public sealed class Gallery : AggregateRoot<Guid>
     public DateTimeOffset? SelectionNotifiedAt { get; private set; }
 
     /// <summary>
+    /// Gets the photos the client chose, in the order they were chosen; empty until the client sends the selection.
+    /// </summary>
+    public IReadOnlyList<Guid> SelectedPhotoIds => _selectedPhotoIds;
+
+    /// <summary>
+    /// Gets the instant the client sent the selection (UTC), or <see langword="null"/> while they did not.
+    /// </summary>
+    public DateTimeOffset? SelectionSubmittedAt { get; private set; }
+
+    /// <summary>
+    /// Gets how many of the chosen photos go beyond <see cref="SelectablePhotos"/>.
+    /// </summary>
+    public int ExtraPhotoCount => Math.Max(0, _selectedPhotoIds.Count - SelectablePhotos);
+
+    /// <summary>
+    /// Gets what the extra photos of the selection cost, with the price frozen in the gallery.
+    /// </summary>
+    public Money ExtraPhotoTotal => ExtraPhotoPrice.MultiplyBy(ExtraPhotoCount);
+
+    /// <summary>
     /// Gets the instant the gallery was created (UTC).
     /// </summary>
     public DateTimeOffset CreatedAt { get; }
@@ -152,6 +179,8 @@ public sealed class Gallery : AggregateRoot<Guid>
             now,
             now,
             [],
+            null,
+            [],
             null);
     }
 
@@ -171,6 +200,8 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <param name="updatedAt">Instant the gallery last changed.</param>
     /// <param name="photos">The proofs registered so far.</param>
     /// <param name="selectionNotifiedAt">Instant the client was told the proofs are ready, if they were.</param>
+    /// <param name="selectedPhotoIds">The photos the client chose, if they sent the selection.</param>
+    /// <param name="selectionSubmittedAt">Instant the client sent the selection, if they did.</param>
     /// <returns>The restored gallery.</returns>
     public static Gallery Restore(
         Guid id,
@@ -185,8 +216,10 @@ public sealed class Gallery : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
         IEnumerable<GalleryPhoto>? photos = null,
-        DateTimeOffset? selectionNotifiedAt = null) =>
-        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt);
+        DateTimeOffset? selectionNotifiedAt = null,
+        IEnumerable<Guid>? selectedPhotoIds = null,
+        DateTimeOffset? selectionSubmittedAt = null) =>
+        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt);
 
     /// <summary>
     /// Changes the terms of the gallery: how many photos the package includes (for a custom package the photographer sets it
@@ -301,6 +334,50 @@ public sealed class Gallery : AggregateRoot<Guid>
         Status = GalleryStatus.InSelection;
         UpdatedAt = now;
         Raise(new SelectionOpened(Id, BookingId, PhotographerId, now));
+    }
+
+    /// <summary>
+    /// Sends the selection (G3): the client chooses the photos the photographer will edit. Raises <see cref="SelectionSubmitted"/>,
+    /// which makes the system tell the photographer and, later, charge the photos beyond what the gallery includes. From then on
+    /// the selection is locked: only the photographer can reopen it. Sending the very same selection again does nothing, so a
+    /// double click or a retry is safe.
+    /// </summary>
+    /// <param name="photoIds">Identifiers of the photos the client chose.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the selection was recorded now; <see langword="false"/> when the same one was already recorded.</returns>
+    /// <exception cref="DomainException">When the selection is not open, or the photos are none, repeated, or not of this gallery.</exception>
+    public bool SubmitSelection(IReadOnlyCollection<Guid> photoIds, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(photoIds);
+
+        if (SelectionSubmittedAt is not null && _selectedPhotoIds.ToHashSet().SetEquals(photoIds) && _selectedPhotoIds.Count == photoIds.Count)
+        {
+            return false;
+        }
+
+        if (Status != GalleryStatus.InSelection)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"The selection of a gallery in state {Status} cannot be sent.");
+        }
+
+        if (photoIds.Count == 0)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidSelection, "Choose at least one photo.");
+        }
+
+        var known = _photos.Select(photo => photo.Id).ToHashSet();
+        if (photoIds.Distinct().Count() != photoIds.Count || photoIds.Any(photoId => !known.Contains(photoId)))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidSelection, "The selection has a photo that is repeated or is not in the gallery.");
+        }
+
+        _selectedPhotoIds.Clear();
+        _selectedPhotoIds.AddRange(photoIds);
+        SelectionSubmittedAt = now;
+        Status = GalleryStatus.InEditing;
+        UpdatedAt = now;
+        Raise(new SelectionSubmitted(Id, BookingId, PhotographerId, _selectedPhotoIds.Count, ExtraPhotoCount, ExtraPhotoTotal.Amount, ExtraPhotoTotal.Currency, now));
+        return true;
     }
 
     /// <summary>
