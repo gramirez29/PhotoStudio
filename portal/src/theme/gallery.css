@@ -1,0 +1,143 @@
+/* The gallery of the client, at the same link as the booking: the grid of proofs, the counter and the large view. Colors come only
+   from the tokens; every pair used here (text on the page, text on a card, accent) is one that tokens.test.ts already checks. */
+.gallery__counter {
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.gallery__counter p {
+  margin: 0;
+}
+
+.gallery__grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gallery-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  /* A proof is not text to copy or an image to drag away. This is a weak layer; the real protection is the quality and the mark. */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.gallery-tile__photo {
+  background: var(--color-bg);
+  border: 4px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+
+.gallery-tile__photo:disabled {
+  cursor: default;
+}
+
+.gallery-tile--chosen .gallery-tile__photo {
+  border-color: var(--color-accent);
+}
+
+.gallery-tile__photo img {
+  aspect-ratio: 1;
+  display: block;
+  object-fit: cover;
+  /* The tap goes to the button, not to the image, so the browser offers no menu to save it. */
+  pointer-events: none;
+  width: 100%;
+}
+
+.gallery-tile__mark {
+  align-items: center;
+  background: var(--color-accent);
+  border-radius: 50%;
+  color: var(--color-on-accent);
+  display: flex;
+  font-size: 1.1rem;
+  font-weight: 700;
+  height: 2rem;
+  justify-content: center;
+  position: absolute;
+  right: var(--space-xs);
+  top: var(--space-xs);
+  width: 2rem;
+}
+
+.gallery-tile__zoom {
+  background: transparent;
+  border: 0;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.95rem;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.gallery__bar {
+  align-items: center;
+  background: var(--color-surface);
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  position: sticky;
+}
+
+.gallery__bar .button {
+  font-size: 1rem;
+  min-height: 48px;
+}
+
+.gallery-lightbox {
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  padding: var(--space-md);
+  position: fixed;
+  z-index: 10;
+}
+
+.gallery-lightbox__frame {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  min-height: 0;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.gallery-lightbox__frame img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.gallery-lightbox__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+  padding-top: var(--space-md);
+}
+
+.gallery-lightbox__bar .button {
+  font-size: 1rem;
+  min-height: 48px;
+}
+
+@media (min-width: 40rem) {
+  .gallery__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
