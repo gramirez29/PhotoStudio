@@ -195,6 +195,59 @@ describe('the page of a gallery and its proofs', () => {
     expect(screen.getByText('El cliente está eligiendo')).toBeInTheDocument();
   });
 
+  it('shows what the client chose, with the names of the files, and copies them one per line', async () => {
+    answer({
+      'GET /api/web/auth/session': [jsonResponse(200, SESSION)],
+      [`GET ${GALLERY_PATH}`]: [
+        jsonResponse(200, gallery({ status: 'InEditing', allowedActions: [], selectedPhotoCount: 2, extraPhotoCount: 1, selectionSubmittedAt: '2026-10-30T12:00:00+00:00' })),
+      ],
+      [`GET ${GALLERY_PATH}/proofs`]: [jsonResponse(200, { items: [PROOF] })],
+      [`GET ${GALLERY_PATH}/selection`]: [
+        jsonResponse(200, {
+          submittedAt: '2026-10-30T12:00:00+00:00',
+          extraPhotos: 1,
+          extraTotal: { amount: 3000, currency: 'CRC' },
+          photos: [
+            { id: 'p-3', name: 'IMG_0003.jpg' },
+            { id: 'p-1', name: 'IMG_0001.jpg' },
+          ],
+        }),
+      ],
+    });
+    const user = renderPage();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText');
+
+    expect(await screen.findByRole('heading', { name: 'Selección del cliente' })).toBeInTheDocument();
+    expect(screen.getByText('2 fotos elegidas')).toBeInTheDocument();
+    expect(screen.getByText(/1 es adicional: .*3.*000/)).toBeInTheDocument();
+    const names = within(screen.getByRole('heading', { name: 'Selección del cliente' }).closest('section') as HTMLElement).getAllByRole('listitem');
+    expect(names.map((item) => item.textContent)).toEqual(['IMG_0003.jpg', 'IMG_0001.jpg']);
+    expect(screen.queryByText(/Las pruebas ya están publicadas/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Elegir fotos')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Copiar los nombres de los archivos' }));
+
+    expect(writeText).toHaveBeenCalledWith(['IMG_0003.jpg', 'IMG_0001.jpg'].join('\n'));
+    expect(await screen.findByText(/Pégalos en la búsqueda/)).toBeInTheDocument();
+  });
+
+  it('says so when the browser does not let the names be copied', async () => {
+    answer({
+      'GET /api/web/auth/session': [jsonResponse(200, SESSION)],
+      [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ status: 'InEditing', allowedActions: [], selectedPhotoCount: 1, selectionSubmittedAt: '2026-10-30T12:00:00+00:00' }))],
+      [`GET ${GALLERY_PATH}/proofs`]: [jsonResponse(200, { items: [] })],
+      [`GET ${GALLERY_PATH}/selection`]: [
+        jsonResponse(200, { submittedAt: '2026-10-30T12:00:00+00:00', extraPhotos: 0, extraTotal: { amount: 0, currency: 'CRC' }, photos: [{ id: 'p-1', name: 'IMG_0001.jpg' }] }),
+      ],
+    });
+    const user = renderPage();
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'));
+
+    await user.click(await screen.findByRole('button', { name: 'Copiar los nombres de los archivos' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Tu navegador no permitió copiar');
+  });
+
   it('does not offer to publish without proofs', async () => {
     answer({
       'GET /api/web/auth/session': [jsonResponse(200, SESSION)],

@@ -7,6 +7,7 @@ import { ProofGrid } from './ProofGrid';
 import { ProofPicker } from './ProofPicker';
 import { ProofQueue } from './ProofQueue';
 import { ProofSamplePreview } from './ProofSamplePreview';
+import { StudioSelection } from './StudioSelection';
 
 /**
  * The proofs of a gallery: what is already up, the way to add more (choose, see a sample, upload) while the API allows it, and the
@@ -22,6 +23,7 @@ export function StudioProofs({ gallery }: StudioProofsProps): ReactElement {
   const busy = upload.running || upload.items.length > 0;
   const room = gallery.maxPhotos - gallery.photoCount - upload.items.length;
   const published = gallery.status !== 'Pending';
+  const selectionSent = gallery.selectionSubmittedAt !== null;
 
   return (
     <section className="card" aria-labelledby="proofs-title">
@@ -35,11 +37,12 @@ export function StudioProofs({ gallery }: StudioProofsProps): ReactElement {
           {gallery.photoCount} de {gallery.maxPhotos} pruebas
         </strong>
       </p>
-      {published && (
+      {published && !selectionSent && (
         <p role="status">
           Las pruebas ya están publicadas. Si la reserva tiene correo, el cliente ya recibió el aviso; si no, avísale tú por WhatsApp.
         </p>
       )}
+      {selectionSent && <StudioSelection gallery={gallery} />}
       {canUpload && upload.pending.length === 0 && <ProofPicker room={room} disabled={upload.running} onChoose={upload.choose} />}
       {upload.pending.length > 0 && <ProofSamplePreview key={fileKey(upload.pending[0] as File)} files={upload.pending} onConfirm={upload.confirm} onCancel={upload.cancel} />}
       {upload.notice !== null && <p className="field__hint">{upload.notice}</p>}

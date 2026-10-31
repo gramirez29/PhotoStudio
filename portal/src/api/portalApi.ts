@@ -1,6 +1,19 @@
 import { BOOKING_STATUSES, PAYMENT_STATUSES } from '../constants/booking';
 import type { HttpClient } from '../types/api/http';
-import type { Money, PortalBooking, PortalCodeSent, PortalContract, PortalExtra, PortalPayment, PortalSession } from '../types/api/portal';
+import { GALLERY_STATUSES } from '../constants/gallery';
+import type {
+  Money,
+  PortalBooking,
+  PortalCodeSent,
+  PortalContract,
+  PortalExtra,
+  PortalGallery,
+  PortalGallerySummary,
+  PortalPayment,
+  PortalProof,
+  PortalSelection,
+  PortalSession,
+} from '../types/api/portal';
 import type { PortalApi } from '../types/api/portalApi';
 import { expectRecord, readArray, readBoolean, readLiteral, readNullableString, readNumber, readString } from './guards';
 
@@ -114,6 +127,59 @@ export function parsePortalContract(value: unknown): PortalContract {
 }
 
 /**
+ * Parses what the link says about the gallery.
+ * @param value Unknown response body.
+ * @returns The typed summary.
+ */
+export function parseGallerySummary(value: unknown): PortalGallerySummary {
+  const path = 'gallerySummary';
+  return { status: readLiteral(expectRecord(value, path), 'status', GALLERY_STATUSES, path) };
+}
+
+/**
+ * Parses a selection that was sent.
+ * @param value Unknown value from the response.
+ * @param path Location of the value, for error messages.
+ * @returns The typed selection.
+ */
+function parseSelection(value: unknown, path: string): PortalSelection {
+  const record = expectRecord(value, path);
+  return {
+    photoIds: readArray(record, 'photoIds', path).map((id, index) => {
+      if (typeof id !== 'string') {
+        throw new Error(`${path}.photoIds[${index}] should be a string`);
+      }
+
+      return id;
+    }),
+    submittedAt: readString(record, 'submittedAt', path),
+    extraPhotos: readNumber(record, 'extraPhotos', path),
+    extraTotal: parseMoney(record.extraTotal, `${path}.extraTotal`),
+  };
+}
+
+/**
+ * Parses the gallery of a booking.
+ * @param value Unknown response body.
+ * @returns The typed gallery.
+ */
+export function parsePortalGallery(value: unknown): PortalGallery {
+  const path = 'gallery';
+  const record = expectRecord(value, path);
+  return {
+    status: readLiteral(record, 'status', GALLERY_STATUSES, path),
+    selectablePhotos: readNumber(record, 'selectablePhotos', path),
+    extraPhotoPrice: parseMoney(record.extraPhotoPrice, `${path}.extraPhotoPrice`),
+    photos: readArray(record, 'photos', path).map((item, index): PortalProof => {
+      const itemPath = `${path}.photos[${index}]`;
+      const photo = expectRecord(item, itemPath);
+      return { id: readString(photo, 'id', itemPath), url: readString(photo, 'url', itemPath), expiresAt: readString(photo, 'expiresAt', itemPath) };
+    }),
+    selection: record.selection === null || record.selection === undefined ? null : parseSelection(record.selection, `${path}.selection`),
+  };
+}
+
+/**
  * Creates the portal API on top of an HTTP client.
  * @param client HTTP client.
  * @returns The portal API.
@@ -136,5 +202,9 @@ export function createPortalApi(client: HttpClient): PortalApi {
     getContract: (token, accessToken, signal) => client.get(pathOf(token, '/contract'), parsePortalContract, { accessToken, signal }),
     signContract: (token, accessToken, request, signal) =>
       client.post(pathOf(token, '/contract'), request, parsePortalBooking, { accessToken, signal }),
+    getGallerySummary: (token, signal) => client.get(pathOf(token, '/gallery/summary'), parseGallerySummary, { signal }),
+    getGallery: (token, accessToken, signal) => client.get(pathOf(token, '/gallery'), parsePortalGallery, { accessToken, signal }),
+    submitSelection: (token, accessToken, photoIds, signal) =>
+      client.post(pathOf(token, '/gallery/selection'), { photoIds }, parsePortalGallery, { accessToken, signal }),
   };
 }

@@ -1,5 +1,5 @@
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from './proofs';
-import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioUser } from './studio';
+import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from './studio';
 
 /** Endpoints of the web area of the photographer. */
 export interface StudioApi {
@@ -54,6 +54,14 @@ export interface StudioApi {
    * @returns The gallery; the request fails with a 404 when it does not exist or is another photographer's.
    */
   getGallery(galleryId: string, signal?: AbortSignal): Promise<StudioGallery>;
+
+  /**
+   * Loads what the client chose, with the names of the original files.
+   * @param galleryId Gallery identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The selection; empty while the client has not sent it.
+   */
+  getSelection(galleryId: string, signal?: AbortSignal): Promise<StudioSelection>;
 
   /**
    * Loads the proofs of a gallery, each with a signed address that works for a few minutes.
