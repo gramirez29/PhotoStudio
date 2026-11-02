@@ -60,6 +60,9 @@ export function StudioGalleries({ user }: StudioGalleriesProps): ReactElement {
           <p className="muted">Hola, {user.name}.</p>
         </div>
         <div className="studio-bar__actions">
+          <a className="button button--secondary" href="/studio/archive">
+            Galerías por archivar
+          </a>
           <button type="button" className="button button--secondary" disabled={logout.isPending} onClick={() => logout.mutate(false)}>
             Salir
           </button>

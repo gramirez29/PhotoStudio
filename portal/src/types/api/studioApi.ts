@@ -65,6 +65,13 @@ export interface StudioApi {
   getSelection(galleryId: string, signal?: AbortSignal): Promise<StudioSelection>;
 
   /**
+   * Lists the galleries whose space can be freed: the delivered ones, the one delivered longest ago first.
+   * @param signal Optional signal to cancel the request.
+   * @returns The galleries.
+   */
+  listArchivable(signal?: AbortSignal): Promise<readonly StudioGallery[]>;
+
+  /**
    * Loads the proofs of a gallery, each with a signed address that works for a few minutes.
    * @param galleryId Gallery identifier.
    * @param signal Optional signal to cancel the request.

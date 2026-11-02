@@ -255,6 +255,24 @@ public sealed class GalleryProofsApiTests(ApiFixture fixture)
     }
 
     /// <summary>
+    /// The web area can list the galleries whose space can be freed (none yet: the one of the test is not delivered), and nobody
+    /// without a session can.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheArchivableList_IsForTheSignedInBrowserOnly()
+    {
+        Assume();
+        var (browser, _, _) = await StartAsync();
+
+        var listed = await browser.GetAsync("/api/web/galleries/archivable", TestContext.Current.CancellationToken);
+
+        listed.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await listed.ReadJsonAsync()).GetProperty("items").GetArrayLength().ShouldBe(0);
+        (await fixture.CreateClient().GetAsync("/api/web/galleries/archivable", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
     /// A user, a booking of a client with an email, a gallery of that booking, and the browser of the user signed in.
     /// </summary>
     /// <param name="photos">Proofs the gallery already has.</param>

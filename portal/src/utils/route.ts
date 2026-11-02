@@ -18,7 +18,7 @@ export function parseTokenFromPath(pathname: string): string | null {
 
 /**
  * Decides which page an address shows: the main page at the root, the web area of the photographer at `/studio` and one of its
- * galleries at `/studio/galleries/{id}`, a booking
+ * galleries at `/studio/galleries/{id}`, the galleries to archive at `/studio/archive`, a booking
  * when the path is a link, or "not found".
  * @param pathname Path of the page.
  * @returns The route.
@@ -30,6 +30,10 @@ export function resolveRoute(pathname: string): Route {
 
   if (pathname === '/studio' || pathname === '/studio/') {
     return { kind: 'studio' };
+  }
+
+  if (pathname === '/studio/archive' || pathname === '/studio/archive/') {
+    return { kind: 'studioArchive' };
   }
 
   const galleryId = GALLERY_PATTERN.exec(pathname)?.[1];
