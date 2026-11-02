@@ -11,8 +11,29 @@ namespace PhotoStudio.Domain.Galleries;
 /// <param name="OriginalName">Name of the file the photographer chose, as a label.</param>
 /// <param name="ProofBytes">Size of the stored proof in bytes.</param>
 /// <param name="UploadedAt">Instant the proof was registered (UTC).</param>
-public sealed record GalleryPhoto(Guid Id, string OriginalName, long ProofBytes, DateTimeOffset UploadedAt)
+/// <param name="FinalBytes">Size of the final (edited) photo in bytes, or <see langword="null"/> while the photographer has not uploaded it.</param>
+/// <param name="FinalUploadedAt">Instant the final photo was registered (UTC), or <see langword="null"/> while it was not.</param>
+public sealed record GalleryPhoto(Guid Id, string OriginalName, long ProofBytes, DateTimeOffset UploadedAt, long? FinalBytes = null, DateTimeOffset? FinalUploadedAt = null)
 {
+    /// <summary>The most a final photo can weigh.</summary>
+    public const long MaxFinalBytes = 52_428_800;
+
+    /// <summary>Gets a value indicating whether the final photo was uploaded.</summary>
+    public bool HasFinal => FinalBytes is not null;
+
+    /// <summary>
+    /// Checks the size of a final photo before it is accepted.
+    /// </summary>
+    /// <param name="finalBytes">Size of the final photo in bytes.</param>
+    /// <exception cref="DomainException">When the size is not between 1 byte and <see cref="MaxFinalBytes"/>.</exception>
+    public static void EnsureValidFinal(long finalBytes)
+    {
+        if (finalBytes is < 1 or > MaxFinalBytes)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, $"A final photo must weigh between 1 byte and {MaxFinalBytes} bytes.");
+        }
+    }
+
     /// <summary>The most a proof can weigh: they are deliberately small and of low quality.</summary>
     public const long MaxProofBytes = 1_048_576;
 

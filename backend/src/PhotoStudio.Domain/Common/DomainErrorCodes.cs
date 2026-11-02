@@ -101,6 +101,9 @@ public static class DomainErrorCodes
     /// <summary>The photos a client picked are not valid: none, a repeated one, or one the gallery does not have.</summary>
     public const string GalleryInvalidSelection = "gallery.invalid_selection";
 
+    /// <summary>The final photos cannot be published: a photo of the package still has no final.</summary>
+    public const string GalleryFinalsIncomplete = "gallery.finals_incomplete";
+
     /// <summary>The selection holds photos beyond the package, and the client did not accept that the studio contacts them to agree on the payment.</summary>
     public const string GalleryExtrasNotAccepted = "gallery.extras_not_accepted";
 

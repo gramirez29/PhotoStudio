@@ -13,6 +13,40 @@ internal static class GalleryEmails
     private static readonly CultureInfo CostaRica = CultureInfo.GetCultureInfo("es-CR");
 
     /// <summary>
+    /// Builds the email that tells the client the final photos are ready to download. Like the other one it carries no link.
+    /// </summary>
+    /// <param name="to">The client's email.</param>
+    /// <param name="gallery">The gallery that was delivered.</param>
+    /// <param name="logoUrl">Public address of the logo, or <see langword="null"/>.</param>
+    /// <returns>The email.</returns>
+    public static EmailMessage Delivered(string to, Gallery gallery, string? logoUrl)
+    {
+        ArgumentNullException.ThrowIfNull(gallery);
+
+        var firstName = gallery.Snapshot.ClientName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? gallery.Snapshot.ClientName;
+        var steps = new List<string>
+        {
+            "Abre el enlace de tu reserva, el mismo que te enviamos por WhatsApp.",
+            "Entra a «Ver galería» y confirma con el código que te llegará a este correo.",
+            "Descarga tus fotos. Cada enlace de descarga dura pocos minutos; si vence, solo vuelve a abrir la galería.",
+        };
+
+        var content = new EmailContent(
+            "Tus fotos ya están listas para descargar.",
+            "Tus fotos ya están listas",
+            [$"Hola {firstName}, ya puedes descargar las fotografías de tu sesión de {gallery.Snapshot.PackageName}. Fue un gusto trabajar contigo."],
+            steps,
+            "Guarda tus fotos en un lugar seguro: la galería no se conserva para siempre.",
+            "Si no encuentras tu enlace, escríbele a tu fotógrafo y te lo enviamos de nuevo.");
+
+        return new EmailMessage(
+            to,
+            "Tus fotos ya están listas",
+            BrandedEmail.RenderText(StudioBrand.Name, content),
+            BrandedEmail.RenderHtml(StudioBrand.Name, logoUrl, content));
+    }
+
+    /// <summary>
     /// Builds the email that tells the client the proofs are ready. It carries no link on purpose: the link of the booking reaches the
     /// client by WhatsApp and the codes to act on it by email, and putting both in one mailbox would let whoever reads it do everything.
     /// </summary>

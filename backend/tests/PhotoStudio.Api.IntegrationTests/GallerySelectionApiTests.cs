@@ -69,7 +69,7 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         gallery.GetProperty("status").GetString().ShouldBe("InEditing");
         gallery.GetProperty("selectedPhotoCount").GetInt32().ShouldBe(3);
         gallery.GetProperty("extraPhotoCount").GetInt32().ShouldBe(1);
-        gallery.GetProperty("allowedActions").GetArrayLength().ShouldBe(0);
+        gallery.GetProperty("allowedActions").EnumerateArray().Select(action => action.GetString()).ShouldBe(["UploadFinals"]);
 
         var notice = await WaitForNoticeAsync(scenario);
         notice.GetProperty("selectedPhotos").GetInt32().ShouldBe(3);
@@ -134,6 +134,100 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         var stranger = await SignInAsync(theirs.User);
         (await stranger.GetAsync($"/api/web/galleries/{mine.GalleryId}/selection", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await fixture.CreateClient().GetAsync($"/api/web/galleries/{mine.GalleryId}/selection", TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
+    /// The finals, end to end: the photographer sees which chosen photos are package and which are extra, uploads the finals straight to
+    /// the storage, cannot publish until the package is complete, publishes, and the client downloads nothing while money is owed; once
+    /// the payment clears the balance the gallery is delivered by itself and the client downloads the package, the extras only after the
+    /// photographer releases them.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheFinals_AreDeliveredWithAZeroBalance_AndTheExtrasOnlyWhenReleased()
+    {
+        Assume();
+        var scenario = await StartAsync(GalleryStatus.InSelection, photos: 4, included: 2);
+        var session = await scenario.OpenPortalSessionAsync(fixture);
+        var ids = (await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync())
+            .GetProperty("photos").EnumerateArray().Select(photo => photo.GetProperty("id").GetGuid()).ToList();
+        var chosen = new[] { ids[2], ids[0], ids[3] };
+        (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = chosen, acceptExtras = true })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var browser = await SignInAsync(scenario.User);
+        var selection = await (await browser.GetAsync($"/api/web/galleries/{scenario.GalleryId}/selection", TestContext.Current.CancellationToken)).ReadJsonAsync();
+        selection.GetProperty("photos").EnumerateArray().Select(photo => photo.GetProperty("isExtra").GetBoolean()).ShouldBe([false, false, true]);
+
+        var bytes = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, 0x4A, 0x46, 0x49, 0x46, 0, 1 };
+        var path = $"/api/web/galleries/{scenario.GalleryId}";
+        await UploadFinalsAsync(browser, path, [chosen[0]], bytes);
+        var early = await PostAsync(browser, $"{path}/finals/publish", new { });
+        early.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await early.ReadCodeAsync()).ShouldBe("gallery.finals_incomplete");
+
+        await UploadFinalsAsync(browser, path, [chosen[1], chosen[2]], bytes);
+        (await (await browser.GetAsync($"{path}/selection", TestContext.Current.CancellationToken)).ReadJsonAsync())
+            .GetProperty("photos").EnumerateArray().Select(photo => photo.GetProperty("finalBytes").GetInt64()).ShouldBe([bytes.Length, bytes.Length, bytes.Length]);
+        var published = await PostAsync(browser, $"{path}/finals/publish", new { });
+        published.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await published.ReadJsonAsync()).GetProperty("status").GetString().ShouldBe("Ready");
+
+        await RunMaintenancePassAsync();
+        var owed = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync();
+        owed.GetProperty("status").GetString().ShouldBe("Ready");
+        owed.GetProperty("finals").GetArrayLength().ShouldBe(0);
+
+        (await scenario.Client.SendAsync(
+            HttpMethod.Post, $"/api/bookings/{scenario.BookingId}/payments/in-person", scenario.Photographer.AccessToken,
+            new { amount = 100000, currency = "CRC", method = "Cash", idempotencyKey = $"all-{scenario.BookingId:N}" })).EnsureSuccessStatusCode();
+        System.Text.Json.JsonElement delivered = default;
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            await RunMaintenancePassAsync();
+            delivered = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync();
+            if (delivered.GetProperty("status").GetString() == "Delivered")
+            {
+                break;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+        }
+
+        delivered.GetProperty("status").GetString().ShouldBe("Delivered");
+        var finals = delivered.GetProperty("finals").EnumerateArray().ToList();
+        finals.Select(final => final.GetProperty("fileName").GetString()).ShouldBe(["IMG_0002.jpg", "IMG_0000.jpg"]);
+        finals.ShouldAllBe(final => !final.GetProperty("isExtra").GetBoolean());
+        var download = await new HttpClient().GetAsync(finals[0].GetProperty("url").GetString(), TestContext.Current.CancellationToken);
+        (await download.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)).ShouldBe(bytes);
+
+        (await PostAsync(browser, $"{path}/extras/release", new { })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var released = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync();
+        released.GetProperty("extrasReleased").GetBoolean().ShouldBeTrue();
+        released.GetProperty("finals").EnumerateArray().Select(final => final.GetProperty("isExtra").GetBoolean()).ShouldBe([false, false, true]);
+    }
+
+    /// <summary>
+    /// Asks for places to upload the finals of some photos, uploads the bytes to them and registers them.
+    /// </summary>
+    /// <param name="browser">The browser that is signed in.</param>
+    /// <param name="galleryPath">Path of the gallery in the web area.</param>
+    /// <param name="photoIds">The photos the finals belong to.</param>
+    /// <param name="bytes">The content of every final.</param>
+    /// <returns>A task that completes when they were registered.</returns>
+    private static async Task UploadFinalsAsync(HttpClient browser, string galleryPath, IReadOnlyList<Guid> photoIds, byte[] bytes)
+    {
+        var slots = await PostAsync(browser, $"{galleryPath}/finals/uploads", new { files = photoIds.Select(id => new { photoId = id, bytes = bytes.Length }) });
+        slots.StatusCode.ShouldBe(HttpStatusCode.OK);
+        foreach (var slot in (await slots.ReadJsonAsync()).GetProperty("slots").EnumerateArray())
+        {
+            using var put = new HttpRequestMessage(HttpMethod.Put, slot.GetProperty("url").GetString()) { Content = new ByteArrayContent(bytes) };
+            put.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+            (await new HttpClient().SendAsync(put, TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var registered = await PostAsync(browser, $"{galleryPath}/finals", new { photoIds });
+        registered.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await registered.ReadJsonAsync()).GetProperty("rejected").GetArrayLength().ShouldBe(0);
     }
 
     /// <summary>

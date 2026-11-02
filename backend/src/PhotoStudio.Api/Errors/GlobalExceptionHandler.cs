@@ -113,6 +113,7 @@ public sealed partial class GlobalExceptionHandler(
         DomainErrorCodes.InvalidPaymentStatus or
         DomainErrorCodes.GalleryInvalidState or
         DomainErrorCodes.GalleryNoPhotos or
+        DomainErrorCodes.GalleryFinalsIncomplete or
         DomainErrorCodes.GalleryFull;
 
     /// <summary>
