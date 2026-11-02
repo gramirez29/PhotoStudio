@@ -13,6 +13,23 @@ const STATUS_VIEWS: Readonly<Record<GalleryStatus, GalleryStatusView>> = {
 };
 
 /**
+ * Says how long ago a gallery was delivered, for the list of galleries whose space can be freed, for example
+ * "Entregada el 17/10/2026 · hace 12 días". Without a delivery date it says nothing about the time.
+ * @param gallery The gallery.
+ * @param now Current instant in milliseconds since the epoch.
+ * @returns The line.
+ */
+export function describeDeliveryAge(gallery: GalleryResponse, now: number): string {
+  if (gallery.deliveredAt === null) {
+    return 'Entregada';
+  }
+
+  const days = Math.max(0, Math.floor((now - Date.parse(gallery.deliveredAt)) / 86_400_000));
+  const ago = days === 0 ? 'hoy' : days === 1 ? 'hace 1 día' : `hace ${days} días`;
+  return `Entregada el ${formatShortDate(gallery.deliveredAt)} · ${ago}`;
+}
+
+/**
  * Says where a gallery is, in words and with a color.
  * @param status State of the gallery.
  * @returns What to show.

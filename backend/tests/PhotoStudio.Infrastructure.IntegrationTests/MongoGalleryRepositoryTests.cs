@@ -321,6 +321,41 @@ public sealed class MongoGalleryRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The list of galleries to free has only the delivered ones of the photographer, the one delivered longest ago first.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListDeliveredByPhotographerAsync_ReturnsTheirDeliveredOnes_OldestDeliveryFirst()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var mine = Guid.CreateVersion7();
+        var recent = Delivered(mine, Now.AddDays(-2));
+        var old = Delivered(mine, Now.AddDays(-50));
+        var pending = NewGallery(mine, Now);
+        var theirs = Delivered(Guid.CreateVersion7(), Now.AddDays(-80));
+        foreach (var gallery in new[] { recent, old, pending, theirs })
+        {
+            (await repository.TryAddAsync(gallery, TestContext.Current.CancellationToken)).ShouldBeTrue();
+        }
+
+        var list = await repository.ListDeliveredByPhotographerAsync(mine, 100, TestContext.Current.CancellationToken);
+
+        list.Select(gallery => gallery.Id).ShouldBe([old.Id, recent.Id]);
+        (await repository.ListDeliveredBeforeAsync(Now.AddDays(-10), 100, TestContext.Current.CancellationToken)).Select(gallery => gallery.Id).ShouldContain(old.Id);
+    }
+
+    /// <summary>
+    /// Builds a delivered gallery.
+    /// </summary>
+    /// <param name="photographer">The photographer.</param>
+    /// <param name="deliveredAt">Instant it was delivered.</param>
+    /// <returns>The gallery.</returns>
+    private static Gallery Delivered(Guid photographer, DateTimeOffset deliveredAt) => Gallery.Restore(
+        Guid.CreateVersion7(), 0, photographer, Guid.CreateVersion7(), new GallerySnapshot("María Pérez", "Retrato Familiar", deliveredAt.AddDays(-9)),
+        GalleryStatus.Delivered, 30, 0, Money.Create(3_000m, "CRC"), deliveredAt.AddDays(-8), deliveredAt, [], null, [], null, deliveredAt.AddHours(-1), deliveredAt);
+
+    /// <summary>
     /// Builds a gallery with 30 included photos and ₡3 000 per extra photo.
     /// </summary>
     /// <param name="photographer">The photographer.</param>

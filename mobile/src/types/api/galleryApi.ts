@@ -108,6 +108,13 @@ export interface GalleryApi {
   release(galleryId: string): Promise<GalleryResponse>;
 
   /**
+   * Lists the galleries whose space can be freed: the delivered ones, the one delivered longest ago first.
+   * @param signal Optional signal to cancel the request.
+   * @returns The galleries.
+   */
+  listArchivable(signal?: AbortSignal): Promise<readonly GalleryResponse[]>;
+
+  /**
    * Asks for the address to download one final. It is not counted as a download of the client.
    * @param galleryId Gallery identifier.
    * @param photoId Photo identifier.

@@ -113,6 +113,18 @@ public sealed class MongoGalleryRepository(IMongoDatabase database) : IGalleryRe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Gallery>> ListDeliveredByPhotographerAsync(Guid photographerId, int limit, CancellationToken cancellationToken)
+    {
+        var status = GalleryStatus.Delivered.ToString();
+        var documents = await _collection
+            .Find(gallery => gallery.PhotographerId == photographerId && gallery.Status == status)
+            .SortBy(gallery => gallery.DeliveredAt)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+        return [.. documents.Select(document => document.ToDomain())];
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Gallery>> ListDeliveredBeforeAsync(DateTimeOffset deliveredBefore, int limit, CancellationToken cancellationToken)
     {
         var status = GalleryStatus.Delivered.ToString();

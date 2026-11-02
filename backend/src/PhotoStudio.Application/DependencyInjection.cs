@@ -158,6 +158,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPortalFinalViewQuery, PortalFinalViewResponse>, GetPortalFinalViewHandler>();
         services.AddScoped<GalleryDelivery>();
         services.AddScoped<GalleryArchiver>();
+        services.AddScoped<IQueryHandler<ListArchivableGalleriesQuery, GalleryListResponse>, ListArchivableGalleriesHandler>();
         services.AddScoped<ICommandHandler<ReleaseGalleryCommand, GalleryResponse>, ReleaseGalleryHandler>();
         services.AddScoped<ICommandHandler<ArchiveExpiredGalleriesCommand, ArchiveExpiredGalleriesResult>, ArchiveExpiredGalleriesHandler>();
         services.AddScoped<IDomainEventHandler<FinalPhotosReady>, FinalPhotosReadyDeliveryHandler>();

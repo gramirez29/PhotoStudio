@@ -7,7 +7,7 @@ import { useBottomInset } from '../hooks/useBottomInset';
 import { useMenuCounters } from '../hooks/useMenuCounters';
 import { useTopInset } from '../hooks/useTopInset';
 import { useMenuStore } from '../menu/menuStore';
-import { openNotifications, openRefunds, openSettings } from '../navigation/appNavigation';
+import { openArchivableGalleries, openNotifications, openRefunds, openSettings } from '../navigation/appNavigation';
 import { confirmSignOut } from '../session/confirmSignOut';
 import { useSessionStore } from '../session/sessionStore';
 import { FONT_FAMILIES } from '../theme/fonts';
@@ -50,6 +50,7 @@ const ICONS = {
   home: menuIcon('home'),
   notices: menuIcon('notifications'),
   refunds: menuIcon('attach-money'),
+  archive: menuIcon('inventory-2'),
   settings: menuIcon('settings'),
   signOut: menuIcon('logout'),
 } as const;
@@ -170,6 +171,7 @@ export function AppMenu(): ReactElement | null {
               right={counter(pendingRefunds, palette.error, palette.onError)}
               onPress={choose(openRefunds)}
             />
+            <Drawer.Item label="Galerías por archivar" icon={ICONS.archive} onPress={choose(openArchivableGalleries)} />
             <Drawer.Item
               label="Ajustes"
               icon={ICONS.settings}

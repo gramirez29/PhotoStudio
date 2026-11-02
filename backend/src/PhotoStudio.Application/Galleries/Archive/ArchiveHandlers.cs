@@ -16,6 +16,12 @@ namespace PhotoStudio.Application.Galleries.Archive;
 public sealed record ReleaseGalleryCommand(Guid PhotographerId, Guid GalleryId);
 
 /// <summary>
+/// Query for the galleries whose space the photographer can free: the delivered ones.
+/// </summary>
+/// <param name="PhotographerId">Authenticated photographer.</param>
+public sealed record ListArchivableGalleriesQuery(Guid PhotographerId);
+
+/// <summary>
 /// Command to archive the delivered galleries whose retention ended.
 /// </summary>
 /// <param name="BatchSize">Most galleries to look at.</param>
@@ -65,6 +71,33 @@ public sealed class GalleryArchiver(IGalleryRepository galleries, IObjectStorage
 
         await storage.DeleteManyAsync(keys, cancellationToken);
         await galleries.UpdateAsync(gallery, cancellationToken);
+    }
+}
+
+/// <summary>
+/// Lists the delivered galleries of the photographer, the one delivered longest ago first, so they can free the space of the ones
+/// they already have on their computer. The list is not paged: a photographer has few delivered galleries at a time, and it is capped.
+/// </summary>
+/// <param name="galleries">Gallery repository.</param>
+public sealed class ListArchivableGalleriesHandler(IGalleryRepository galleries) : IQueryHandler<ListArchivableGalleriesQuery, GalleryListResponse>
+{
+    /// <summary>
+    /// Most galleries the list returns.
+    /// </summary>
+    public const int MaxItems = 100;
+
+    /// <summary>
+    /// Lists the galleries.
+    /// </summary>
+    /// <param name="query">The photographer.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The galleries; there is never a next page.</returns>
+    public async Task<GalleryListResponse> HandleAsync(ListArchivableGalleriesQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var found = await galleries.ListDeliveredByPhotographerAsync(query.PhotographerId, MaxItems, cancellationToken);
+        return new GalleryListResponse([.. found.Select(gallery => gallery.ToResponse())], null);
     }
 }
 

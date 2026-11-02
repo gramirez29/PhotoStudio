@@ -81,6 +81,11 @@ export function goBack(): void {
   router.back();
 }
 
+/** Opens the list of delivered galleries whose space the photographer can free. */
+export function openArchivableGalleries(): void {
+  router.push('/archivable');
+}
+
 /** Opens the list of refunds the photographer still has to give back. */
 export function openRefunds(): void {
   router.push('/refunds');
