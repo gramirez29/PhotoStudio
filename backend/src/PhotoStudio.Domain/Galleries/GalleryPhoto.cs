@@ -17,6 +17,7 @@ namespace PhotoStudio.Domain.Galleries;
 /// <param name="FinalHeight">Height of the final in pixels, or <see langword="null"/> when unknown.</param>
 /// <param name="FinalCapturedAt">Instant the final was taken, from its metadata, or <see langword="null"/> when unknown.</param>
 /// <param name="FinalDownloads">How many times the client asked to download the final.</param>
+/// <param name="FinalThumbBytes">Size of the small image of the final that the galleries show, or <see langword="null"/> when it has none.</param>
 public sealed record GalleryPhoto(
     Guid Id,
     string OriginalName,
@@ -27,8 +28,12 @@ public sealed record GalleryPhoto(
     int? FinalWidth = null,
     int? FinalHeight = null,
     DateTimeOffset? FinalCapturedAt = null,
-    int FinalDownloads = 0)
+    int FinalDownloads = 0,
+    long? FinalThumbBytes = null)
 {
+    /// <summary>The most a thumbnail of a final can weigh: it is a small image to look at, not the photo.</summary>
+    public const long MaxThumbBytes = 409_600;
+
     /// <summary>The most a final photo can weigh.</summary>
     public const long MaxFinalBytes = 52_428_800;
 

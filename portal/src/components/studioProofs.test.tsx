@@ -208,8 +208,19 @@ describe('the page of a gallery and its proofs', () => {
           extraPhotos: 1,
           extraTotal: { amount: 3000, currency: 'CRC' },
           photos: [
-            { id: 'p-3', name: 'IMG_0003.jpg', isExtra: false, finalBytes: 4_404_019, finalWidth: 1250, finalHeight: 3000, finalCapturedAt: '2026-10-17T21:30:00+00:00', finalDownloads: 2 },
-            { id: 'p-1', name: 'IMG_0001.jpg', isExtra: true, finalBytes: null },
+            {
+              id: 'p-3',
+              name: 'IMG_0003.jpg',
+              isExtra: false,
+              finalBytes: 4_404_019,
+              finalWidth: 1250,
+              finalHeight: 3000,
+              finalCapturedAt: '2026-10-17T21:30:00+00:00',
+              finalDownloads: 2,
+              thumbUrl: 'https://account.r2.cloudflarestorage.com/thumb-3?sig=secret',
+              thumbIsFinal: true,
+            },
+            { id: 'p-1', name: 'IMG_0001.jpg', isExtra: true, finalBytes: null, thumbUrl: 'https://account.r2.cloudflarestorage.com/proof-1?sig=secret', thumbIsFinal: false },
           ],
         }),
       ],
@@ -222,8 +233,12 @@ describe('the page of a gallery and its proofs', () => {
     expect(screen.getByText(/Fuera del paquete: .*3.*000/)).toBeInTheDocument();
     const packageBlock = screen.getByRole('group', { name: 'Fotos del paquete (1)' });
     const extrasBlock = screen.getByRole('group', { name: 'Fotos adicionales (1)' });
-    expect(within(packageBlock).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['IMG_0003.jpg · final subido · 1250 × 3000 px · 4,2 MB · tomada el 17 de octubre de 2026 · descargada 2 veces⬇ Descargar']);
-    expect(within(extrasBlock).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['IMG_0001.jpg · sin final']);
+    expect(within(packageBlock).getByText('IMG_0003.jpg')).toBeInTheDocument();
+    expect(within(packageBlock).getByText('final subido · 1250 × 3000 px · 4,2 MB · tomada el 17 de octubre de 2026 · descargada 2 veces')).toBeInTheDocument();
+    expect(within(extrasBlock).getByText('IMG_0001.jpg')).toBeInTheDocument();
+    expect(within(extrasBlock).getByText('sin final')).toBeInTheDocument();
+    expect(within(packageBlock).getByRole('button', { name: 'Ver IMG_0003.jpg' }).querySelector('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/thumb-3?sig=secret');
+    expect(within(extrasBlock).getByRole('button', { name: 'Ver IMG_0001.jpg' }).querySelector('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/proof-1?sig=secret');
     expect(within(packageBlock).getByText('1 de 1 con su final')).toBeInTheDocument();
     expect(within(extrasBlock).getByText('0 de 1 con su final')).toBeInTheDocument();
     expect(screen.queryByText(/Las pruebas ya están publicadas/)).not.toBeInTheDocument();

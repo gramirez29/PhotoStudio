@@ -10,6 +10,14 @@ public static class GalleryKeys
     public const string ProofContentType = "image/jpeg";
 
     /// <summary>
+    /// Builds the key of the thumbnail of a final: the small image the galleries show. It uses the identifier of the photo.
+    /// </summary>
+    /// <param name="galleryId">Gallery the photo belongs to.</param>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <returns>The key in the object storage.</returns>
+    public static string Thumb(Guid galleryId, Guid photoId) => $"galleries/{galleryId:D}/thumbs/{photoId:D}.jpg";
+
+    /// <summary>
     /// Content type of the ZIP with the photos. The signed address of the storage only accepts this one.
     /// </summary>
     public const string ZipContentType = "application/zip";

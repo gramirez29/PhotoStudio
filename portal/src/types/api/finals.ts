@@ -1,3 +1,13 @@
+import type { ProofUploadSlot } from './proofs';
+
+/** A place to upload one final and, optionally, its thumbnail, as the API gives it. */
+export interface FinalUploadSlot extends ProofUploadSlot {
+  /** Signed address to PUT the thumbnail to, or null when the API gives none. It is a secret that expires: it is never logged. */
+  readonly thumbUrl: string | null;
+  /** Headers the thumbnail upload must send exactly as given. */
+  readonly thumbHeaders: Readonly<Record<string, string>>;
+}
+
 /** What the browser read from a final photo before sending it, as the API takes it. Every value may be unknown. */
 export interface FinalDetailsInfo {
   /** Identifier of the chosen photo the final belongs to. */

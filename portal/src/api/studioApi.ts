@@ -1,6 +1,6 @@
 import { GALLERIES_PAGE_SIZE, GALLERY_ACTIONS, GALLERY_STATUSES } from '../constants/gallery';
 import type { HttpClient } from '../types/api/http';
-import type { FinalDetailsInfo, FinalDownloadLink, FinalFileInfo, ZipUploadSlot } from '../types/api/finals';
+import type { FinalDetailsInfo, FinalDownloadLink, FinalFileInfo, FinalUploadSlot, ZipUploadSlot } from '../types/api/finals';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from '../types/api/proofs';
 import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser, StudioZip } from '../types/api/studio';
 import type { StudioApi } from '../types/api/studioApi';
@@ -173,6 +173,25 @@ export function parseProofSlots(value: unknown): readonly ProofUploadSlot[] {
 }
 
 /**
+ * Parses the places to upload the finals of a request, each with the place for its thumbnail.
+ * @param value Unknown response body.
+ * @returns One slot per file, in the order of the request.
+ */
+export function parseFinalSlots(value: unknown): readonly FinalUploadSlot[] {
+  const path = 'finalUploads';
+  return readArray(expectRecord(value, path), 'slots', path).map((item, index): FinalUploadSlot => {
+    const slotPath = `${path}.slots[${index}]`;
+    const record = expectRecord(item, slotPath);
+    const thumbHeaders = record.thumbHeaders === null || record.thumbHeaders === undefined ? {} : expectRecord(record.thumbHeaders, `${slotPath}.thumbHeaders`);
+    return {
+      ...parseProofSlots({ slots: [item] })[0]!,
+      thumbUrl: readNullableString(record, 'thumbUrl', slotPath),
+      thumbHeaders: Object.fromEntries(Object.keys(thumbHeaders).map((name) => [name, readString(thumbHeaders, name, `${slotPath}.thumbHeaders`)])),
+    };
+  });
+}
+
+/**
  * Parses the outcome of registering a batch of proofs.
  * @param value Unknown response body.
  * @returns The gallery and the proofs that were not registered.
@@ -234,6 +253,8 @@ export function parseStudioSelection(value: unknown): StudioSelection {
         finalHeight: photo.finalHeight === null || photo.finalHeight === undefined ? null : readNumber(photo, 'finalHeight', itemPath),
         finalCapturedAt: readNullableString(photo, 'finalCapturedAt', itemPath),
         finalDownloads: photo.finalDownloads === null || photo.finalDownloads === undefined ? 0 : readNumber(photo, 'finalDownloads', itemPath),
+        thumbUrl: readNullableString(photo, 'thumbUrl', itemPath),
+        thumbIsFinal: photo.thumbIsFinal === true,
       };
     }),
   };
@@ -304,7 +325,7 @@ export function createStudioApi(client: HttpClient): StudioApi {
     reopenSelection: (galleryId, reason) => client.post(`/api/web/galleries/${galleryId}/selection/reopen`, { reason }, parseStudioGalleryBody),
     openSelection: (galleryId) => client.post(`/api/web/galleries/${galleryId}/selection/open`, {}, parseStudioGalleryBody),
     requestFinalUploads: (galleryId, files: readonly FinalFileInfo[], signal) =>
-      client.post(`/api/web/galleries/${galleryId}/finals/uploads`, { files }, parseProofSlots, { signal }),
+      client.post(`/api/web/galleries/${galleryId}/finals/uploads`, { files }, parseFinalSlots, { signal }),
     registerFinals: (galleryId, photoIds: readonly string[], details: readonly FinalDetailsInfo[], signal) =>
       client.post(`/api/web/galleries/${galleryId}/finals`, { photoIds, details }, parseRegisterProofs, { signal }),
     requestZipUpload: (galleryId, bytes, signal) => client.post(`/api/web/galleries/${galleryId}/zip/upload`, { bytes }, parseZipSlot, { signal }),

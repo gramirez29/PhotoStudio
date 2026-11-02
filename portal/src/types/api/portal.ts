@@ -176,6 +176,8 @@ export interface PortalFinal {
   readonly bytes: number;
   /** Whether it is one of the extra photos. */
   readonly isExtra: boolean;
+  /** Signed address of a small image of the photo, to look at in a grid; null when there is none. It is a secret: it is never logged. */
+  readonly thumbUrl: string | null;
 }
 
 /** The ZIP with the photos, as the client sees it before asking for it (backend `PortalZipResponse`). */

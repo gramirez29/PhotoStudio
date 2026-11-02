@@ -574,7 +574,45 @@ public sealed class Gallery : AggregateRoot<Guid>
             FinalHeight = kept.Height,
             FinalCapturedAt = kept.CapturedAt,
             FinalDownloads = replaced ? 0 : current.FinalDownloads,
+            FinalThumbBytes = replaced ? null : current.FinalThumbBytes,
         };
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Registers the thumbnail of a final: the small image the galleries show instead of the photo, which weighs megabytes. It is
+    /// optional, because the final does not depend on it, and it follows the same rules as the final it belongs to.
+    /// </summary>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <param name="thumbBytes">Size of the stored thumbnail.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was recorded now; <see langword="false"/> when the same one was already recorded.</returns>
+    /// <exception cref="DomainException">When the photo has no final, the final cannot change in this state, or the size is not valid.</exception>
+    public bool RegisterFinalThumb(Guid photoId, long thumbBytes, DateTimeOffset now)
+    {
+        var index = _photos.FindIndex(photo => photo.Id == photoId && photo.HasFinal);
+        if (index < 0)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, "Only a photo that has a final photo can have a thumbnail.");
+        }
+
+        if (Status != GalleryStatus.InEditing && !(IsExtra(photoId) && Status is GalleryStatus.Ready or GalleryStatus.Delivered))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, "The final photos of the package cannot change once they are published.");
+        }
+
+        if (thumbBytes is < 1 or > GalleryPhoto.MaxThumbBytes)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, $"A thumbnail must weigh between 1 byte and {GalleryPhoto.MaxThumbBytes} bytes.");
+        }
+
+        if (_photos[index].FinalThumbBytes == thumbBytes)
+        {
+            return false;
+        }
+
+        _photos[index] = _photos[index] with { FinalThumbBytes = thumbBytes };
         UpdatedAt = now;
         return true;
     }
@@ -600,7 +638,7 @@ public sealed class Gallery : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.GalleryInvalidState, "The final photos of the package cannot change once they are published.");
         }
 
-        _photos[index] = _photos[index] with { FinalBytes = null, FinalUploadedAt = null, FinalWidth = null, FinalHeight = null, FinalCapturedAt = null, FinalDownloads = 0 };
+        _photos[index] = _photos[index] with { FinalBytes = null, FinalUploadedAt = null, FinalWidth = null, FinalHeight = null, FinalCapturedAt = null, FinalDownloads = 0, FinalThumbBytes = null };
         UpdatedAt = now;
         return true;
     }

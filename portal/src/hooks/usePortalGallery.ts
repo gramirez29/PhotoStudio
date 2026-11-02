@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import { portalApi } from '../api/client';
 import { ApiError } from '../api/httpClient';
 import type { PortalDownload, PortalGallery, PortalGallerySummary, PortalZipDownload } from '../types/api/portal';
-import type { RequestDownloadsVariables, SubmitSelectionVariables } from '../types/hooks/usePortalGallery.types';
+import type { RequestDownloadsVariables, RequestFinalViewVariables, SubmitSelectionVariables } from '../types/hooks/usePortalGallery.types';
 
 /**
  * Key of the cached gallery of a link.
@@ -62,6 +62,15 @@ export function useGallery(token: string, accessToken: string): UseQueryResult<P
  */
 export function useRequestDownloads(token: string): UseMutationResult<readonly PortalDownload[], Error, RequestDownloadsVariables> {
   return useMutation({ mutationFn: ({ accessToken, photoIds }) => portalApi.requestDownloads(token, accessToken, photoIds) });
+}
+
+/**
+ * Mutation that asks for the address to look at a final in its real quality. Looking is not downloading, so it is not counted.
+ * @param token Secret token taken from the URL.
+ * @returns The TanStack Query mutation; it gives the address.
+ */
+export function useRequestFinalView(token: string): UseMutationResult<string, Error, RequestFinalViewVariables> {
+  return useMutation({ mutationFn: ({ accessToken, photoId }) => portalApi.getFinalView(token, accessToken, photoId) });
 }
 
 /**

@@ -110,6 +110,10 @@ public static class PortalEndpoints
             .WithName("RequestPortalDownloads")
             .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
             .RequireRateLimiting(RateLimitingExtensions.PortalActionPolicy);
+        group.MapGet("/gallery/finals/{photoId:guid}/view", GetFinalViewAsync)
+            .WithName("GetPortalFinalView")
+            .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
+            .RequireRateLimiting(RateLimitingExtensions.PortalReadPolicy);
         group.MapPost("/gallery/zip/download", RequestZipDownloadAsync)
             .WithName("RequestPortalZipDownload")
             .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
@@ -179,6 +183,23 @@ public static class PortalEndpoints
         ICommandHandler<RequestPortalDownloadsCommand, PortalDownloadsResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new RequestPortalDownloadsCommand(token, user.GetPortalBookingId(), request.PhotoIds ?? []), cancellationToken));
+
+    /// <summary>
+    /// Gives the client the address to look at a final photo in its real quality. It is not a download and is not counted.
+    /// </summary>
+    /// <param name="token">Secret token of the link.</param>
+    /// <param name="photoId">Photo identifier.</param>
+    /// <param name="user">Authenticated portal session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the address; 401 without a valid session; 404 when the session is for another booking; 409 <c>gallery.invalid_state</c> when the gallery is not delivered; 422 <c>gallery.invalid_photo</c> for a photo the client may not take.</returns>
+    private static async Task<Ok<PortalFinalViewResponse>> GetFinalViewAsync(
+        string token,
+        Guid photoId,
+        ClaimsPrincipal user,
+        IQueryHandler<GetPortalFinalViewQuery, PortalFinalViewResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetPortalFinalViewQuery(token, user.GetPortalBookingId(), photoId), cancellationToken));
 
     /// <summary>
     /// Gives the client the address to download the ZIP with the photos, and counts it as a download.

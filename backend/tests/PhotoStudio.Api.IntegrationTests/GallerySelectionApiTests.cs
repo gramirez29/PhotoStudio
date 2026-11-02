@@ -264,6 +264,16 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         finals.ShouldAllBe(final => !final.GetProperty("isExtra").GetBoolean());
         finals.ShouldAllBe(final => final.EnumerateObject().All(property => property.Name != "url"));
 
+        // The client looks at the real final, as edited, and at its thumbnail; neither is a download.
+        var thumbOfFirst = finals[0].GetProperty("thumbUrl").GetString();
+        thumbOfFirst.ShouldNotBeNull();
+        (await (await new HttpClient().GetAsync(thumbOfFirst, TestContext.Current.CancellationToken)).Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)).ShouldBe(bytes);
+        var view = await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery/finals/{chosen[0]}/view", session);
+        view.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var viewUrl = (await view.ReadJsonAsync()).GetProperty("url").GetString();
+        (await (await new HttpClient().GetAsync(viewUrl, TestContext.Current.CancellationToken)).Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)).ShouldBe(bytes);
+        (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery/finals/{chosen[2]}/view", session)).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
         // The client asks for the addresses when they download, and each photo asked for is counted.
         var downloads = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/downloads", session, new { photoIds = new[] { chosen[0] } });
         downloads.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -277,6 +287,8 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
 
         var seen = (await (await browser.GetAsync($"{path}/selection", TestContext.Current.CancellationToken)).ReadJsonAsync()).GetProperty("photos").EnumerateArray().ToList();
         seen.Select(photo => photo.GetProperty("finalDownloads").GetInt32()).ShouldBe([1, 0, 0]);
+        seen.Select(photo => photo.GetProperty("thumbIsFinal").GetBoolean()).ShouldBe([true, true, true]);
+        seen.ShouldAllBe(photo => photo.GetProperty("thumbUrl").GetString()!.StartsWith("http", StringComparison.Ordinal));
         seen[0].GetProperty("finalWidth").GetInt32().ShouldBe(1250);
         seen[0].GetProperty("finalHeight").GetInt32().ShouldBe(3000);
         seen[0].TryGetProperty("finalCapturedAt", out var capturedAt).ShouldBeTrue();
@@ -334,9 +346,12 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         slots.StatusCode.ShouldBe(HttpStatusCode.OK);
         foreach (var slot in (await slots.ReadJsonAsync()).GetProperty("slots").EnumerateArray())
         {
-            using var put = new HttpRequestMessage(HttpMethod.Put, slot.GetProperty("url").GetString()) { Content = new ByteArrayContent(bytes) };
-            put.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-            (await new HttpClient().SendAsync(put, TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+            foreach (var property in new[] { "url", "thumbUrl" })
+            {
+                using var put = new HttpRequestMessage(HttpMethod.Put, slot.GetProperty(property).GetString()) { Content = new ByteArrayContent(bytes) };
+                put.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+                (await new HttpClient().SendAsync(put, TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+            }
         }
 
         var details = photoIds.Select(id => new { photoId = id, width = 1250, height = 3000, capturedAt = DateTimeOffset.UtcNow.AddDays(-3) });

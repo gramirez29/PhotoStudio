@@ -10,6 +10,21 @@ export const FINAL_UPLOAD_CONCURRENCY = 3;
 /** What the file picker offers for finals: JPEG files only. */
 export const FINAL_ACCEPT = 'image/jpeg,.jpg,.jpeg';
 
+/** Longest side of the thumbnail of a final, in pixels: big enough to look good in a grid, small enough to load fast. */
+export const THUMB_LONG_SIDE = 720;
+
+/** JPEG qualities to try for a thumbnail, from the best to the lowest; the first that fits in the limit wins. */
+export const THUMB_QUALITIES = [0.85, 0.75, 0.65, 0.55] as const;
+
+/** Heaviest thumbnail the API accepts, in bytes (400 KB). */
+export const THUMB_MAX_BYTES = 409_600;
+
+/** Factor applied to the sides of a thumbnail that still weighs too much with the lowest quality. */
+export const THUMB_SHRINK_FACTOR = 0.8;
+
+/** Times a thumbnail is shrunk before giving up; each time every quality is tried again. */
+export const THUMB_MAX_SHRINKS = 2;
+
 /** Heaviest ZIP the API accepts, in bytes (500 MB). */
 export const ZIP_MAX_BYTES = 524_288_000;
 

@@ -136,6 +136,10 @@ export interface StudioSelectedPhoto {
   readonly finalCapturedAt: string | null;
   /** How many times the client asked to download the final. */
   readonly finalDownloads: number;
+  /** Signed address of a small image of the photo, valid for ten minutes, or null when there is none. It is a secret: it is never logged. */
+  readonly thumbUrl: string | null;
+  /** Whether `thumbUrl` is the thumbnail of the final (true) or only the proof, which has the watermark (false). */
+  readonly thumbIsFinal: boolean;
 }
 
 /** What the client chose in a gallery. */

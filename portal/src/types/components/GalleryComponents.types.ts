@@ -59,6 +59,12 @@ export interface GalleryDownloadsProps {
    */
   readonly requestDownloads: (photoIds: readonly string[]) => Promise<readonly PortalDownload[]>;
   /**
+   * Asks for the address to look at a photo in its real quality, as edited. It is not a download. It rejects when the request fails.
+   * @param photoId The photo.
+   * @returns The address.
+   */
+  readonly requestView: (photoId: string) => Promise<string>;
+  /**
    * Asks for the address to download the ZIP. Asking counts as a download. It rejects when the request fails.
    * @returns The address of the ZIP.
    */

@@ -271,3 +271,21 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Rutas para la app (token del fotógrafo, `/api/galleries/{id}/…`)** con los mismos manejadores que la web, para operar desde el celular: `GET proofs`, `GET selection`, `POST proofs/{photoId}/remove`, `POST selection/open`, `POST selection/reopen`, `POST finals/publish`, `POST extras/release`, `POST zip/remove`, `GET finals/{photoId}/download` (más `terms` y la lectura, que ya existían). **Subir archivos no está aquí:** es el PR 9, porque necesita que el teléfono prepare las fotos.
 
 **Pruebas:** dominio 11 nuevas, aplicación 6 nuevas, la de API recorre la app de punta a punta (leer, rechazos por token ajeno y sin token, reabrir sin motivo y con motivo, el cliente elige de nuevo, llegan **dos** avisos al fotógrafo y el correo al cliente), y 2 del portal (reabrir con motivo y confirmación, y el rechazo).
+
+## 23. La galería final se ve como galería: miniaturas y la foto real (PR 8b)
+
+**Decisión (2026-11-04):** la galería final tiene que verse con las fotos, **tal cual se editaron y con buena calidad**, no como una lista de nombres. Hasta el 7c las dos webs mostraban nombres con su ficha; ahora son cuadrículas de fotos.
+
+**Dos imágenes por foto, cada una para lo suyo**
+- **Miniatura** (para la cuadrícula): la foto reducida a 720 px de lado largo, calidad alta (JPEG 0,85 y baja solo si no cabe), **sin marca de agua**, hasta 400 KB. La hace **el navegador del fotógrafo al subir el final** y sube junto a él, en su propio lugar firmado (`galleries/{id}/thumbs/{foto}.jpg`). Es opcional: si no se puede hacer o el servidor la rechaza (no es JPEG o pesa de más; se borra), el final se registra igual. Un final de otro peso reemplaza la miniatura. Cargar los finales tal cual en una cuadrícula serían unos 220 MB solo para mirar.
+- **Foto real** (al abrir una foto): el **final mismo**, el archivo editado, a pantalla completa, de a una por vez. Mientras llega se muestra la miniatura. Fotógrafo: `GET .../finals/{foto}/download` (5 min, sin contar). Cliente: `GET /public/bookings/{token}/gallery/finals/{foto}/view` (5 min; **no es una descarga y no se cuenta**; solo con la galería entregada, es decir con saldo cero, y una extra solo si se liberó; sin nombre de archivo, para mostrarse y no guardarse). Sin final, el fotógrafo ve la **prueba** (con marca de agua) como referencia.
+
+**Web del fotógrafo:** la selección es una cuadrícula por bloque (paquete y adicionales) con la miniatura del final o, si aún no lo tiene, la prueba; sobre la foto una etiqueta "Final" o "Sin final"; debajo el nombre, la ficha y el botón ⬇ Descargar. Tocar una foto abre el visor con anterior, siguiente y Escape.
+
+**Web del cliente:** las descargas son una cuadrícula con la miniatura de cada foto, su casilla, "Descargar" y el visor con la foto real. Las direcciones de las miniaturas y de la vista no cuentan como descargas.
+
+**API:** `POST finals/uploads` devuelve por foto también `thumbUrl` y `thumbHeaders`; `GET selection` trae `thumbUrl` y `thumbIsFinal` por foto; la galería del cliente trae `thumbUrl` por final. Máximo de miniatura: 400 KB.
+
+**Pendiente:** hacer la miniatura desde el celular al subir finales (PR 9). La app del celular usa esta misma cuadrícula (PR 8c).
+
+**Pruebas:** backend dominio +2, aplicación +6 y la de API de punta a punta (sube final y miniatura a R2, el cliente descarga la miniatura y mira el final real sin que cuente, una extra sin liberar se rechaza); portal 11 nuevas (renderer de miniaturas, visor, cuadrículas, mirar el final real).

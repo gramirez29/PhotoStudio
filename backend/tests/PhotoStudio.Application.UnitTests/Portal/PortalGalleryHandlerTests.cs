@@ -212,7 +212,7 @@ public sealed class PortalGalleryHandlerTests
         var gallery = MakeGallery(GalleryStatus.InSelection, 3, included: 1);
         gallery.SubmitSelection([gallery.Photos[2].Id, gallery.Photos[0].Id], PortalFixture.Now);
 
-        var response = await new GetSelectionHandler(_galleries)
+        var response = await new GetSelectionHandler(_galleries, _storage)
             .HandleAsync(new GetSelectionQuery(gallery.PhotographerId, gallery.Id), TestContext.Current.CancellationToken);
 
         response.SubmittedAt.ShouldBe(PortalFixture.Now);
@@ -228,7 +228,7 @@ public sealed class PortalGalleryHandlerTests
     public async Task PhotographerSelection_BeforeItIsSent_IsEmpty_AndOfAnotherPhotographerIsNotFound()
     {
         var gallery = MakeGallery(GalleryStatus.InSelection, 2);
-        var handler = new GetSelectionHandler(_galleries);
+        var handler = new GetSelectionHandler(_galleries, _storage);
 
         var response = await handler.HandleAsync(new GetSelectionQuery(gallery.PhotographerId, gallery.Id), TestContext.Current.CancellationToken);
 

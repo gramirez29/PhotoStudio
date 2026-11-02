@@ -1,5 +1,6 @@
 import watermarkUrl from '../assets/proof-watermark.png';
-import type { ProofCanvas, ProofRenderer, ProofRendererDeps } from '../types/media/proofRenderer.types';
+import type { ProofRenderer, ProofRendererDeps } from '../types/media/proofRenderer.types';
+import { createBrowserCanvas, decodeInBrowser } from './browserCanvas';
 import { createProofRenderer } from './proofRenderer';
 
 /**
@@ -10,16 +11,8 @@ import { createProofRenderer } from './proofRenderer';
  */
 export function createBrowserProofDeps(watermark: string): ProofRendererDeps {
   return {
-    decode: (file) => createImageBitmap(file, { imageOrientation: 'from-image' }),
-    createCanvas: (size): ProofCanvas => {
-      const canvas = document.createElement('canvas');
-      canvas.width = size.width;
-      canvas.height = size.height;
-      return {
-        getContext: () => canvas.getContext('2d'),
-        toJpeg: (quality) => new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality)),
-      };
-    },
+    decode: decodeInBrowser,
+    createCanvas: createBrowserCanvas,
     loadWatermark: async () => {
       const response = await fetch(watermark);
       if (!response.ok) {

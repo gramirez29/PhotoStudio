@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseDownloads, parseGallerySummary, parsePortalGallery, parseZipDownload } from '../api/portalApi';
-import { parseFinalDownload, parseStudioSelection, parseStudioZip, parseZipSlot } from '../api/studioApi';
+import { parseDownloads, parseFinalView, parseGallerySummary, parsePortalGallery, parseZipDownload } from '../api/portalApi';
+import { parseFinalDownload, parseFinalSlots, parseStudioSelection, parseStudioZip, parseZipSlot } from '../api/studioApi';
 import { describeGalleryCard } from './galleryCard';
 import { galleryFlowReducer, INITIAL_GALLERY_FLOW } from './galleryFlow';
 import { clearDraft, describeChoice, readDraft, saveDraft, splitChoice, summarizeChoice, toggleChoice } from './gallerySelection';
@@ -199,7 +199,7 @@ describe('the answers of the gallery', () => {
     });
     expect(
       parseStudioSelection({ submittedAt: '2026-10-30T12:00:00+00:00', extraPhotos: 1, extraTotal: PRICE, photos: [{ id: 'p1', name: 'IMG_0001.jpg' }] }).photos,
-    ).toEqual([{ id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0 }]);
+    ).toEqual([{ id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0, thumbUrl: null, thumbIsFinal: false }]);
   });
 
   it('parses which photos of the selection are extra and the size of each final', () => {
@@ -208,14 +208,14 @@ describe('the answers of the gallery', () => {
       extraPhotos: 1,
       extraTotal: PRICE,
       photos: [
-        { id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: 4_400_000, finalWidth: 1250, finalHeight: 3000, finalCapturedAt: '2026-10-17T21:30:00+00:00', finalDownloads: 2 },
+        { id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: 4_400_000, finalWidth: 1250, finalHeight: 3000, finalCapturedAt: '2026-10-17T21:30:00+00:00', finalDownloads: 2, thumbUrl: 'https://s/t1', thumbIsFinal: true },
         { id: 'p2', name: 'IMG_0002.jpg', isExtra: true, finalBytes: null },
       ],
     }).photos;
 
     expect(photos).toEqual([
-      { id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: 4_400_000, finalWidth: 1250, finalHeight: 3000, finalCapturedAt: '2026-10-17T21:30:00+00:00', finalDownloads: 2 },
-      { id: 'p2', name: 'IMG_0002.jpg', isExtra: true, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0 },
+      { id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: 4_400_000, finalWidth: 1250, finalHeight: 3000, finalCapturedAt: '2026-10-17T21:30:00+00:00', finalDownloads: 2, thumbUrl: 'https://s/t1', thumbIsFinal: true },
+      { id: 'p2', name: 'IMG_0002.jpg', isExtra: true, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0, thumbUrl: null, thumbIsFinal: false },
     ]);
   });
 
@@ -225,6 +225,8 @@ describe('the answers of the gallery', () => {
     expect(
       parsePortalGallery({ ...body, finals: [{ id: 'p1', fileName: 'IMG_0001.jpg', url: 'https://s/1', expiresAt: '2026-11-03T12:05:00+00:00', bytes: 4_400_000, isExtra: false }] }),
     ).toMatchObject({ extrasReleased: true, finals: [{ id: 'p1', fileName: 'IMG_0001.jpg', bytes: 4_400_000, isExtra: false }] });
+    expect(parsePortalGallery({ ...body, finals: [{ id: 'p1', fileName: 'a.jpg', bytes: 5, isExtra: false, thumbUrl: 'https://s/t' }] }).finals[0]?.thumbUrl).toBe('https://s/t');
+    expect(parsePortalGallery({ ...body, finals: [{ id: 'p1', fileName: 'a.jpg', bytes: 5, isExtra: false }] }).finals[0]?.thumbUrl).toBeNull();
     expect(() => parsePortalGallery({ ...body, finals: [{ id: 'p1' }] })).toThrow();
   });
 
@@ -243,6 +245,13 @@ describe('the answers of the gallery', () => {
 
   it('parses the ZIP of the photographer with what the client did with it, and the address of a final', () => {
     expect(parseStudioZip({ bytes: 5, uploadedAt: 'x', downloads: 2, lastDownloadedAt: null }, 'zip')).toEqual({ bytes: 5, uploadedAt: 'x', downloads: 2, lastDownloadedAt: null });
+    expect(parseFinalSlots({ slots: [{ photoId: 'p1', url: 'https://s/f', headers: { a: 'b' }, expiresAt: 'x', thumbUrl: 'https://s/t', thumbHeaders: { c: 'd' } }] })[0]).toMatchObject({
+      photoId: 'p1',
+      thumbUrl: 'https://s/t',
+      thumbHeaders: { c: 'd' },
+    });
+    expect(parseFinalSlots({ slots: [{ photoId: 'p1', url: 'https://s/f', headers: {}, expiresAt: 'x' }] })[0]).toMatchObject({ thumbUrl: null, thumbHeaders: {} });
+    expect(parseFinalView({ url: 'https://s/v', expiresAt: 'x' })).toEqual({ url: 'https://s/v' });
     expect(parseFinalDownload({ fileName: 'a.jpg', url: 'https://s/a', expiresAt: 'x' })).toEqual({ fileName: 'a.jpg', url: 'https://s/a' });
     expect(parseZipSlot({ url: 'https://s/z', headers: { 'Content-Type': 'application/zip' }, expiresAt: 'x' }).headers).toEqual({ 'Content-Type': 'application/zip' });
   });

@@ -2,6 +2,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.Finals;
+using PhotoStudio.Application.Galleries.Selection;
 using PhotoStudio.Application.Portal.Galleries;
 using PhotoStudio.Application.Storage;
 using PhotoStudio.Application.UnitTests.Portal;
@@ -277,6 +278,129 @@ public sealed class GalleryZipHandlerTests
     }
 
     /// <summary>
+    /// The client sees a small image of each final that has one, without it counting as a download, and none for a final without it.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheClient_SeesTheThumbnailOfAFinal_WithoutItBeingADownload()
+    {
+        var gallery = MakeGallery(GalleryStatus.Delivered, thumbOnFirst: true);
+
+        var response = await gallery.ToPortalResponseAsync(_storage, TestContext.Current.CancellationToken);
+
+        var finals = response.Finals.ShouldNotBeNull();
+        finals[0].ThumbUrl.ShouldNotBeNull().ToString().ShouldContain($"galleries/{gallery.Id:D}/thumbs/{gallery.PackagePhotoIds[0]:D}.jpg");
+        finals[1].ThumbUrl.ShouldBeNull();
+        gallery.Photos.ShouldAllBe(photo => photo.FinalDownloads == 0);
+    }
+
+    /// <summary>
+    /// The client looks at a final in its real quality, as edited: the address is of the final itself and carries no file name, so it
+    /// is shown and not saved, and looking is not counted as a download.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheClient_LooksAtTheRealFinal_WithoutItBeingADownload()
+    {
+        var gallery = MakeGallery(GalleryStatus.Delivered);
+        var handler = new GetPortalFinalViewHandler(_galleries, _fixture.Links, _fixture.Tokens, _storage, _fixture.Clock);
+
+        var view = await handler.HandleAsync(new GetPortalFinalViewQuery(PortalFixture.Token, _fixture.Booking.Id, gallery.PackagePhotoIds[0]), TestContext.Current.CancellationToken);
+
+        view.Url.ToString().ShouldContain($"galleries/{gallery.Id:D}/finals/{gallery.PackagePhotoIds[0]:D}.jpg");
+        view.ExpiresAt.ShouldBe(PortalFixture.Now.AddMinutes(5));
+        await _storage.Received(1).CreateDownloadUrlAsync(GalleryKeys.Final(gallery.Id, gallery.PackagePhotoIds[0]), TimeSpan.FromMinutes(5), null, Arg.Any<CancellationToken>());
+        gallery.Photos.ShouldAllBe(photo => photo.FinalDownloads == 0);
+        await _galleries.DidNotReceive().UpdateAsync(Arg.Any<Gallery>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// The client cannot look at what they may not take: an extra that was not released, a photo without a final, a gallery that is
+    /// not delivered, or with the session of another booking.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheClient_CannotLookAtWhatIsNotTheirs()
+    {
+        var gallery = MakeGallery(GalleryStatus.Delivered);
+        gallery.RegisterFinal(gallery.ExtraPhotoIds[0], 100, PortalFixture.Now);
+        var handler = new GetPortalFinalViewHandler(_galleries, _fixture.Links, _fixture.Tokens, _storage, _fixture.Clock);
+
+        (await Should.ThrowAsync<DomainException>(() => handler.HandleAsync(new GetPortalFinalViewQuery(PortalFixture.Token, _fixture.Booking.Id, gallery.ExtraPhotoIds[0]), TestContext.Current.CancellationToken)))
+            .Code.ShouldBe(DomainErrorCodes.GalleryInvalidPhoto);
+        (await Should.ThrowAsync<DomainException>(() => handler.HandleAsync(new GetPortalFinalViewQuery(PortalFixture.Token, _fixture.Booking.Id, Guid.CreateVersion7()), TestContext.Current.CancellationToken)))
+            .Code.ShouldBe(DomainErrorCodes.GalleryInvalidPhoto);
+        await Should.ThrowAsync<NotFoundException>(() => handler.HandleAsync(new GetPortalFinalViewQuery(PortalFixture.Token, Guid.CreateVersion7(), gallery.PackagePhotoIds[0]), TestContext.Current.CancellationToken));
+
+        var ready = MakeGallery(GalleryStatus.Ready);
+        (await Should.ThrowAsync<DomainException>(() => handler.HandleAsync(new GetPortalFinalViewQuery(PortalFixture.Token, _fixture.Booking.Id, ready.PackagePhotoIds[0]), TestContext.Current.CancellationToken)))
+            .Code.ShouldBe(DomainErrorCodes.GalleryInvalidState);
+    }
+
+    /// <summary>
+    /// The photographer sees, for every chosen photo, a small image: the thumbnail of its final when it has one, and otherwise its
+    /// proof, which has the watermark.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ThePhotographerSelection_ShowsTheThumbnailOrTheProof()
+    {
+        var gallery = MakeGallery(GalleryStatus.Delivered, thumbOnFirst: true);
+
+        var response = await new GetSelectionHandler(_galleries, _storage).HandleAsync(new GetSelectionQuery(gallery.PhotographerId, gallery.Id), TestContext.Current.CancellationToken);
+
+        response.Photos[0].ThumbIsFinal.ShouldBeTrue();
+        response.Photos[0].ThumbUrl.ShouldNotBeNull().ToString().ShouldContain("/thumbs/");
+        response.Photos[1].ThumbIsFinal.ShouldBeFalse();
+        response.Photos[1].ThumbUrl.ShouldNotBeNull().ToString().ShouldContain("/proofs/");
+        response.Photos[2].ThumbUrl.ShouldNotBeNull().ToString().ShouldContain("/proofs/");
+    }
+
+    /// <summary>
+    /// Registering a final also takes its thumbnail when one was uploaded; one that is not a JPEG or weighs too much is deleted and does
+    /// not stop the final from being registered.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task RegisteringFinals_TakesTheThumbnail_AndIgnoresABadOne()
+    {
+        var gallery = MakeGallery(GalleryStatus.InEditing);
+        var first = gallery.PackagePhotoIds[0];
+        var second = gallery.PackagePhotoIds[1];
+        _storage.GetInfoAsync(GalleryKeys.Final(gallery.Id, first), Arg.Any<CancellationToken>()).Returns(new StoredObjectInfo(4_000_000, "image/jpeg"));
+        _storage.GetInfoAsync(GalleryKeys.Final(gallery.Id, second), Arg.Any<CancellationToken>()).Returns(new StoredObjectInfo(4_000_000, "image/jpeg"));
+        _storage.GetInfoAsync(GalleryKeys.Thumb(gallery.Id, first), Arg.Any<CancellationToken>()).Returns(new StoredObjectInfo(90_000, "image/jpeg"));
+        _storage.GetInfoAsync(GalleryKeys.Thumb(gallery.Id, second), Arg.Any<CancellationToken>()).Returns(new StoredObjectInfo(5_000_000, "image/jpeg"));
+
+        var response = await new RegisterFinalsHandler(_galleries, _storage, _clock)
+            .HandleAsync(new RegisterFinalsCommand(gallery.PhotographerId, gallery.Id, [first, second]), TestContext.Current.CancellationToken);
+
+        response.Rejected.ShouldBeEmpty();
+        gallery.Photos.Single(photo => photo.Id == first).FinalThumbBytes.ShouldBe(90_000);
+        gallery.Photos.Single(photo => photo.Id == second).FinalThumbBytes.ShouldBeNull();
+        gallery.HasFinal(second).ShouldBeTrue();
+        await _storage.Received(1).DeleteAsync(GalleryKeys.Thumb(gallery.Id, second), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Every place to upload a final comes with a second one for its thumbnail, signed for a JPEG.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task EachPlaceToUploadAFinal_HasAnotherForItsThumbnail()
+    {
+        var gallery = MakeGallery(GalleryStatus.InEditing);
+
+        var response = await new RequestFinalUploadsHandler(_galleries, _storage).HandleAsync(
+            new RequestFinalUploadsCommand(gallery.PhotographerId, gallery.Id, [new FinalFile(gallery.PackagePhotoIds[0], 4_000_000)]), TestContext.Current.CancellationToken);
+
+        var slot = response.Slots.Single();
+        slot.Url.ToString().ShouldContain("/finals/");
+        slot.ThumbUrl.ShouldNotBeNull().ToString().ShouldContain("/thumbs/");
+        slot.ThumbHeaders.ShouldNotBeNull()["Content-Type"].ShouldBe("image/jpeg");
+    }
+
+    /// <summary>
     /// Builds the handler that gives the client the addresses.
     /// </summary>
     /// <returns>The handler.</returns>
@@ -286,14 +410,15 @@ public sealed class GalleryZipHandlerTests
     /// Builds a gallery of the booking of the fixture: 4 proofs, 3 chosen (2 of the package and 1 extra), the package with its finals.
     /// </summary>
     /// <param name="status">State of the gallery.</param>
+    /// <param name="thumbOnFirst">Whether the final of the first chosen photo already has its thumbnail.</param>
     /// <returns>The gallery, which the repository returns.</returns>
-    private Gallery MakeGallery(GalleryStatus status)
+    private Gallery MakeGallery(GalleryStatus status, bool thumbOnFirst = false)
     {
         var proofs = Enumerable.Range(0, 4).Select(index => new GalleryPhoto(Guid.CreateVersion7(), $"IMG_{index:0000}.CR2", 10, PortalFixture.Now)).ToList();
         var chosen = proofs.Take(3).Select(photo => photo.Id).ToList();
         if (status != GalleryStatus.InEditing)
         {
-            proofs = [.. proofs.Select(photo => chosen.Take(2).Contains(photo.Id) ? photo with { FinalBytes = 100, FinalUploadedAt = PortalFixture.Now } : photo)];
+            proofs = [.. proofs.Select(photo => chosen.Take(2).Contains(photo.Id) ? photo with { FinalBytes = 100, FinalUploadedAt = PortalFixture.Now, FinalThumbBytes = thumbOnFirst && photo.Id == chosen[0] ? 90_000 : null } : photo)];
         }
 
         var gallery = Gallery.Restore(
