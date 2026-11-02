@@ -204,7 +204,7 @@ export function createPortalApi(client: HttpClient): PortalApi {
       client.post(pathOf(token, '/contract'), request, parsePortalBooking, { accessToken, signal }),
     getGallerySummary: (token, signal) => client.get(pathOf(token, '/gallery/summary'), parseGallerySummary, { signal }),
     getGallery: (token, accessToken, signal) => client.get(pathOf(token, '/gallery'), parsePortalGallery, { accessToken, signal }),
-    submitSelection: (token, accessToken, photoIds, signal) =>
-      client.post(pathOf(token, '/gallery/selection'), { photoIds }, parsePortalGallery, { accessToken, signal }),
+    submitSelection: (token, accessToken, photoIds, acceptExtras, signal) =>
+      client.post(pathOf(token, '/gallery/selection'), { photoIds, acceptExtras }, parsePortalGallery, { accessToken, signal }),
   };
 }

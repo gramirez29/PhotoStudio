@@ -64,7 +64,8 @@ export function useSubmitSelection(token: string): UseMutationResult<PortalGalle
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ accessToken, photoIds }: SubmitSelectionVariables) => portalApi.submitSelection(token, accessToken, photoIds),
+    mutationFn: ({ accessToken, photoIds, acceptExtras }: SubmitSelectionVariables) =>
+      portalApi.submitSelection(token, accessToken, photoIds, acceptExtras),
     onSuccess: (gallery) => {
       queryClient.setQueryData(portalGalleryKey(token), gallery);
       void queryClient.invalidateQueries({ queryKey: ['portal-gallery-summary', token] });
