@@ -138,3 +138,85 @@ export interface EditGalleryTermsRequest {
   /** Price of each extra photo, in the currency of the booking. */
   readonly extraPhotoPrice: number;
 }
+
+/** A file about to be uploaded as a proof, as the API is told about it. */
+export interface ProofFileInfo {
+  /** Name of the original file, kept as a label. */
+  readonly name: string;
+  /** Size of the proof in bytes. */
+  readonly bytes: number;
+}
+
+/** A place to upload one proof or final, given by the API. */
+export interface ProofUploadSlot {
+  /** Identifier the photo will have; it goes back when the upload is registered. */
+  readonly photoId: string;
+  /** Signed address to PUT the file to. It is a secret that expires: it is never logged or shown. */
+  readonly url: string;
+  /** Headers the upload must send exactly as given (the content type is part of the signature). */
+  readonly headers: Readonly<Record<string, string>>;
+  /** Instant the address stops working (ISO 8601). */
+  readonly expiresAt: string;
+}
+
+/** A place to upload one final and, optionally, its thumbnail. */
+export interface FinalUploadSlot extends ProofUploadSlot {
+  /** Signed address to PUT the thumbnail to, or null when the API gives none. It is a secret that expires: it is never logged. */
+  readonly thumbUrl: string | null;
+  /** Headers the thumbnail upload must send exactly as given. */
+  readonly thumbHeaders: Readonly<Record<string, string>>;
+}
+
+/** An upload of a proof that finished and has to be registered. */
+export interface ProofRegistration {
+  /** Identifier of the slot it was uploaded to. */
+  readonly photoId: string;
+  /** Name of the original file, kept as a label. */
+  readonly name: string;
+}
+
+/** A final about to be uploaded, as the API is told about it. */
+export interface FinalFileInfo {
+  /** Identifier of the chosen photo the final belongs to. */
+  readonly photoId: string;
+  /** Size of the final in bytes. */
+  readonly bytes: number;
+}
+
+/** What the phone knows about a final photo before sending it, as the API takes it. Every value may be unknown. */
+export interface FinalDetailsInfo {
+  /** Identifier of the chosen photo the final belongs to. */
+  readonly photoId: string;
+  /** Width in pixels, or null when unknown. */
+  readonly width: number | null;
+  /** Height in pixels, or null when unknown. */
+  readonly height: number | null;
+  /** Instant the photo was taken (ISO 8601), or null when unknown. */
+  readonly capturedAt: string | null;
+}
+
+/** An upload the API did not register, and why. */
+export interface UploadRejection {
+  /** Identifier of the photo. */
+  readonly photoId: string;
+  /** Stable reason: `missing`, `wrong_type`, `too_big`, `empty`, `invalid_name`, `gallery_full`... (others may come later). */
+  readonly reason: string;
+}
+
+/** What registering a batch of proofs or finals gave back. */
+export interface RegisterUploadsResult {
+  /** The gallery after registering what was valid. */
+  readonly gallery: GalleryResponse;
+  /** The uploads that were not registered. */
+  readonly rejected: readonly UploadRejection[];
+}
+
+/** The place to upload the ZIP, as the API gives it. */
+export interface ZipUploadSlot {
+  /** Signed address to send the file to with a PUT. It is a secret that expires: it is never logged. */
+  readonly url: string;
+  /** Headers that must go with the request. */
+  readonly headers: Readonly<Record<string, string>>;
+  /** Instant the address stops working (ISO 8601). */
+  readonly expiresAt: string;
+}

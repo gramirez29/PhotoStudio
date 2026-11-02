@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using PhotoStudio.Api.Auth;
+using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.EditTerms;
@@ -51,7 +52,7 @@ public static class GalleryEndpoints
         group.MapPost("/{id:guid}/terms", EditTermsAsync).WithName("EditGalleryTerms");
 
         // What the photographer does with a gallery from the app. The same handlers serve the web area; here the session is the
-        // token of the app instead of the cookie. Uploading files is not here: it needs the phone to prepare the photos.
+        // token of the app instead of the cookie.
         group.MapGet("/{id:guid}/proofs", ListProofsAsync).WithName("AppListProofs");
         group.MapGet("/{id:guid}/selection", GetSelectionAsync).WithName("AppGetSelection");
         group.MapPost("/{id:guid}/proofs/{photoId:guid}/remove", RemoveProofAsync).WithName("AppRemoveProof");
@@ -61,6 +62,16 @@ public static class GalleryEndpoints
         group.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("AppReleaseExtras");
         group.MapPost("/{id:guid}/zip/remove", RemoveZipAsync).WithName("AppRemoveZip");
         group.MapGet("/{id:guid}/finals/{photoId:guid}/download", GetFinalDownloadAsync).WithName("AppGetFinalDownload");
+
+        // Uploading files from the phone: the phone prepares the photos (a proof is reduced and marked on the device) and the bytes go
+        // straight to the storage with the signed addresses these routes give; the API only looks at what arrived. The handlers are
+        // the ones of the web area, so both surfaces follow the same rules.
+        group.MapPost("/{id:guid}/proofs/uploads", StudioEndpoints.RequestUploadsAsync).WithName("AppRequestProofUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        group.MapPost("/{id:guid}/proofs", StudioEndpoints.RegisterProofsAsync).WithName("AppRegisterProofs").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        group.MapPost("/{id:guid}/finals/uploads", StudioEndpoints.RequestFinalUploadsAsync).WithName("AppRequestFinalUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        group.MapPost("/{id:guid}/finals", StudioEndpoints.RegisterFinalsAsync).WithName("AppRegisterFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        group.MapPost("/{id:guid}/zip/upload", StudioEndpoints.RequestZipUploadAsync).WithName("AppRequestZipUpload").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        group.MapPost("/{id:guid}/zip", StudioEndpoints.RegisterZipAsync).WithName("AppRegisterZip").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
 
         return endpoints;
     }

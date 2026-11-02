@@ -17,6 +17,17 @@ import { GalleryProofGrid } from '../GalleryProofGrid';
 import { GallerySelection } from '../GallerySelection';
 import { GalleryZipCard } from '../GalleryZipCard';
 
+jest.mock('../../media/deviceUploaders', () => ({
+  deviceProofUploader: { run: jest.fn() },
+  deviceFinalUploader: { run: jest.fn() },
+  deviceZipUploader: { run: jest.fn() },
+  discardPickedFile: jest.fn(),
+  makeProofSample: jest.fn(),
+}));
+jest.mock('../GalleryFinalUpload', () => ({ GalleryFinalUpload: () => null }));
+jest.mock('../GalleryZipUpload', () => ({ GalleryZipUpload: () => null }));
+jest.mock('../GalleryProofUpload', () => ({ GalleryProofUpload: () => null }));
+jest.mock('../../media/devicePickers', () => ({ pickPhotos: jest.fn(), pickZip: jest.fn() }));
 jest.mock('../../hooks/useGallery');
 jest.mock('../../hooks/useDownloadFinal');
 jest.mock('../../navigation/appNavigation');

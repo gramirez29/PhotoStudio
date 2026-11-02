@@ -208,11 +208,69 @@ public sealed class GalleryProofsApiTests(ApiFixture fixture)
     }
 
     /// <summary>
+    /// The phone uploads proofs with the token of the app, the same way the page does with the cookie: places, the straight upload
+    /// to the storage, the registration (which looks at the real object), and the opening of the selection. Nobody else can: no token
+    /// is 401, another photographer's token is 404, for the proofs, the finals and the ZIP alike.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task FromTheApp_ThePhotographerUploadsProofsWithTheTokenOfTheApp()
+    {
+        Assume();
+        var (_, gallery, _, user) = await StartWithUserAsync();
+        var app = fixture.CreateClient();
+        var token = (await app.LoginAsync(user)).AccessToken;
+        var path = $"/api/galleries/{gallery.Id}";
+
+        var asked = await app.SendAsync(HttpMethod.Post, $"{path}/proofs/uploads", token, new { files = new[] { new { name = "IMG_0001.jpg", bytes = Photo.Length }, new { name = "IMG_0002.jpg", bytes = Photo.Length } } });
+        asked.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var slots = (await asked.ReadJsonAsync()).GetProperty("slots").EnumerateArray()
+            .Select(slot => new Slot(slot.GetProperty("photoId").GetGuid(), new Uri(slot.GetProperty("url").GetString()!), slot.GetProperty("headers").GetProperty("Content-Type").GetString()!)).ToList();
+        slots.Count.ShouldBe(2);
+        foreach (var slot in slots)
+        {
+            (await PutAsync(slot, Photo)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var registered = await app.SendAsync(HttpMethod.Post, $"{path}/proofs", token, new { photos = slots.Select((slot, index) => new { photoId = slot.PhotoId, name = $"IMG_000{index + 1}.jpg" }) });
+        registered.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await registered.ReadJsonAsync();
+        body.GetProperty("rejected").GetArrayLength().ShouldBe(0);
+        body.GetProperty("gallery").GetProperty("photoCount").GetInt32().ShouldBe(2);
+
+        var neverUploaded = await app.SendAsync(HttpMethod.Post, $"{path}/proofs", token, new { photos = new[] { new { photoId = Guid.CreateVersion7(), name = "ghost.jpg" } } });
+        (await neverUploaded.ReadJsonAsync()).GetProperty("rejected")[0].GetProperty("reason").GetString().ShouldBe("missing");
+
+        var stranger = await fixture.CreateUserAsync(verifiedEmail: true);
+        var strangerToken = (await app.LoginAsync(stranger)).AccessToken;
+        foreach (var route in new[] { "proofs/uploads", "proofs", "finals/uploads", "finals", "zip/upload", "zip" })
+        {
+            var request = new { files = new[] { new { name = "x.jpg", bytes = 10 } }, photos = new[] { new { photoId = Guid.CreateVersion7(), name = "x.jpg" } }, photoIds = new[] { Guid.CreateVersion7() }, bytes = 10 };
+            (await app.SendAsync(HttpMethod.Post, $"{path}/{route}", null, request)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+            (await app.SendAsync(HttpMethod.Post, $"{path}/{route}", strangerToken, request)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+
+        (await app.SendAsync(HttpMethod.Post, $"{path}/selection/open", token)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await app.SendAsync(HttpMethod.Post, $"{path}/proofs/uploads", token, new { files = new[] { new { name = "late.jpg", bytes = 10 } } })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    /// <summary>
     /// A user, a booking of a client with an email, a gallery of that booking, and the browser of the user signed in.
     /// </summary>
     /// <param name="photos">Proofs the gallery already has.</param>
     /// <returns>The browser, the gallery and the email of the client.</returns>
     private async Task<(HttpClient Browser, Gallery Gallery, string ClientEmail)> StartAsync(int photos = 0)
+    {
+        var (browser, gallery, clientEmail, _) = await StartWithUserAsync(photos);
+        return (browser, gallery, clientEmail);
+    }
+
+    /// <summary>
+    /// The same as <see cref="StartAsync"/>, and the user too, for the tests that also use the token of the app.
+    /// </summary>
+    /// <param name="photos">Proofs the gallery already has.</param>
+    /// <returns>The browser, the gallery, the email of the client and the user.</returns>
+    private async Task<(HttpClient Browser, Gallery Gallery, string ClientEmail, TestUser User)> StartWithUserAsync(int photos = 0)
     {
         var user = await fixture.CreateUserAsync(verifiedEmail: true);
         var clientEmail = $"client-{Guid.NewGuid():N}@example.com";
@@ -234,7 +292,7 @@ public sealed class GalleryProofsApiTests(ApiFixture fixture)
             Enumerable.Range(0, photos).Select(index => new GalleryPhoto(Guid.CreateVersion7(), $"{index}.jpg", 100, DateTimeOffset.UtcNow)));
         using var scope = fixture.Services.CreateScope();
         (await scope.ServiceProvider.GetRequiredService<IGalleryRepository>().TryAddAsync(gallery, TestContext.Current.CancellationToken)).ShouldBeTrue();
-        return (await SignInAsync(user), gallery, clientEmail);
+        return (await SignInAsync(user), gallery, clientEmail, user);
     }
 
     /// <summary>

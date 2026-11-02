@@ -6,6 +6,7 @@ import type { GalleryProofsProps } from '../types/components/GalleryComponents.t
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
 import { GalleryProofGrid } from './GalleryProofGrid';
+import { GalleryProofUpload } from './GalleryProofUpload';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { spacing } from '../theme/tokens';
@@ -29,10 +30,11 @@ export function GalleryProofs({ gallery, handlers }: GalleryProofsProps): ReactE
         Pruebas para el cliente ({gallery.photoCount} de {gallery.maxPhotos})
       </Text>
       {gallery.photoCount === 0 ? (
-        <Text style={styles.body}>Todavía no hay pruebas. Súbelas desde la computadora, en tu página de galerías.</Text>
+        <Text style={styles.body}>Todavía no hay pruebas. Súbelas desde aquí o desde la computadora.</Text>
       ) : (
         <ActionButton label={shown ? 'Ocultar las pruebas' : 'Ver las pruebas'} onPress={() => setShown((current) => !current)} />
       )}
+      {gallery.allowedActions.includes('UploadProofs') && <GalleryProofUpload gallery={gallery} />}
       {shown && query.isPending && <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando las pruebas" />}
       {shown && query.isError && (
         <>

@@ -352,7 +352,7 @@ public static class StudioEndpoints
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with a signed address per file; 409 <c>gallery.invalid_state</c> or <c>gallery.full</c>; 422 <c>gallery.invalid_photo</c>.</returns>
-    private static async Task<Ok<ProofUploadSlotsResponse>> RequestUploadsAsync(
+    internal static async Task<Ok<ProofUploadSlotsResponse>> RequestUploadsAsync(
         Guid id,
         RequestProofUploadsRequest request,
         ClaimsPrincipal user,
@@ -371,7 +371,7 @@ public static class StudioEndpoints
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with the gallery and the uploads that were not accepted, each with its reason.</returns>
-    private static async Task<Ok<RegisterProofsResponse>> RegisterProofsAsync(
+    internal static async Task<Ok<RegisterProofsResponse>> RegisterProofsAsync(
         Guid id,
         RegisterProofsRequest request,
         ClaimsPrincipal user,
@@ -407,7 +407,7 @@ public static class StudioEndpoints
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with a signed address per file; 409 <c>gallery.invalid_state</c>; 422 <c>gallery.invalid_photo</c> for a photo that was not chosen or a size that is not valid.</returns>
-    private static async Task<Ok<FinalUploadSlotsResponse>> RequestFinalUploadsAsync(
+    internal static async Task<Ok<FinalUploadSlotsResponse>> RequestFinalUploadsAsync(
         Guid id,
         RequestFinalUploadsRequest request,
         ClaimsPrincipal user,
@@ -426,7 +426,7 @@ public static class StudioEndpoints
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with the gallery and the uploads that were not kept, each with its reason.</returns>
-    private static async Task<Ok<RegisterFinalsResponse>> RegisterFinalsAsync(
+    internal static async Task<Ok<RegisterFinalsResponse>> RegisterFinalsAsync(
         Guid id,
         RegisterFinalsRequest request,
         ClaimsPrincipal user,
@@ -507,7 +507,7 @@ public static class StudioEndpoints
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with the signed address; 409 <c>gallery.invalid_state</c> before the finals are published; 422 <c>gallery.invalid_zip</c> for a size that is not valid.</returns>
-    private static async Task<Ok<ZipUploadSlotResponse>> RequestZipUploadAsync(
+    internal static async Task<Ok<ZipUploadSlotResponse>> RequestZipUploadAsync(
         Guid id,
         RequestZipUploadRequest request,
         ClaimsPrincipal user,
@@ -523,7 +523,7 @@ public static class StudioEndpoints
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with the gallery; 422 <c>gallery.invalid_zip</c> when the file is missing, is not a ZIP or weighs too much.</returns>
-    private static async Task<Ok<GalleryResponse>> RegisterZipAsync(
+    internal static async Task<Ok<GalleryResponse>> RegisterZipAsync(
         Guid id,
         ClaimsPrincipal user,
         ICommandHandler<RegisterZipCommand, GalleryResponse> handler,

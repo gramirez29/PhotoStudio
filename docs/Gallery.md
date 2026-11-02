@@ -309,7 +309,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 
 **Pruebas:** app 43 nuevas (921 en total): lectura de las respuestas, rutas llamadas, textos de estado, ficha y validaciones, las acciones con su confirmación, las pantallas (tarjeta, selección en dos bloques, visor de la foto real, cuadrícula de pruebas, ZIP) y las dos opciones del enlace. El paquete de Android se exporta sin errores.
 
-**Pendiente (PR 9):** subir pruebas, finales (con su miniatura) y ZIP desde el celular.
+**Subir archivos desde el celular:** ver la sección 26 (PR 9).
 
 ## 25. Las fotos como tarjetas (2026-11-04)
 
@@ -323,3 +323,21 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 - Una sola pieza compartida en la web (`PhotoCard`) para las dos páginas; en la app, `GalleryPhotoTile`.
 
 **Pendiente:** los finales ya publicados antes de las miniaturas siguen sin la suya (se ven con la prueba). Una opción es una acción "generar miniaturas faltantes" desde la web del fotógrafo, para que el cliente vea la foto final y no la de prueba.
+
+## 26. Subir pruebas, finales y ZIP desde el celular (PR 9)
+
+**Qué hay:** todo lo que la web de `/studio` sube, ahora también desde el detalle de la galería en la app. Los bytes **nunca pasan por la API**: van directo a R2 con las direcciones firmadas de siempre.
+
+**Backend:** seis rutas nuevas bajo `/api/galleries/{id}` con el token de la app y los **mismos manejadores** que la web (`StudioEndpoints`): `POST proofs/uploads`, `POST proofs`, `POST finals/uploads`, `POST finals`, `POST zip/upload`, `POST zip`. Mismo límite (60 por minuto por IP). Una galería ajena responde 404 y sin token 401.
+
+**En el celular (`mobile/src/media/`):**
+- **Pruebas:** el selector del sistema (sin pedir permisos) → la foto se reduce con la librería nativa (`expo-image-manipulator`, ya girada como la tenía la cámara) a 720 px de lado largo → Skia dibuja el logo (70 % del lado corto, 60 % de opacidad, sombra suave: la misma especificación que `portal/src/media/proofRenderer.ts`) y codifica JPEG con calidad 40, 30 o 20 (si pesa más de 1 MB, baja la calidad y luego el tamaño). El JPEG de Skia no lleva metadatos. Antes de subir se muestra **una muestra con la primera foto** y hay que confirmar. Lotes de 10 (2 preparadas a la vez, 3 subidas a la vez).
+- **Finales:** se suben **tal cual** (hasta 50 MB), emparejados por nombre con lo que eligió el cliente (`IMG_0001-Edit.jpg` va con `IMG_0001`; mismo algoritmo que la web). La miniatura se hace con la librería nativa (720 px, calidad 0,85 a 0,55, máx. 400 KB). Se envían ancho, alto y fecha de la foto (EXIF; sin zona horaria se asume Costa Rica).
+- **ZIP:** selector de archivos, hasta 500 MB, se envía desde el archivo (no se lee a memoria) con barra de progreso.
+- **Reglas:** la app debe quedar abierta mientras sube; una foto que falla se queda en la lista con su motivo y se reintenta; una petición que falla detiene la subida y deja el resto en espera. Los archivos temporales (pruebas hechas, copias del selector) viven en la caché de la app y se borran al terminar; **solo se borra lo que está en la caché de la app**, nunca la fototeca.
+
+**Requiere un build nuevo de EAS** (Skia, selector de fotos y de archivos, manipulador de imágenes).
+
+**Por verificar en un teléfono real:** que el selector entregue el JPEG de los finales sin recomprimir, que las dimensiones de los finales salgan con la orientación correcta, el aspecto de la marca de agua frente a la de la web, y la memoria con fotos de muchos megapíxeles.
+
+**Pruebas:** backend, una de API (subir pruebas con el token de la app, rechazos por token ajeno y sin token); app 12 nuevas (tamaños, selección, emparejado, fecha, renderizador, los tres subidores).
