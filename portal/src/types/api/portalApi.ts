@@ -78,8 +78,9 @@ export interface PortalApi {
    * @param token Secret token taken from the URL.
    * @param accessToken Token of the session obtained by verifying a code.
    * @param photoIds Identifiers of the photos chosen.
+   * @param acceptExtras True when the client accepted that the studio contacts them to agree on the payment of the extra photos.
    * @param signal Optional signal to cancel the request.
    * @returns The gallery after the selection.
    */
-  submitSelection(token: string, accessToken: string, photoIds: readonly string[], signal?: AbortSignal): Promise<PortalGallery>;
+  submitSelection(token: string, accessToken: string, photoIds: readonly string[], acceptExtras: boolean, signal?: AbortSignal): Promise<PortalGallery>;
 }

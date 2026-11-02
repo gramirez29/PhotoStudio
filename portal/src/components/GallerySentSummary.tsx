@@ -31,7 +31,7 @@ export function GallerySentSummary({ gallery, justSent, onClose }: GallerySentSu
       </p>
       {selection !== null && extra > 0 && (
         <p>
-          {extra} {extra === 1 ? 'foto adicional' : 'fotos adicionales'}: {formatMoney(selection.extraTotal)}. Se suma a tu saldo.
+          {extra} {extra === 1 ? 'foto adicional' : 'fotos adicionales'}: {formatMoney(selection.extraTotal)}. PhotoSense Studio te contactará para coordinar el pago.
         </p>
       )}
 

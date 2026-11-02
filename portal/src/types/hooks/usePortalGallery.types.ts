@@ -4,4 +4,6 @@ export interface SubmitSelectionVariables {
   readonly accessToken: string;
   /** Identifiers of the photos chosen, in the order they were chosen. */
   readonly photoIds: readonly string[];
+  /** True when the client accepted that the studio contacts them to agree on the payment of the photos beyond the package. */
+  readonly acceptExtras: boolean;
 }

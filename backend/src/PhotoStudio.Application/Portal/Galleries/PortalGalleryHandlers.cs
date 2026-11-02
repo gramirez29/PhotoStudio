@@ -24,7 +24,8 @@ public sealed record GetPortalGalleryQuery(string Token, Guid AuthorizedBookingI
 /// <param name="Token">Secret token taken from the URL.</param>
 /// <param name="AuthorizedBookingId">Booking the portal session is valid for; it must be the booking of the link.</param>
 /// <param name="PhotoIds">Identifiers of the photos chosen.</param>
-public sealed record SubmitPortalSelectionCommand(string Token, Guid AuthorizedBookingId, IReadOnlyList<Guid> PhotoIds);
+/// <param name="AcceptExtras">Whether the client accepted that the studio contacts them to agree on the payment of the photos beyond the package.</param>
+public sealed record SubmitPortalSelectionCommand(string Token, Guid AuthorizedBookingId, IReadOnlyList<Guid> PhotoIds, bool AcceptExtras = false);
 
 /// <summary>
 /// Tells whether the client has a gallery to look at and where it is. It needs only the link, like the booking itself, and says
@@ -135,6 +136,12 @@ public sealed class SubmitPortalSelectionHandler(
         if (command.PhotoIds is null || command.PhotoIds.Count > Gallery.MaxPhotos)
         {
             throw new DomainException(DomainErrorCodes.GalleryInvalidSelection, "The selection is not valid.");
+        }
+
+        // The extra photos are not charged by the system: the studio agrees on their payment with the client, so the client must say yes first.
+        if (command.PhotoIds.Count > gallery.SelectablePhotos && !command.AcceptExtras)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryExtrasNotAccepted, "The selection has extra photos and the client did not accept them.");
         }
 
         if (gallery.SubmitSelection(command.PhotoIds, now))

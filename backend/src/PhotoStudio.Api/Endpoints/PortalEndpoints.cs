@@ -53,7 +53,8 @@ public sealed record PortalSignContractRequest(
 /// HTTP body for the client to send the photos they chose.
 /// </summary>
 /// <param name="PhotoIds">Identifiers of the photos chosen.</param>
-public sealed record SubmitSelectionRequest(IReadOnlyList<Guid>? PhotoIds);
+/// <param name="AcceptExtras">True when the client accepted that the studio contacts them to agree on the payment of the extra photos.</param>
+public sealed record SubmitSelectionRequest(IReadOnlyList<Guid>? PhotoIds, bool AcceptExtras = false);
 
 /// <summary>
 /// Endpoints of the client portal under <c>/public/bookings/{token}</c>. The token of the link is the credential for reading
@@ -139,14 +140,14 @@ public static class PortalEndpoints
     /// <param name="user">Authenticated portal session.</param>
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
-    /// <returns>200 with the gallery after the selection; 401 without a valid session; 404 when the session is for another booking; 409 when the selection is not open; 422 <c>gallery.invalid_selection</c> for photos that are none, repeated or not of the gallery.</returns>
+    /// <returns>200 with the gallery after the selection; 401 without a valid session; 404 when the session is for another booking; 409 when the selection is not open; 422 <c>gallery.invalid_selection</c> for photos that are none, repeated or not of the gallery; 422 <c>gallery.extras_not_accepted</c> when there are photos beyond the package and the client did not accept them.</returns>
     private static async Task<Ok<PortalGalleryResponse>> SubmitSelectionAsync(
         string token,
         SubmitSelectionRequest request,
         ClaimsPrincipal user,
         ICommandHandler<SubmitPortalSelectionCommand, PortalGalleryResponse> handler,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await handler.HandleAsync(new SubmitPortalSelectionCommand(token, user.GetPortalBookingId(), request.PhotoIds ?? []), cancellationToken));
+        TypedResults.Ok(await handler.HandleAsync(new SubmitPortalSelectionCommand(token, user.GetPortalBookingId(), request.PhotoIds ?? [], request.AcceptExtras), cancellationToken));
 
     /// <summary>
     /// Reads the booking the link opens.
