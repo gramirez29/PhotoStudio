@@ -39,12 +39,16 @@ function selection(finals: Record<string, number> = {}): Record<string, unknown>
     extraPhotos: 1,
     extraTotal: { amount: 3000, currency: 'CRC' },
     photos: [
-      { id: 'p1', name: 'IMG_0001.CR2', isExtra: false, finalBytes: finals.p1 ?? null },
-      { id: 'p2', name: 'IMG_0002.CR2', isExtra: false, finalBytes: finals.p2 ?? null },
-      { id: 'p3', name: 'IMG_0003.CR2', isExtra: true, finalBytes: finals.p3 ?? null },
+      { id: 'p1', name: 'IMG_0001.CR2', isExtra: false, finalBytes: finals.p1 ?? null, thumbUrl: 'https://account.r2.cloudflarestorage.com/t-p1?sig=secret', thumbIsFinal: finals.p1 !== undefined },
+      { id: 'p2', name: 'IMG_0002.CR2', isExtra: false, finalBytes: finals.p2 ?? null, thumbUrl: 'https://account.r2.cloudflarestorage.com/t-p2?sig=secret', thumbIsFinal: finals.p2 !== undefined },
+      { id: 'p3', name: 'IMG_0003.CR2', isExtra: true, finalBytes: finals.p3 ?? null, thumbUrl: 'https://account.r2.cloudflarestorage.com/t-p3?sig=secret', thumbIsFinal: finals.p3 !== undefined },
     ],
   };
 }
+
+vi.mock('../media/browserThumbRenderer', () => ({
+  browserThumbRenderer: { render: () => Promise.resolve(new Blob([new Uint8Array(6)], { type: 'image/jpeg' })) },
+}));
 
 describe('the final photos on the page of a gallery', () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -121,13 +125,15 @@ describe('the final photos on the page of a gallery', () => {
         [`POST ${GALLERY_PATH}/finals/uploads`]: [
           jsonResponse(200, {
             slots: [
-              { photoId: 'p1', url: 'https://account.r2.cloudflarestorage.com/f1?sig=secret', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: '2026-11-03T12:15:00+00:00' },
-              { photoId: 'p2', url: 'https://account.r2.cloudflarestorage.com/f2?sig=secret', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: '2026-11-03T12:15:00+00:00' },
+              { photoId: 'p1', url: 'https://account.r2.cloudflarestorage.com/f1?sig=secret', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: '2026-11-03T12:15:00+00:00', thumbUrl: 'https://account.r2.cloudflarestorage.com/th1?sig=secret', thumbHeaders: { 'Content-Type': 'image/jpeg' } },
+              { photoId: 'p2', url: 'https://account.r2.cloudflarestorage.com/f2?sig=secret', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: '2026-11-03T12:15:00+00:00', thumbUrl: 'https://account.r2.cloudflarestorage.com/th2?sig=secret', thumbHeaders: { 'Content-Type': 'image/jpeg' } },
             ],
           }),
         ],
         'PUT /f1?sig=secret': [new Response(null, { status: 200 })],
         'PUT /f2?sig=secret': [new Response(null, { status: 200 })],
+        'PUT /th1?sig=secret': [new Response(null, { status: 200 })],
+        'PUT /th2?sig=secret': [new Response(null, { status: 200 })],
         [`POST ${GALLERY_PATH}/finals`]: [jsonResponse(200, { gallery: gallery({ allowedActions: ['UploadFinals', 'PublishFinals'] }), rejected: [] })],
       }),
     );
@@ -146,7 +152,7 @@ describe('the final photos on the page of a gallery', () => {
 
     await user.click(screen.getByRole('button', { name: 'Subir 2 finales' }));
 
-    await waitFor(() => expect(requests()).toEqual(expect.arrayContaining([`POST ${GALLERY_PATH}/finals/uploads`, 'PUT /f1?sig=secret', 'PUT /f2?sig=secret', `POST ${GALLERY_PATH}/finals`])));
+    await waitFor(() => expect(requests()).toEqual(expect.arrayContaining([`POST ${GALLERY_PATH}/finals/uploads`, 'PUT /f1?sig=secret', 'PUT /f2?sig=secret', 'PUT /th1?sig=secret', 'PUT /th2?sig=secret', `POST ${GALLERY_PATH}/finals`])));
     const registered = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/finals') && init?.method === 'POST');
     expect(JSON.parse(String(registered?.[1]?.body))).toEqual({
       photoIds: ['p1', 'p2'],
@@ -156,6 +162,31 @@ describe('the final photos on the page of a gallery', () => {
       ],
     });
     expect(await screen.findByRole('button', { name: 'Publicar finales' })).toBeInTheDocument();
+  });
+
+  it('opens a photo in its real quality, the final itself and not the small image, and keeps the proof for one without a final', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery())],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 4_000_000 }))],
+        [`GET ${GALLERY_PATH}/finals/p1/download`]: [
+          jsonResponse(200, { fileName: 'IMG_0001.jpg', url: 'https://account.r2.cloudflarestorage.com/final-p1?sig=secret', expiresAt: '2026-11-03T12:05:00+00:00' }),
+        ],
+      }),
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Ver IMG_0001.CR2' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/final-p1?sig=secret'));
+    expect(within(dialog).getByText(/final subido/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Siguiente' }));
+    expect(within(dialog).getByRole('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/t-p2?sig=secret');
+    expect(within(dialog).getByText(/prueba, todavía sin final/)).toBeInTheDocument();
+    expect(requests().some((request) => request.includes('/finals/p2/download'))).toBe(false);
+    await user.click(within(dialog).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps a final that was refused in the queue with its reason', async () => {

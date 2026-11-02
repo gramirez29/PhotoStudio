@@ -190,6 +190,7 @@ export function parsePortalGallery(value: unknown): PortalGallery {
               fileName: readString(final, 'fileName', itemPath),
               bytes: readNumber(final, 'bytes', itemPath),
               isExtra: readBoolean(final, 'isExtra', itemPath),
+              thumbUrl: readNullableString(final, 'thumbUrl', itemPath),
             };
           }),
     extrasReleased: record.extrasReleased === true,
@@ -214,6 +215,16 @@ export function parseDownloads(value: unknown): readonly PortalDownload[] {
       expiresAt: readString(download, 'expiresAt', itemPath),
     };
   });
+}
+
+/**
+ * Parses the address to look at a final in its real quality.
+ * @param value Unknown response body.
+ * @returns The address.
+ */
+export function parseFinalView(value: unknown): { readonly url: string } {
+  const path = 'finalView';
+  return { url: readString(expectRecord(value, path), 'url', path) };
 }
 
 /**
@@ -259,6 +270,8 @@ export function createPortalApi(client: HttpClient): PortalApi {
     getGallery: (token, accessToken, signal) => client.get(pathOf(token, '/gallery'), parsePortalGallery, { accessToken, signal }),
     requestDownloads: (token, accessToken, photoIds, signal) =>
       client.post(pathOf(token, '/gallery/downloads'), { photoIds }, parseDownloads, { accessToken, signal }),
+    getFinalView: async (token, accessToken, photoId, signal) =>
+      (await client.get(pathOf(token, `/gallery/finals/${encodeURIComponent(photoId)}/view`), parseFinalView, { accessToken, signal })).url,
     requestZipDownload: (token, accessToken, signal) => client.post(pathOf(token, '/gallery/zip/download'), {}, parseZipDownload, { accessToken, signal }),
     submitSelection: (token, accessToken, photoIds, acceptExtras, signal) =>
       client.post(pathOf(token, '/gallery/selection'), { photoIds, acceptExtras }, parsePortalGallery, { accessToken, signal }),

@@ -84,6 +84,16 @@ export interface PortalApi {
   requestDownloads(token: string, accessToken: string, photoIds: readonly string[], signal?: AbortSignal): Promise<readonly PortalDownload[]>;
 
   /**
+   * Asks for the address to look at a final photo in its real quality, as edited. It is not a download and is not counted.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param photoId The photo.
+   * @param signal Optional signal to cancel the request.
+   * @returns The address.
+   */
+  getFinalView(token: string, accessToken: string, photoId: string, signal?: AbortSignal): Promise<string>;
+
+  /**
    * Asks for the address to download the ZIP with the photos. Asking counts as a download.
    * @param token Secret token taken from the URL.
    * @param accessToken Token of the session obtained by verifying a code.

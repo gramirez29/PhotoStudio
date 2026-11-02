@@ -1,4 +1,4 @@
-import type { FinalDetailsInfo, FinalDownloadLink, FinalFileInfo, ZipUploadSlot } from './finals';
+import type { FinalDetailsInfo, FinalDownloadLink, FinalFileInfo, FinalUploadSlot, ZipUploadSlot } from './finals';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from './proofs';
 import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from './studio';
 
@@ -121,7 +121,7 @@ export interface StudioApi {
    * @param signal Optional signal to cancel the request.
    * @returns One slot per file, in the same order.
    */
-  requestFinalUploads(galleryId: string, files: readonly FinalFileInfo[], signal?: AbortSignal): Promise<readonly ProofUploadSlot[]>;
+  requestFinalUploads(galleryId: string, files: readonly FinalFileInfo[], signal?: AbortSignal): Promise<readonly FinalUploadSlot[]>;
 
   /**
    * Registers the finals that were uploaded; the API looks at what is really in the storage first.

@@ -6,6 +6,14 @@ export interface RequestDownloadsVariables {
   readonly photoIds: readonly string[];
 }
 
+/** What the mutation that asks for the address to look at a final needs. */
+export interface RequestFinalViewVariables {
+  /** Token of the session obtained by verifying a code. */
+  readonly accessToken: string;
+  /** The photo. */
+  readonly photoId: string;
+}
+
 /** What the mutation that sends the selection needs. */
 export interface SubmitSelectionVariables {
   /** Token of the session obtained by verifying a code. */

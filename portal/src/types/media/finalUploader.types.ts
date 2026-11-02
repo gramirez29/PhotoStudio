@@ -20,7 +20,13 @@ export interface FinalUploaderDeps {
    * @param signal Optional signal to cancel the upload.
    * @returns A promise that resolves when the storage has the file.
    */
-  readonly put: (slot: ProofUploadSlot, file: Blob, signal?: AbortSignal) => Promise<void>;
+  readonly put: (slot: Pick<ProofUploadSlot, 'url' | 'headers'>, file: Blob, signal?: AbortSignal) => Promise<void>;
+  /**
+   * Makes the thumbnail of a final. It never fails: when it cannot be made it gives null and the final goes up without one.
+   * @param file The final.
+   * @returns The thumbnail, or null.
+   */
+  readonly renderThumb: (file: Blob) => Promise<Blob | null>;
   /**
    * Reads the size in pixels and the date taken from a file. It never fails: what cannot be read comes back unknown.
    * @param file The final.

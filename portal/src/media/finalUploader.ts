@@ -1,4 +1,5 @@
 import { FINAL_BATCH_SIZE, FINAL_UPLOAD_CONCURRENCY } from '../constants/finals';
+import type { FinalUploadSlot } from '../types/api/finals';
 import type { FinalUploadItem, FinalUploader, FinalUploaderDeps } from '../types/media/finalUploader.types';
 import { mapWithLimit } from '../utils/concurrency';
 import { describeFinalsRequestError, describeRejection, describeUploadFailure } from '../utils/proofMessages';
@@ -10,6 +11,30 @@ import { describeFinalsRequestError, describeRejection, describeUploadFailure } 
  * @returns The uploader.
  */
 export function createFinalUploader(deps: FinalUploaderDeps): FinalUploader {
+  /**
+   * Sends the thumbnail of a final. It is optional: whatever goes wrong here leaves the final without one, and the final is not
+   * refused for it. Only a cancellation is passed on.
+   * @param slot Where the final and its thumbnail go.
+   * @param file The final.
+   * @param signal Optional signal to cancel the run.
+   */
+  async function sendThumb(slot: FinalUploadSlot, file: Blob, signal: AbortSignal | undefined): Promise<void> {
+    if (slot.thumbUrl === null) {
+      return;
+    }
+
+    try {
+      const thumb = await deps.renderThumb(file);
+      if (thumb !== null) {
+        await deps.put({ url: slot.thumbUrl, headers: slot.thumbHeaders }, thumb, signal);
+      }
+    } catch (error) {
+      if (isCancelled(signal)) {
+        throw error;
+      }
+    }
+  }
+
   return {
     async run(galleryId, items, observer, signal) {
       for (let start = 0; start < items.length; start += FINAL_BATCH_SIZE) {
@@ -35,6 +60,7 @@ export function createFinalUploader(deps: FinalUploaderDeps): FinalUploader {
             observer.onItem(item.id, 'uploading', null);
             try {
               await deps.put(slot, item.file, signal);
+              await sendThumb(slot, item.file, signal);
               return item;
             } catch (error) {
               if (isCancelled(signal)) {

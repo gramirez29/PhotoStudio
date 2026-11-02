@@ -440,6 +440,30 @@ describe('the gallery of the client', () => {
       click.mockRestore();
     });
 
+    it('shows the thumbnail of each photo and opens the real one, as edited, without it being a download', async () => {
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [
+            jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [{ ...FINAL('p4'), thumbUrl: 'https://account.r2.cloudflarestorage.com/thumb-p4?sig=secret' }, FINAL('p2')] })),
+          ],
+          'GET /gallery/finals/p4/view': [jsonResponse(200, { url: 'https://account.r2.cloudflarestorage.com/final-p4?sig=secret', expiresAt: '2026-11-03T12:05:00+00:00' })],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      const tile = await screen.findByRole('button', { name: 'Ver IMG_0004.jpg' });
+      expect(tile.querySelector('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/thumb-p4?sig=secret');
+      await user.click(tile);
+
+      const dialog = await screen.findByRole('dialog');
+      await waitFor(() => expect(within(dialog).getByRole('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/final-p4?sig=secret'));
+      expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/gallery/downloads'))).toBe(false);
+      await user.click(within(dialog).getByRole('button', { name: 'Cerrar' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
     it('downloads one photo with its own button, asking for that photo only', async () => {
       const started: string[] = [];
       const click = spyOnDownloads(started);

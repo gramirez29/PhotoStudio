@@ -7,6 +7,7 @@ import { describeDownloadError } from '../utils/apiErrors';
 import { downloadInSequence, toDownloads, totalBytes } from '../utils/downloads';
 import { formatBytes, formatMoney } from '../utils/format';
 import { CheckboxField } from './CheckboxField';
+import { PhotoViewer } from './PhotoViewer';
 import { StepHeading } from './StepHeading';
 
 /**
@@ -17,11 +18,12 @@ import { StepHeading } from './StepHeading';
  * @param props Component props.
  * @returns The downloads.
  */
-export function GalleryDownloads({ gallery, requestDownloads, requestZip, onSessionExpired, onClose }: GalleryDownloadsProps): ReactElement {
+export function GalleryDownloads({ gallery, requestDownloads, requestView, requestZip, onSessionExpired, onClose }: GalleryDownloadsProps): ReactElement {
   const [marked, setMarked] = useState<ReadonlySet<string>>(new Set());
   const [started, setStarted] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [confirmingZip, setConfirmingZip] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
   const [zipBusy, setZipBusy] = useState(false);
   const packageFinals = gallery.finals.filter((final) => !final.isExtra);
   const extraFinals = gallery.finals.filter((final) => final.isExtra);
@@ -148,7 +150,7 @@ export function GalleryDownloads({ gallery, requestDownloads, requestZip, onSess
         </p>
       )}
 
-      <DownloadGroup title="Fotos de tu paquete" finals={packageFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} />
+      <DownloadGroup title="Fotos de tu paquete" finals={packageFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} onView={(final) => setViewing(final.id)} />
 
       {extraChosen > 0 && extraFinals.length === 0 && (
         <p className="notice" role="status">
@@ -156,7 +158,16 @@ export function GalleryDownloads({ gallery, requestDownloads, requestZip, onSess
           PhotoSense Studio te contactará para coordinar el pago y entregártelas.
         </p>
       )}
-      <DownloadGroup title="Fotos adicionales" finals={extraFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} />
+      <DownloadGroup title="Fotos adicionales" finals={extraFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} onView={(final) => setViewing(final.id)} />
+      {viewing !== null && (
+        <PhotoViewer
+          photos={gallery.finals.map((final) => ({ id: final.id, name: final.fileName, caption: formatBytes(final.bytes), placeholder: final.thumbUrl }))}
+          index={Math.max(0, gallery.finals.findIndex((final) => final.id === viewing))}
+          loadSource={requestView}
+          onMove={(position) => setViewing(gallery.finals[position]?.id ?? null)}
+          onClose={() => setViewing(null)}
+        />
+      )}
 
       <div className="actions">
         <button type="button" className="button button--secondary" onClick={onClose}>
@@ -181,6 +192,8 @@ interface DownloadGroupProps {
   readonly onToggle: (id: string) => void;
   /** Called to download one photo. */
   readonly onDownload: (final: PortalFinal) => void;
+  /** Called to look at one photo in its real quality. */
+  readonly onView: (final: PortalFinal) => void;
 }
 
 /**
@@ -188,7 +201,7 @@ interface DownloadGroupProps {
  * @param props Component props.
  * @returns The group, or nothing when it has no photos.
  */
-function DownloadGroup({ title, finals, marked, disabled, onToggle, onDownload }: DownloadGroupProps): ReactElement | null {
+function DownloadGroup({ title, finals, marked, disabled, onToggle, onDownload, onView }: DownloadGroupProps): ReactElement | null {
   if (finals.length === 0) {
     return null;
   }
@@ -198,13 +211,16 @@ function DownloadGroup({ title, finals, marked, disabled, onToggle, onDownload }
       <h3>
         {title} ({finals.length})
       </h3>
-      <ul className="downloads__list">
+      <ul className="final-grid">
         {finals.map((final) => (
-          <li key={final.id} className="downloads__item">
+          <li key={final.id} className="final-tile">
+            <button type="button" className="final-tile__photo" aria-label={`Ver ${final.fileName}`} onClick={() => onView(final)}>
+              {final.thumbUrl !== null && <img src={final.thumbUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
+            </button>
             <CheckboxField id={`download-${final.id}`} checked={marked.has(final.id)} disabled={disabled} onChange={() => onToggle(final.id)}>
               {final.fileName} ({formatBytes(final.bytes)})
             </CheckboxField>
-            <button type="button" className="button button--secondary" disabled={disabled} aria-label={`Descargar ${final.fileName}`} onClick={() => onDownload(final)}>
+            <button type="button" className="button button--secondary final-tile__action" disabled={disabled} aria-label={`Descargar ${final.fileName}`} onClick={() => onDownload(final)}>
               Descargar
             </button>
           </li>

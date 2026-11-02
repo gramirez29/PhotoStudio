@@ -1,14 +1,17 @@
-import { useState, type ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
+import { studioApi } from '../api/client';
 import { useDownloadFinal, useStudioSelection } from '../hooks/useStudioGallery';
 import type { StudioSelectedPhoto } from '../types/api/studio';
 import type { StudioSelectionProps } from '../types/components/ProofComponents.types';
 import { formatBytes, formatDateTime, formatDay, formatMoney } from '../utils/format';
 import { describeProofRequestError } from '../utils/proofMessages';
+import { PhotoViewer } from './PhotoViewer';
 
 /**
  * What the client chose, in two blocks: the photos of the package and the extra ones, so the photographer tells at a glance which
- * he must edit for the package and which are agreed on apart. Each block has the names of the original files, one per line, ready to
- * copy and paste into the search of the editing software, and shows which photos already have their final.
+ * he must edit for the package and which are agreed on apart. Each block is a gallery: a grid with the photo of each (the thumbnail
+ * of its final or, while it has none, its proof), what is known about the final, a way to download it, and the names of the original
+ * files to copy and paste into the search of the editing software. Tapping a photo opens it in the quality it was edited.
  * @param props Component props.
  * @returns The section.
  */
@@ -61,38 +64,13 @@ export function StudioSelection({ gallery }: StudioSelectionProps): ReactElement
   );
 }
 
-/**
- * Describes the final of a photo for the photographer: its size in pixels and in megabytes, when it was taken and how many times
- * the client asked to download it; or that it has none yet.
- * @param photo The photo.
- * @returns The text.
- */
-export function describeFinal(photo: StudioSelectedPhoto): string {
-  if (photo.finalBytes === null) {
-    return 'sin final';
-  }
-
-  const parts = ['final subido'];
-  if (photo.finalWidth !== null && photo.finalHeight !== null) {
-    parts.push(`${photo.finalWidth} × ${photo.finalHeight} px`);
-  }
-
-  parts.push(formatBytes(photo.finalBytes));
-  if (photo.finalCapturedAt !== null) {
-    parts.push(`tomada el ${formatDay(photo.finalCapturedAt)}`);
-  }
-
-  parts.push(photo.finalDownloads === 0 ? 'sin descargas' : `descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
-  return parts.join(' · ');
-}
-
 /** Props of one block of the selection. */
 interface SelectionBlockProps {
   /** Heading of the block. */
   readonly title: string;
   /** Identifier prefix for the accessibility links. */
   readonly id: string;
-  /** Identifier of the gallery, to ask for the download of a final. */
+  /** Identifier of the gallery, to ask for the real photo and for its download. */
   readonly galleryId: string;
   /** The photos of the block. */
   readonly photos: readonly StudioSelectedPhoto[];
@@ -103,14 +81,32 @@ interface SelectionBlockProps {
 }
 
 /**
- * One block of the selection: its photos, a button that copies their names and whether each already has its final.
+ * One block of the selection: a grid of its photos, a button that copies their names, and the viewer of the real photos.
  * @param props Component props.
  * @returns The block.
  */
 function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: SelectionBlockProps): ReactElement {
-  const download = useDownloadFinal(galleryId);
   const [copied, setCopied] = useState<'done' | 'failed' | null>(null);
+  const [open, setOpen] = useState<number | null>(null);
+  const download = useDownloadFinal(galleryId);
   const withFinal = photos.filter((photo) => photo.finalBytes !== null).length;
+
+  /**
+   * Gets the address of the real photo. A photo without a final shows its proof, which is what there is.
+   * @param photoId Identifier of the photo.
+   * @returns The address.
+   */
+  const loadSource = useCallback(
+    async (photoId: string): Promise<string> => {
+      const photo = photos.find((candidate) => candidate.id === photoId);
+      if (photo?.finalBytes === null || photo === undefined) {
+        return photo?.thumbUrl ?? '';
+      }
+
+      return (await studioApi.getFinalDownload(galleryId, photoId)).url;
+    },
+    [galleryId, photos],
+  );
 
   /** Copies the names of the files of this block, one per line. Without permission the page says so instead of failing silently. */
   async function copyNames(): Promise<void> {
@@ -145,17 +141,21 @@ function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: S
           Tu navegador no permitió copiar. Selecciona la lista y cópiala a mano.
         </p>
       )}
-      <ol className="studio-selection__names">
-        {photos.map((photo) => (
-          <li key={photo.id} className="selection-photo">
-            <span>
-              {photo.name}
-              <span className="muted"> · {describeFinal(photo)}</span>
-            </span>
+      <ul className="final-grid" aria-label={title}>
+        {photos.map((photo, position) => (
+          <li key={photo.id} className="final-tile">
+            <button type="button" className="final-tile__photo" aria-label={`Ver ${photo.name}`} onClick={() => setOpen(position)}>
+              {photo.thumbUrl !== null && <img src={photo.thumbUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
+              <span className={photo.finalBytes === null ? 'final-tile__badge final-tile__badge--missing' : 'final-tile__badge'}>
+                {photo.finalBytes === null ? 'Sin final' : 'Final'}
+              </span>
+            </button>
+            <span className="final-tile__name">{photo.name}</span>
+            <span className="muted final-tile__info">{describeFinal(photo)}</span>
             {photo.finalBytes !== null && (
               <button
                 type="button"
-                className="button button--secondary selection-photo__download"
+                className="button button--secondary final-tile__action"
                 disabled={download.isPending}
                 aria-label={`Descargar el final de ${photo.name}`}
                 onClick={() => download.mutate(photo.id)}
@@ -165,12 +165,51 @@ function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: S
             )}
           </li>
         ))}
-      </ol>
+      </ul>
       {download.isError && (
         <p className="field__error" role="alert">
           {describeProofRequestError(download.error)}
         </p>
       )}
+      {open !== null && (
+        <PhotoViewer
+          photos={photos.map((photo) => ({
+            id: photo.id,
+            name: photo.name,
+            caption: photo.finalBytes === null ? 'prueba, todavía sin final' : describeFinal(photo),
+            placeholder: photo.thumbUrl,
+          }))}
+          index={open}
+          loadSource={loadSource}
+          onMove={setOpen}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </div>
   );
+}
+
+/**
+ * Describes the final of a photo for the photographer: its size in pixels and in megabytes, when it was taken and how many times
+ * the client asked to download it; or that it has none yet.
+ * @param photo The photo.
+ * @returns The text.
+ */
+export function describeFinal(photo: StudioSelectedPhoto): string {
+  if (photo.finalBytes === null) {
+    return 'sin final';
+  }
+
+  const parts = ['final subido'];
+  if (photo.finalWidth !== null && photo.finalHeight !== null) {
+    parts.push(`${photo.finalWidth} × ${photo.finalHeight} px`);
+  }
+
+  parts.push(formatBytes(photo.finalBytes));
+  if (photo.finalCapturedAt !== null) {
+    parts.push(`tomada el ${formatDay(photo.finalCapturedAt)}`);
+  }
+
+  parts.push(photo.finalDownloads === 0 ? 'sin descargas' : `descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
+  return parts.join(' · ');
 }
