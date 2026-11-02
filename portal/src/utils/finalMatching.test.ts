@@ -3,9 +3,9 @@ import type { StudioSelectedPhoto } from '../types/api/studio';
 import { describeSkippedFinals, matchFinals } from './finalMatching';
 
 const PHOTOS: readonly StudioSelectedPhoto[] = [
-  { id: 'a', name: 'IMG_0001.CR2', isExtra: false, finalBytes: null },
-  { id: 'b', name: 'IMG_0002.jpg', isExtra: false, finalBytes: null },
-  { id: 'c', name: 'IMG_00020.jpg', isExtra: true, finalBytes: null },
+  { id: 'a', name: 'IMG_0001.CR2', isExtra: false, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0 },
+  { id: 'b', name: 'IMG_0002.jpg', isExtra: false, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0 },
+  { id: 'c', name: 'IMG_00020.jpg', isExtra: true, finalBytes: null, finalWidth: null, finalHeight: null, finalCapturedAt: null, finalDownloads: 0 },
 ];
 
 /**

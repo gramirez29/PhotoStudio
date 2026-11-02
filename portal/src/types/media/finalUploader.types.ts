@@ -1,4 +1,5 @@
 import type { ProofUploadSlot } from '../api/proofs';
+import type { JpegInfo } from '../utils/jpegInfo.types';
 import type { StudioApi } from '../api/studioApi';
 import type { UploadItem, UploadObserver, UploadOutcome } from './proofUploader.types';
 
@@ -20,6 +21,12 @@ export interface FinalUploaderDeps {
    * @returns A promise that resolves when the storage has the file.
    */
   readonly put: (slot: ProofUploadSlot, file: Blob, signal?: AbortSignal) => Promise<void>;
+  /**
+   * Reads the size in pixels and the date taken from a file. It never fails: what cannot be read comes back unknown.
+   * @param file The final.
+   * @returns What was found.
+   */
+  readonly readInfo: (file: Blob) => Promise<JpegInfo>;
 }
 
 /** The uploader of final photos. */

@@ -9,6 +9,7 @@ import { FinalsStaged } from './FinalsStaged';
 import { ProofQueue } from './ProofQueue';
 import { PublishFinalsPanel } from './PublishFinalsPanel';
 import { ReleaseExtrasPanel } from './ReleaseExtrasPanel';
+import { StudioZip } from './StudioZip';
 
 /**
  * The final photos of a gallery: how many of the package are up, the way to add more (choose files that are paired with the photos
@@ -24,6 +25,7 @@ export function StudioFinals({ gallery }: StudioFinalsProps): ReactElement {
   const canUpload = gallery.allowedActions.includes('UploadFinals');
   const canPublish = gallery.allowedActions.includes('PublishFinals');
   const canRelease = gallery.allowedActions.includes('ReleaseExtras');
+  const canZip = gallery.allowedActions.includes('UploadZip');
   const busy = upload.running || upload.items.length > 0 || upload.staged.length > 0;
   const packagePhotos = photos.filter((photo) => !photo.isExtra);
   const packageDone = packagePhotos.filter((photo) => photo.finalBytes !== null).length;
@@ -63,6 +65,7 @@ export function StudioFinals({ gallery }: StudioFinalsProps): ReactElement {
       <ProofQueue items={upload.items} running={upload.running} problem={upload.problem} onRetry={upload.retry} onDismiss={upload.dismissFailed} />
       {canPublish && <PublishFinalsPanel gallery={gallery} disabled={busy} />}
       {canRelease && <ReleaseExtrasPanel gallery={gallery} disabled={busy} />}
+      {(canZip || gallery.zip !== null) && <StudioZip gallery={gallery} />}
     </section>
   );
 }

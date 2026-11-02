@@ -1,8 +1,8 @@
 import { useState, type ReactElement } from 'react';
-import { useStudioSelection } from '../hooks/useStudioGallery';
+import { useDownloadFinal, useStudioSelection } from '../hooks/useStudioGallery';
 import type { StudioSelectedPhoto } from '../types/api/studio';
 import type { StudioSelectionProps } from '../types/components/ProofComponents.types';
-import { formatBytes, formatDateTime, formatMoney } from '../utils/format';
+import { formatBytes, formatDateTime, formatDay, formatMoney } from '../utils/format';
 import { describeProofRequestError } from '../utils/proofMessages';
 
 /**
@@ -43,6 +43,7 @@ export function StudioSelection({ gallery }: StudioSelectionProps): ReactElement
       <SelectionBlock
         title="Fotos del paquete"
         id="selection-package"
+        galleryId={gallery.id}
         photos={packagePhotos}
         hint="Son las que cubre el paquete contratado: se editan y se entregan con el saldo en cero."
       />
@@ -50,6 +51,7 @@ export function StudioSelection({ gallery }: StudioSelectionProps): ReactElement
         <SelectionBlock
           title="Fotos adicionales"
           id="selection-extras"
+          galleryId={gallery.id}
           photos={extraPhotos}
           hint={`Fuera del paquete: ${formatMoney(extraTotal)} en total. Se acuerdan con el cliente; editalas y entrégalas solo cuando pague.`}
           extra
@@ -59,12 +61,39 @@ export function StudioSelection({ gallery }: StudioSelectionProps): ReactElement
   );
 }
 
+/**
+ * Describes the final of a photo for the photographer: its size in pixels and in megabytes, when it was taken and how many times
+ * the client asked to download it; or that it has none yet.
+ * @param photo The photo.
+ * @returns The text.
+ */
+export function describeFinal(photo: StudioSelectedPhoto): string {
+  if (photo.finalBytes === null) {
+    return 'sin final';
+  }
+
+  const parts = ['final subido'];
+  if (photo.finalWidth !== null && photo.finalHeight !== null) {
+    parts.push(`${photo.finalWidth} × ${photo.finalHeight} px`);
+  }
+
+  parts.push(formatBytes(photo.finalBytes));
+  if (photo.finalCapturedAt !== null) {
+    parts.push(`tomada el ${formatDay(photo.finalCapturedAt)}`);
+  }
+
+  parts.push(photo.finalDownloads === 0 ? 'sin descargas' : `descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
+  return parts.join(' · ');
+}
+
 /** Props of one block of the selection. */
 interface SelectionBlockProps {
   /** Heading of the block. */
   readonly title: string;
   /** Identifier prefix for the accessibility links. */
   readonly id: string;
+  /** Identifier of the gallery, to ask for the download of a final. */
+  readonly galleryId: string;
   /** The photos of the block. */
   readonly photos: readonly StudioSelectedPhoto[];
   /** What the block means, in words. */
@@ -78,7 +107,8 @@ interface SelectionBlockProps {
  * @param props Component props.
  * @returns The block.
  */
-function SelectionBlock({ title, id, photos, hint, extra = false }: SelectionBlockProps): ReactElement {
+function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: SelectionBlockProps): ReactElement {
+  const download = useDownloadFinal(galleryId);
   const [copied, setCopied] = useState<'done' | 'failed' | null>(null);
   const withFinal = photos.filter((photo) => photo.finalBytes !== null).length;
 
@@ -117,12 +147,30 @@ function SelectionBlock({ title, id, photos, hint, extra = false }: SelectionBlo
       )}
       <ol className="studio-selection__names">
         {photos.map((photo) => (
-          <li key={photo.id}>
-            {photo.name}
-            {photo.finalBytes !== null && <span className="muted"> · final subido ({formatBytes(photo.finalBytes)})</span>}
+          <li key={photo.id} className="selection-photo">
+            <span>
+              {photo.name}
+              <span className="muted"> · {describeFinal(photo)}</span>
+            </span>
+            {photo.finalBytes !== null && (
+              <button
+                type="button"
+                className="button button--secondary selection-photo__download"
+                disabled={download.isPending}
+                aria-label={`Descargar el final de ${photo.name}`}
+                onClick={() => download.mutate(photo.id)}
+              >
+                ⬇ Descargar
+              </button>
+            )}
           </li>
         ))}
       </ol>
+      {download.isError && (
+        <p className="field__error" role="alert">
+          {describeProofRequestError(download.error)}
+        </p>
+      )}
     </div>
   );
 }

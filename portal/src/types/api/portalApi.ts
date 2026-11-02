@@ -1,4 +1,4 @@
-import type { PortalBooking, PortalCodeSent, PortalContract, PortalGallery, PortalGallerySummary, PortalSession, SignContractRequest, SubmitProofRequest } from './portal';
+import type { PortalBooking, PortalCodeSent, PortalContract, PortalDownload, PortalGallery, PortalGallerySummary, PortalSession, PortalZipDownload, SignContractRequest, SubmitProofRequest } from './portal';
 
 /** Portal endpoints the page calls. */
 export interface PortalApi {
@@ -72,6 +72,25 @@ export interface PortalApi {
    * @returns The gallery.
    */
   getGallery(token: string, accessToken: string, signal?: AbortSignal): Promise<PortalGallery>;
+
+  /**
+   * Asks for the addresses to download some final photos. Asking counts as a download.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param photoIds The photos the client wants.
+   * @param signal Optional signal to cancel the request.
+   * @returns One address per photo.
+   */
+  requestDownloads(token: string, accessToken: string, photoIds: readonly string[], signal?: AbortSignal): Promise<readonly PortalDownload[]>;
+
+  /**
+   * Asks for the address to download the ZIP with the photos. Asking counts as a download.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param signal Optional signal to cancel the request.
+   * @returns The address and what the client needs to know about the file.
+   */
+  requestZipDownload(token: string, accessToken: string, signal?: AbortSignal): Promise<PortalZipDownload>;
 
   /**
    * Sends the photos the client chose. From then on the selection is locked.

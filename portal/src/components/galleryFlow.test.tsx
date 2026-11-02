@@ -353,8 +353,6 @@ describe('the gallery of the client', () => {
     const FINAL = (id: string, extra = false): Record<string, unknown> => ({
       id,
       fileName: `IMG_000${id.slice(1)}.jpg`,
-      url: `https://account.r2.cloudflarestorage.com/final-${id}?sig=secret`,
-      expiresAt: '2026-11-03T12:05:00+00:00',
       bytes: 4_404_019,
       isExtra: extra,
     });
@@ -393,41 +391,63 @@ describe('the gallery of the client', () => {
       expect(screen.queryByText(/te contactará para coordinar el pago y entregártelas/)).not.toBeInTheDocument();
     });
 
-    it('downloads the photos that are marked, with fresh addresses, after telling how much they weigh', async () => {
-      const started: string[] = [];
-      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+    /**
+     * Records the anchors the page clicks, which are the downloads the browser would start.
+     * @param started Where the `name|address` of each is recorded.
+     * @returns The spy, to restore.
+     */
+    function spyOnDownloads(started: string[]): ReturnType<typeof vi.spyOn> {
+      return vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
         started.push(`${this.download}|${this.getAttribute('href')}`);
       });
-      const fresh = galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')], extrasReleased: false });
+    }
+
+    /**
+     * Builds the answer of asking for the addresses of some photos.
+     * @param ids Identifiers of the photos.
+     * @returns The response.
+     */
+    function links(ids: readonly string[]): Response {
+      return jsonResponse(200, {
+        items: ids.map((id) => ({ id, fileName: `IMG_000${id.slice(1)}.jpg`, url: `https://account.r2.cloudflarestorage.com/final-${id}?sig=secret`, expiresAt: '2026-11-03T12:05:00+00:00' })),
+      });
+    }
+
+    it('asks for the addresses only when the client downloads, and downloads the marked photos after telling how much they weigh', async () => {
+      const started: string[] = [];
+      const click = spyOnDownloads(started);
       answer(
         baseAnswers({
           'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
-          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')] })), jsonResponse(200, fresh)],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')] }))],
+          'POST /gallery/downloads': [links(['p4', 'p2'])],
         }),
       );
       const user = renderPage();
       await openGallery(user, 'Descargar mis fotos');
 
       expect(await screen.findByRole('button', { name: /Descargar seleccionadas \(0\)/ })).toBeDisabled();
+      expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/gallery/downloads'))).toBe(false);
       await user.click(screen.getByRole('checkbox', { name: /Seleccionar todas \(2, 8,4 MB\)/ }));
       expect(screen.getByRole('button', { name: /Descargar seleccionadas \(2, 8,4 MB\)/ })).toBeEnabled();
       await user.click(screen.getByRole('button', { name: /Descargar seleccionadas/ }));
 
       await waitFor(() => expect(started).toHaveLength(2), { timeout: 4000 });
       expect(started[0]).toBe('IMG_0004.jpg|https://account.r2.cloudflarestorage.com/final-p4?sig=secret');
-      expect(fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith('/gallery') && (init?.method ?? 'GET') === 'GET')).toHaveLength(2);
+      const asked = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/gallery/downloads'));
+      expect(JSON.parse(String(asked?.[1]?.body))).toEqual({ photoIds: ['p4', 'p2'] });
+      expect(asked?.[1]?.headers).toMatchObject({ Authorization: 'Bearer portal-jwt' });
       click.mockRestore();
     });
 
-    it('downloads one photo with its own button', async () => {
+    it('downloads one photo with its own button, asking for that photo only', async () => {
       const started: string[] = [];
-      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
-        started.push(this.download);
-      });
+      const click = spyOnDownloads(started);
       answer(
         baseAnswers({
           'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
           'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')] }))],
+          'POST /gallery/downloads': [links(['p2'])],
         }),
       );
       const user = renderPage();
@@ -435,8 +455,75 @@ describe('the gallery of the client', () => {
 
       await user.click(await screen.findByRole('button', { name: 'Descargar IMG_0002.jpg' }));
 
-      await waitFor(() => expect(started).toEqual(['IMG_0002.jpg']));
+      await waitFor(() => expect(started).toHaveLength(1));
+      expect(started[0]).toMatch(/^IMG_0002\.jpg\|/);
+      const asked = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/gallery/downloads'));
+      expect(JSON.parse(String(asked?.[1]?.body))).toEqual({ photoIds: ['p2'] });
       click.mockRestore();
+    });
+
+    it('says in words when the addresses could not be prepared, and downloads nothing', async () => {
+      const started: string[] = [];
+      const click = spyOnDownloads(started);
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4')] }))],
+          'POST /gallery/downloads': [jsonResponse(500, { code: 'server.error', detail: 'x' })],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      await user.click(await screen.findByRole('button', { name: 'Descargar IMG_0004.jpg' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos preparar la descarga');
+      expect(started).toHaveLength(0);
+      click.mockRestore();
+    });
+
+    it('offers the ZIP only when there is one, asks to confirm with its size, and downloads it after the client says yes', async () => {
+      const started: string[] = [];
+      const click = spyOnDownloads(started);
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4')], zip: { bytes: 220_000_000 } }))],
+          'POST /gallery/zip/download': [
+            jsonResponse(200, { fileName: 'PhotoSense-fotos.zip', url: 'https://account.r2.cloudflarestorage.com/zip?sig=secret', expiresAt: '2026-11-03T12:05:00+00:00', bytes: 220_000_000 }),
+          ],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      await user.click(await screen.findByRole('button', { name: 'Descargar todo en un ZIP (209,8 MB)' }));
+      expect(screen.getByRole('alert')).toHaveTextContent('Se va a descargar un paquete de 209,8 MB. Según tu conexión a internet puede tomar tiempo.');
+      expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/zip/download'))).toBe(false);
+
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(started).toHaveLength(0);
+
+      await user.click(screen.getByRole('button', { name: 'Descargar todo en un ZIP (209,8 MB)' }));
+      await user.click(screen.getByRole('button', { name: 'Sí, descargar el ZIP' }));
+
+      await waitFor(() => expect(started).toEqual(['PhotoSense-fotos.zip|https://account.r2.cloudflarestorage.com/zip?sig=secret']));
+      click.mockRestore();
+    });
+
+    it('does not offer a ZIP when the photographer did not upload one', async () => {
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4')] }))],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      expect(await screen.findByRole('heading', { name: 'Tus fotos están listas' })).toBeInTheDocument();
+      expect(screen.queryByText(/ZIP/)).not.toBeInTheDocument();
     });
   });
 

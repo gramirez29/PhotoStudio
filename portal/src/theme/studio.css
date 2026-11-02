@@ -146,6 +146,15 @@
   margin: 0;
 }
 
+.selection-photo {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  padding-block: var(--space-xs);
+}
+
 .studio-selection__names {
   margin: 0;
   max-height: 16rem;

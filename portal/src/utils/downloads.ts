@@ -1,4 +1,4 @@
-import type { PortalFinal } from '../types/api/portal';
+import type { PortalDownload, PortalFinal } from '../types/api/portal';
 import type { DownloadItem } from '../types/utils/downloads.types';
 
 /**
@@ -13,12 +13,12 @@ export function sleep(milliseconds: number): Promise<void> {
 }
 
 /**
- * Turns finals into what the browser needs to download them.
- * @param finals The finals.
+ * Turns the addresses the client asked for into what the browser needs to download them.
+ * @param downloads The addresses.
  * @returns The address and file name of each.
  */
-export function toDownloads(finals: readonly PortalFinal[]): readonly DownloadItem[] {
-  return finals.map((final) => ({ url: final.url, fileName: final.fileName }));
+export function toDownloads(downloads: readonly Pick<PortalDownload, 'url' | 'fileName'>[]): readonly DownloadItem[] {
+  return downloads.map((download) => ({ url: download.url, fileName: download.fileName }));
 }
 
 /**
