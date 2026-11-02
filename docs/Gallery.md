@@ -83,7 +83,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 4. **Subida de pruebas (web)** (backend hecho en el PR 4a, `feature/gallery-proofs-backend`: fotos en la galería, lugares de subida firmados, registro con comprobación del objeto real, lista, borrado, G2 y el correo al cliente; la página con la marca de agua y la compresión es el PR 4b, hecho; detalle en las secciones 11 y 12): URLs firmadas, registro de la foto, módulo de marca de agua y compresión, página de subida y "Publicar pruebas" (G2) con el correo al cliente.
 5. **Selección del cliente en el portal** (backend hecho en el PR 5a, `feature/gallery-selection-backend`, sección 13; la página del cliente es el PR 5b, hecho, sección 14): sesión por código, cuadrícula con URLs de vida corta, contador, leyendas, mensaje de extras, sin clic derecho; enviar (G3) y push al fotógrafo.
 6. **Extras (decisión 2026-11-02, ver sección 15):** las fotos adicionales **no se cargan solas al saldo**; el estudio coordina su pago con el cliente. Ya no hay cargo automático en Billing. Queda, si se quiere, que el fotógrafo registre ese cobro a mano más adelante.
-7. **Finales, ZIP y entrega:** subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
+7. **Finales, ZIP y entrega** (con la regla de las extras de la sección 16): subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
 8. **App del fotógrafo:** tarjeta de galería en la reserva, cuadrícula de pruebas, selección con nombres de archivo, acciones (regalar fotos, abrir y reabrir selección, publicar), diálogo de copiar o WhatsApp para el enlace del cliente.
 9. **Subida desde el celular:** selector de fotos, reducción, marca y compresión en el dispositivo (Skia), subida con progreso y reintento; **requiere un build nuevo de EAS**.
 10. **Liberar espacio y archivo:** descarga de la galería para el fotógrafo, **Release** y el trabajo de G8.
@@ -180,3 +180,9 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 - El servidor lo exige: `POST /gallery/selection` lleva `acceptExtras` (por defecto falso); con fotos de más y sin aceptarlas responde 422 `gallery.extras_not_accepted`. Dentro del paquete no hace falta.
 - **El fotógrafo** sigue viendo cuántas son extra y cuánto suman (sección "Selección del cliente" y el aviso/push), y es quien coordina el cobro con el cliente. El saldo de la reserva **no** cambia.
 - **PR 6 de Billing ya no existe como cargo automático:** el consumidor de `SelectionSubmitted` no crea cargos. El evento conserva `ExtraPhotos` y `ExtraTotal` para el aviso.
+
+## 16. Entrega de las extras (decisión 2026-11-02, para el PR 7)
+
+- **La entrega automática (G7) sigue igual:** se habilita solo con saldo cero. Las extras no entran al saldo, así que no la bloquean ni la retrasan: se entrega lo del paquete.
+- **Las extras son un proceso manual.** Si el cliente las paga, el fotógrafo las edita y se las entrega; si no, entrega solo el paquete y no pasa nada. Si el cliente las pide después y paga, se entregan entonces.
+- **Lo que debe hacer el PR 7:** al publicar los finales, el fotógrafo **marca cuáles corresponden a las extras**; esas quedan fuera de la descarga automática. Cuando el cliente paga, el fotógrafo las libera con una acción manual ("Entregar extras") y el cliente las ve en el mismo enlace. Si nunca se liberan, no se rompe nada.
