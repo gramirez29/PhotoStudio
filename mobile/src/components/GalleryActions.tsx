@@ -39,6 +39,10 @@ export function GalleryActions({ gallery, handlers }: GalleryActionsProps): Reac
     buttons.push(<ActionButton key="reopen" label="Reabrir la selección" variant="danger" disabled={handlers.isPending} onPress={() => openGalleryReopen(gallery.id)} />);
   }
 
+  if (can('Release')) {
+    buttons.push(<ActionButton key="release" label="Liberar espacio" variant="danger" disabled={handlers.isPending} onPress={handlers.release} />);
+  }
+
   if (buttons.length === 0 && handlers.errorMessage === null) {
     return null;
   }

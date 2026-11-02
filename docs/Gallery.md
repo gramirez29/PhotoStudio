@@ -86,7 +86,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 7. **Finales, descargas y entrega** (con la regla de las extras de la sección 16; partido en 7a backend, sección 17; 7b portal, sección 18; 7c ZIP manual y ficha de cada foto, sección 19): subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
 8. **App del fotógrafo:** tarjeta de galería en la reserva, cuadrícula de pruebas, selección con nombres de archivo, acciones (regalar fotos, abrir y reabrir selección, publicar), diálogo de copiar o WhatsApp para el enlace del cliente.
 9. **Subida desde el celular:** selector de fotos, reducción, marca y compresión en el dispositivo (Skia), subida con progreso y reintento; **requiere un build nuevo de EAS**.
-10. **Liberar espacio y archivo:** descarga de la galería para el fotógrafo, **Release** y el trabajo de G8.
+10. **Liberar espacio y archivo** (hecho, sección 27): Release a mano y archivado a los 90 días; queda pendiente la limpieza de objetos huérfanos.
 
 **Antes del PR 4:** un prototipo local (fuera del repositorio) de la marca de agua y la compresión para aprobar cómo se ven las pruebas: tamaño, opacidad y calidad.
 
@@ -341,3 +341,19 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Por verificar en un teléfono real:** que el selector entregue el JPEG de los finales sin recomprimir, que las dimensiones de los finales salgan con la orientación correcta, el aspecto de la marca de agua frente a la de la web, y la memoria con fotos de muchos megapíxeles.
 
 **Pruebas:** backend, una de API (subir pruebas con el token de la app, rechazos por token ajeno y sin token); app 12 nuevas (tamaños, selección, emparejado, fecha, renderizador, los tres subidores).
+
+## 27. Liberar espacio y archivo (PR 10, G8)
+
+**Qué hace:** una galería **entregada** puede archivarse: se borran de R2 las pruebas, las miniaturas, los finales y el ZIP, y la galería pasa a `Archived` (estado final; el cliente ya no puede descargar). Es **irreversible**.
+
+**Dos caminos, el mismo código (`GalleryArchiver`):**
+- **A mano (Release):** `POST /api/galleries/{id}/release` (app) y `POST /api/web/galleries/{id}/release` (web). Botón "Liberar espacio" con confirmación ("¿Ya descargaste las fotos?"). Acción `Release` en `allowedActions`, solo con la galería entregada. 409 `gallery.invalid_state` en cualquier otro estado.
+- **Por tiempo (G8):** la pasada de mantenimiento (worker y despertador de la API) archiva las galerías entregadas hace **90 días o más** (`Gallery.RetentionDays`, constante del dominio, hasta 20 por lote y 10 lotes por pasada). `MaintenanceResponse.galleriesArchived` dice cuántas.
+
+**Orden de seguridad:** primero se borran los archivos y después se guarda el estado. Si R2 falla, la galería sigue entregada y se reintenta en la siguiente pasada (la pasada la cuenta como omitida); si el guardado falla después de borrar, el siguiente intento termina el trabajo (borrar lo que ya no existe no es error). Lo contrario dejaría una galería "archivada" con archivos ocupando espacio.
+
+**Requisito operativo:** el **worker ahora registra el almacenamiento** (`AddObjectStorage`), así que necesita las variables `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` igual que la API. Sin ellas el archivado por tiempo se omite sin tumbar el proceso (la API sigue funcionando; Release responde 503 `storage.unavailable`).
+
+**Pendiente:** limpiar objetos huérfanos en R2 (subidas interrumpidas antes de registrarse): hace falta listar el bucket por prefijo (`galleries/{id}/`) y compararlo con lo registrado; queda para un PR aparte porque el puerto de almacenamiento no lista objetos. El plazo de retención aún no es configurable por galería ni por entorno.
+
+**Pruebas:** dominio 6 nuevas (archivar una vez, estados que no se pueden archivar, cuenta de los 90 días), aplicación 3 nuevas (borra todo y luego archiva, rechaza lo no entregado y lo ajeno, un fallo del almacenamiento no archiva) y la pasada de mantenimiento sigue verde. Suite completa del backend en contenedor: 1 186 pruebas.

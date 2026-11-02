@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
+using PhotoStudio.Application.Galleries.Archive;
 using PhotoStudio.Application.Maintenance.RunMaintenance;
 using PhotoStudio.Application.Notifications.DeliverDue;
 
@@ -18,12 +19,19 @@ public sealed class RunMaintenanceHandlerTests
     private readonly ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult> _notifications =
         Substitute.For<ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult>>();
 
+    private readonly ICommandHandler<ArchiveExpiredGalleriesCommand, ArchiveExpiredGalleriesResult> _archiving =
+        Substitute.For<ICommandHandler<ArchiveExpiredGalleriesCommand, ArchiveExpiredGalleriesResult>>();
+
     /// <summary>
     /// Creates the fixture: with no notifications due unless a test says otherwise.
     /// </summary>
-    public RunMaintenanceHandlerTests() =>
+    public RunMaintenanceHandlerTests()
+    {
         _notifications.HandleAsync(Arg.Any<DeliverDueNotificationsCommand>(), Arg.Any<CancellationToken>())
             .Returns(new DeliverDueNotificationsResult(0, 0, 0));
+        _archiving.HandleAsync(Arg.Any<ArchiveExpiredGalleriesCommand>(), Arg.Any<CancellationToken>())
+            .Returns(new ArchiveExpiredGalleriesResult(0, 0));
+    }
 
     /// <summary>
     /// With nothing to do, both tasks run once and the response is empty.
@@ -179,5 +187,5 @@ public sealed class RunMaintenanceHandlerTests
     /// Creates the handler under test.
     /// </summary>
     /// <returns>The handler.</returns>
-    private RunMaintenanceHandler NewHandler() => new(_expiration, _outbox, _notifications);
+    private RunMaintenanceHandler NewHandler() => new(_expiration, _outbox, _notifications, _archiving);
 }

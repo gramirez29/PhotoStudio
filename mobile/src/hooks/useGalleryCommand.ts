@@ -26,6 +26,8 @@ function execute(galleryId: string, command: GalleryCommand): Promise<GalleryRes
       return galleryApi.releaseExtras(galleryId);
     case 'removeZip':
       return galleryApi.removeZip(galleryId);
+    case 'release':
+      return galleryApi.release(galleryId);
   }
 }
 

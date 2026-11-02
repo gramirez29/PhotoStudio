@@ -61,6 +61,7 @@ public static class GalleryEndpoints
         group.MapPost("/{id:guid}/finals/publish", PublishFinalsAsync).WithName("AppPublishFinals");
         group.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("AppReleaseExtras");
         group.MapPost("/{id:guid}/zip/remove", RemoveZipAsync).WithName("AppRemoveZip");
+        group.MapPost("/{id:guid}/release", StudioEndpoints.ReleaseAsync).WithName("AppReleaseGallery");
         group.MapGet("/{id:guid}/finals/{photoId:guid}/download", GetFinalDownloadAsync).WithName("AppGetFinalDownload");
 
         // Uploading files from the phone: the phone prepares the photos (a proof is reduced and marked on the device) and the bytes go

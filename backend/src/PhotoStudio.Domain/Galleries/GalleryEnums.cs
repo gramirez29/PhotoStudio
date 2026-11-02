@@ -59,4 +59,7 @@ public enum GalleryAction
 
     /// <summary>Let the client download the extra photos, once the client agreed on their payment with the studio.</summary>
     ReleaseExtras,
+
+    /// <summary>Free the space: delete every photo and the ZIP from the storage and archive the gallery. It cannot be undone.</summary>
+    Release,
 }

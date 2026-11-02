@@ -12,6 +12,8 @@ export interface GalleryActionHandlers {
   releaseExtras(): void;
   /** Deletes the ZIP, after confirming. */
   removeZip(): void;
+  /** Frees the space of a delivered gallery, after confirming: the files are deleted and it cannot be undone. */
+  release(): void;
   /**
    * Removes a proof, after confirming.
    * @param photoId Proof identifier.

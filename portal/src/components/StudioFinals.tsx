@@ -10,6 +10,7 @@ import { ProofQueue } from './ProofQueue';
 import { PublishFinalsPanel } from './PublishFinalsPanel';
 import { ReopenSelectionPanel } from './ReopenSelectionPanel';
 import { ReleaseExtrasPanel } from './ReleaseExtrasPanel';
+import { ReleaseGalleryPanel } from './ReleaseGalleryPanel';
 import { StudioZip } from './StudioZip';
 
 /**
@@ -69,6 +70,7 @@ export function StudioFinals({ gallery }: StudioFinalsProps): ReactElement {
       {canReopen && <ReopenSelectionPanel gallery={gallery} disabled={busy} />}
       {canRelease && <ReleaseExtrasPanel gallery={gallery} disabled={busy} />}
       {(canZip || gallery.zip !== null) && <StudioZip gallery={gallery} />}
+      {gallery.allowedActions.includes('Release') && <ReleaseGalleryPanel gallery={gallery} disabled={busy} />}
     </section>
   );
 }

@@ -261,6 +261,7 @@ export function createGalleryApi(client: HttpClient): GalleryApi {
     publishFinals: (galleryId) => post(galleryId, '/finals/publish'),
     releaseExtras: (galleryId) => post(galleryId, '/extras/release'),
     removeZip: (galleryId) => post(galleryId, '/zip/remove'),
+    release: (galleryId) => post(galleryId, '/release'),
     getFinalDownload: (galleryId, photoId, signal) =>
       client.get(path(galleryId, `/finals/${encodeURIComponent(photoId)}/download`), parseFinalDownload, signal),
     requestProofUploads: (galleryId, files, signal) => client.post(path(galleryId, '/proofs/uploads'), { files }, parseProofSlots, signal),

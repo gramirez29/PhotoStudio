@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
+using PhotoStudio.Application.Galleries.Archive;
 using PhotoStudio.Application.Notifications.DeliverDue;
 
 namespace PhotoStudio.Application.Maintenance.RunMaintenance;
@@ -13,10 +14,12 @@ namespace PhotoStudio.Application.Maintenance.RunMaintenance;
 /// <param name="expiration">Handler that expires tentative bookings.</param>
 /// <param name="outbox">Delivers the pending outbox messages.</param>
 /// <param name="notificationDelivery">Delivers the notifications that came due.</param>
+/// <param name="galleryArchiving">Archives the delivered galleries whose retention ended.</param>
 public sealed class RunMaintenanceHandler(
     ICommandHandler<ExpireTentativeBookingsCommand, ExpireTentativeBookingsResult> expiration,
     IOutboxDispatcher outbox,
-    ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult> notificationDelivery) : ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>
+    ICommandHandler<DeliverDueNotificationsCommand, DeliverDueNotificationsResult> notificationDelivery,
+    ICommandHandler<ArchiveExpiredGalleriesCommand, ArchiveExpiredGalleriesResult> galleryArchiving) : ICommandHandler<RunMaintenanceCommand, MaintenanceResponse>
 {
     /// <summary>
     /// Bookings examined per expiration batch.
@@ -32,6 +35,11 @@ public sealed class RunMaintenanceHandler(
     /// Notifications examined per delivery batch.
     /// </summary>
     public const int NotificationBatchSize = 100;
+
+    /// <summary>
+    /// Galleries examined per archiving batch.
+    /// </summary>
+    public const int GalleryBatchSize = 20;
 
     /// <summary>
     /// Maximum batches per task in one pass.
@@ -96,6 +104,21 @@ public sealed class RunMaintenanceHandler(
             morePending |= batch == MaxBatches;
         }
 
-        return new MaintenanceResponse(expired, skipped, processed, delivered, morePending);
+        var archived = 0;
+        for (var batch = 1; batch <= MaxBatches; batch++)
+        {
+            var result = await galleryArchiving.HandleAsync(new ArchiveExpiredGalleriesCommand(GalleryBatchSize), cancellationToken);
+            archived += result.Archived;
+
+            // A batch without an archived gallery would only repeat itself: what failed is tried again in the next pass.
+            if (result.Archived == 0 || result.Archived + result.Skipped < GalleryBatchSize)
+            {
+                break;
+            }
+
+            morePending |= batch == MaxBatches;
+        }
+
+        return new MaintenanceResponse(expired, skipped, processed, delivered, morePending, archived);
     }
 }
