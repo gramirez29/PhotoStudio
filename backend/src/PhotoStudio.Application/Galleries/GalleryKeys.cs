@@ -16,4 +16,13 @@ public static class GalleryKeys
     /// <param name="photoId">Photo identifier.</param>
     /// <returns>The key, for example <c>galleries/0197.../proofs/0197....jpg</c>.</returns>
     public static string Proof(Guid galleryId, Guid photoId) => $"galleries/{galleryId:D}/proofs/{photoId:D}.jpg";
+
+    /// <summary>
+    /// Builds the key of a final photo. It uses the identifier of the proof it belongs to, so a photo and its final share a name apart
+    /// from the folder; the key never comes from the name of the file.
+    /// </summary>
+    /// <param name="galleryId">Gallery the photo belongs to.</param>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <returns>The key in the object storage.</returns>
+    public static string Final(Guid galleryId, Guid photoId) => $"galleries/{galleryId:D}/finals/{photoId:D}.jpg";
 }

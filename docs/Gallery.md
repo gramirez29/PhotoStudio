@@ -83,7 +83,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 4. **Subida de pruebas (web)** (backend hecho en el PR 4a, `feature/gallery-proofs-backend`: fotos en la galería, lugares de subida firmados, registro con comprobación del objeto real, lista, borrado, G2 y el correo al cliente; la página con la marca de agua y la compresión es el PR 4b, hecho; detalle en las secciones 11 y 12): URLs firmadas, registro de la foto, módulo de marca de agua y compresión, página de subida y "Publicar pruebas" (G2) con el correo al cliente.
 5. **Selección del cliente en el portal** (backend hecho en el PR 5a, `feature/gallery-selection-backend`, sección 13; la página del cliente es el PR 5b, hecho, sección 14): sesión por código, cuadrícula con URLs de vida corta, contador, leyendas, mensaje de extras, sin clic derecho; enviar (G3) y push al fotógrafo.
 6. **Extras (decisión 2026-11-02, ver sección 15):** las fotos adicionales **no se cargan solas al saldo**; el estudio coordina su pago con el cliente. Ya no hay cargo automático en Billing. Queda, si se quiere, que el fotógrafo registre ese cobro a mano más adelante.
-7. **Finales, ZIP y entrega** (con la regla de las extras de la sección 16): subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
+7. **Finales, ZIP y entrega** (con la regla de las extras de la sección 16; partido en 7a backend, sección 17, 7b portal y 7c ZIP): subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
 8. **App del fotógrafo:** tarjeta de galería en la reserva, cuadrícula de pruebas, selección con nombres de archivo, acciones (regalar fotos, abrir y reabrir selección, publicar), diálogo de copiar o WhatsApp para el enlace del cliente.
 9. **Subida desde el celular:** selector de fotos, reducción, marca y compresión en el dispositivo (Skia), subida con progreso y reintento; **requiere un build nuevo de EAS**.
 10. **Liberar espacio y archivo:** descarga de la galería para el fotógrafo, **Release** y el trabajo de G8.
@@ -186,3 +186,22 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 - **La entrega automática (G7) sigue igual:** se habilita solo con saldo cero. Las extras no entran al saldo, así que no la bloquean ni la retrasan: se entrega lo del paquete.
 - **Las extras son un proceso manual.** Si el cliente las paga, el fotógrafo las edita y se las entrega; si no, entrega solo el paquete y no pasa nada. Si el cliente las pide después y paga, se entregan entonces.
 - **Lo que debe hacer el PR 7:** al publicar los finales, el fotógrafo **marca cuáles corresponden a las extras**; esas quedan fuera de la descarga automática. Cuando el cliente paga, el fotógrafo las libera con una acción manual ("Entregar extras") y el cliente las ve en el mismo enlace. Si nunca se liberan, no se rompe nada.
+
+## 17. Finales, publicar y entregar (PR 7a, backend)
+
+**Qué hay:** el fotógrafo sube las fotos editadas (finales) de lo que el cliente eligió, las publica, y el cliente las descarga cuando el saldo es cero. Las extras se liberan a mano (sección 16).
+
+**Reglas**
+- Un final pertenece a una foto **elegida** (usa el mismo identificador que su prueba; la llave en R2 es `galleries/{galería}/finals/{foto}.jpg`). Solo JPEG, de 1 byte a **50 MB**, subido directo a R2 con dirección firmada (15 min), igual que las pruebas; la API revisa el objeto real al registrarlo y borra el que no sirve.
+- **Paquete y extras:** las primeras fotos que el cliente eligió, tantas como cubre el paquete, son el paquete; el resto son extras (`Gallery.PackagePhotoIds` / `ExtraPhotoIds`, `IsExtra`). La selección del fotógrafo trae `isExtra` y `finalBytes` por foto.
+- **Publicar (G6, `InEditing → Ready`):** exige el final de **cada foto del paquete**; las extras no hacen falta. Después de publicar los finales del paquete quedan congelados (el cliente puede estar descargando); los de las extras se pueden seguir subiendo y quitando. 409 `gallery.finals_incomplete` si falta alguno.
+- **Entregar (G7, `Ready → Delivered`):** lo hace el sistema, nunca el fotógrafo. `GalleryDelivery` lo intenta cuando se publica (`FinalPhotosReady`) y con cada pago verificado (`PaymentVerified`, aunque pasen semanas): entrega solo si el saldo de la reserva es cero. La galería no sabe de dinero; solo `GalleryDelivery` junta las dos cosas. Idempotente.
+- **Correo de entrega:** `GalleryDelivered` envía "Tus fotos ya están listas" al correo de la reserva, **sin enlace** (como el de las pruebas), una sola vez (`deliveryNotifiedAt`).
+- **Descarga del cliente:** `GET /public/bookings/{token}/gallery` (sesión de portal) trae `finals` solo con la galería **entregada**: direcciones firmadas de **5 minutos** con el nombre original como nombre de archivo. Las extras salen solo si el fotógrafo las liberó (`extrasReleased`).
+- **Liberar extras:** `POST /api/web/galleries/{id}/extras/release`, a mano, cuando el cliente ya pagó. Exige que al menos una extra tenga su final.
+
+**Endpoints nuevos (web del fotógrafo, `/api/web/galleries/{id}`):** `POST finals/uploads` (lugares de subida: `{ files: [{ photoId, bytes }] }`), `POST finals` (registrar: `{ photoIds }`; devuelve la galería y lo rechazado con su motivo), `POST finals/publish`, `POST extras/release`. `GalleryResponse` suma `finalsPublishedAt`, `deliveredAt`, `extrasReleasedAt`; `GalleryAction` suma `UploadFinals`, `PublishFinals`, `ReleaseExtras`.
+
+**Pruebas:** dominio 10 nuevas, aplicación 15 nuevas, y una de API de punta a punta (subir finales a R2, no poder publicar incompleto, publicar con saldo pendiente sin entregar, pagar, entrega automática, descarga real, extras ocultas hasta liberarlas).
+
+**Pendiente de este PR:** la página del fotógrafo para subir finales (7b), la separación visual paquete/extras en ambas webs (7b), el ZIP en el worker (7c) y "Reabrir selección" (PR 8).

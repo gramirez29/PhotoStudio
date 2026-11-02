@@ -38,7 +38,11 @@ public sealed class Gallery : AggregateRoot<Guid>
         IEnumerable<GalleryPhoto> photos,
         DateTimeOffset? selectionNotifiedAt,
         IEnumerable<Guid> selectedPhotoIds,
-        DateTimeOffset? selectionSubmittedAt)
+        DateTimeOffset? selectionSubmittedAt,
+        DateTimeOffset? finalsPublishedAt,
+        DateTimeOffset? deliveredAt,
+        DateTimeOffset? deliveryNotifiedAt,
+        DateTimeOffset? extrasReleasedAt)
         : base(id, version)
     {
         PhotographerId = photographerId;
@@ -54,6 +58,10 @@ public sealed class Gallery : AggregateRoot<Guid>
         SelectionNotifiedAt = selectionNotifiedAt;
         _selectedPhotoIds = [.. selectedPhotoIds];
         SelectionSubmittedAt = selectionSubmittedAt;
+        FinalsPublishedAt = finalsPublishedAt;
+        DeliveredAt = deliveredAt;
+        DeliveryNotifiedAt = deliveryNotifiedAt;
+        ExtrasReleasedAt = extrasReleasedAt;
     }
 
     /// <summary>
@@ -116,6 +124,38 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// Gets the instant the client sent the selection (UTC), or <see langword="null"/> while they did not.
     /// </summary>
     public DateTimeOffset? SelectionSubmittedAt { get; private set; }
+
+    /// <summary>
+    /// Gets the instant the final photos of the package were published (G6, UTC), or <see langword="null"/> while they were not.
+    /// </summary>
+    public DateTimeOffset? FinalsPublishedAt { get; private set; }
+
+    /// <summary>
+    /// Gets the instant the gallery was delivered (G7, UTC), or <see langword="null"/> while it was not.
+    /// </summary>
+    public DateTimeOffset? DeliveredAt { get; private set; }
+
+    /// <summary>
+    /// Gets the instant the client was told that the delivery is ready (UTC), or <see langword="null"/> while they were not. It makes
+    /// the email idempotent.
+    /// </summary>
+    public DateTimeOffset? DeliveryNotifiedAt { get; private set; }
+
+    /// <summary>
+    /// Gets the instant the photographer let the client download the extra photos (UTC), or <see langword="null"/> while they did not.
+    /// The extras are agreed on and paid apart from the package, so they are released by hand.
+    /// </summary>
+    public DateTimeOffset? ExtrasReleasedAt { get; private set; }
+
+    /// <summary>
+    /// Gets the chosen photos that the package covers: the first ones the client chose, as many as <see cref="SelectablePhotos"/>.
+    /// </summary>
+    public IReadOnlyList<Guid> PackagePhotoIds => [.. _selectedPhotoIds.Take(SelectablePhotos)];
+
+    /// <summary>
+    /// Gets the chosen photos beyond the package, in the order the client chose them.
+    /// </summary>
+    public IReadOnlyList<Guid> ExtraPhotoIds => [.. _selectedPhotoIds.Skip(SelectablePhotos)];
 
     /// <summary>
     /// Gets how many of the chosen photos go beyond <see cref="SelectablePhotos"/>.
@@ -181,6 +221,10 @@ public sealed class Gallery : AggregateRoot<Guid>
             [],
             null,
             [],
+            null,
+            null,
+            null,
+            null,
             null);
     }
 
@@ -202,6 +246,10 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <param name="selectionNotifiedAt">Instant the client was told the proofs are ready, if they were.</param>
     /// <param name="selectedPhotoIds">The photos the client chose, if they sent the selection.</param>
     /// <param name="selectionSubmittedAt">Instant the client sent the selection, if they did.</param>
+    /// <param name="finalsPublishedAt">Instant the final photos were published, if they were.</param>
+    /// <param name="deliveredAt">Instant the gallery was delivered, if it was.</param>
+    /// <param name="deliveryNotifiedAt">Instant the client was told about the delivery, if they were.</param>
+    /// <param name="extrasReleasedAt">Instant the extra photos were released, if they were.</param>
     /// <returns>The restored gallery.</returns>
     public static Gallery Restore(
         Guid id,
@@ -218,8 +266,12 @@ public sealed class Gallery : AggregateRoot<Guid>
         IEnumerable<GalleryPhoto>? photos = null,
         DateTimeOffset? selectionNotifiedAt = null,
         IEnumerable<Guid>? selectedPhotoIds = null,
-        DateTimeOffset? selectionSubmittedAt = null) =>
-        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt);
+        DateTimeOffset? selectionSubmittedAt = null,
+        DateTimeOffset? finalsPublishedAt = null,
+        DateTimeOffset? deliveredAt = null,
+        DateTimeOffset? deliveryNotifiedAt = null,
+        DateTimeOffset? extrasReleasedAt = null) =>
+        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt, finalsPublishedAt, deliveredAt, deliveryNotifiedAt, extrasReleasedAt);
 
     /// <summary>
     /// Changes the terms of the gallery: how many photos the package includes (for a custom package the photographer sets it
@@ -381,6 +433,188 @@ public sealed class Gallery : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Tells whether a chosen photo is one of the extras, beyond what the package covers.
+    /// </summary>
+    /// <param name="photoId">Identifier of the photo.</param>
+    /// <returns><see langword="true"/> when the photo was chosen and is beyond the package.</returns>
+    public bool IsExtra(Guid photoId) => ExtraPhotoIds.Contains(photoId);
+
+    /// <summary>
+    /// Registers the final (edited) photo of a chosen photo, which was uploaded to the storage. The finals of the package can be
+    /// registered or replaced until they are published; after that only those of the extras can, because the client may already be
+    /// downloading the rest. Registering the same size again does nothing.
+    /// </summary>
+    /// <param name="photoId">Identifier of the chosen photo the final belongs to.</param>
+    /// <param name="finalBytes">Size of the stored final photo.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the final was recorded now; <see langword="false"/> when it was already recorded.</returns>
+    /// <exception cref="DomainException">When the gallery does not take finals in its state, the photo was not chosen, or the size is not valid.</exception>
+    public bool RegisterFinal(Guid photoId, long finalBytes, DateTimeOffset now)
+    {
+        if (Status is not (GalleryStatus.InEditing or GalleryStatus.Ready or GalleryStatus.Delivered))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {Status} does not take final photos.");
+        }
+
+        var index = _photos.FindIndex(photo => photo.Id == photoId);
+        if (index < 0 || !_selectedPhotoIds.Contains(photoId))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, "Only a photo the client chose can have a final photo.");
+        }
+
+        if (Status != GalleryStatus.InEditing && !IsExtra(photoId))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, "The final photos of the package cannot change once they are published.");
+        }
+
+        GalleryPhoto.EnsureValidFinal(finalBytes);
+        if (_photos[index].FinalBytes == finalBytes)
+        {
+            return false;
+        }
+
+        _photos[index] = _photos[index] with { FinalBytes = finalBytes, FinalUploadedAt = now };
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Forgets the final photo of a chosen photo, for example because the file that replaced it was refused. It follows the same rules
+    /// as <see cref="RegisterFinal"/>.
+    /// </summary>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when a final was forgotten; <see langword="false"/> when there was none.</returns>
+    /// <exception cref="DomainException">When the gallery does not take changes to the final of this photo.</exception>
+    public bool RemoveFinal(Guid photoId, DateTimeOffset now)
+    {
+        var index = _photos.FindIndex(photo => photo.Id == photoId && photo.HasFinal);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        if (Status != GalleryStatus.InEditing && !(IsExtra(photoId) && Status is GalleryStatus.Ready or GalleryStatus.Delivered))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, "The final photos of the package cannot change once they are published.");
+        }
+
+        _photos[index] = _photos[index] with { FinalBytes = null, FinalUploadedAt = null };
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Publishes the final photos of the package (G6). Every photo the package covers needs its final; the extras are not needed,
+    /// because they are agreed on apart. Raises <see cref="FinalPhotosReady"/>, which makes the system deliver the gallery when the
+    /// balance is zero.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the gallery is not being edited, or a photo of the package has no final.</exception>
+    public void PublishFinals(DateTimeOffset now)
+    {
+        if (Status != GalleryStatus.InEditing)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"The final photos of a gallery in state {Status} cannot be published.");
+        }
+
+        if (!HasAllPackageFinals())
+        {
+            throw new DomainException(DomainErrorCodes.GalleryFinalsIncomplete, "Every photo of the package needs its final photo before publishing.");
+        }
+
+        Status = GalleryStatus.Ready;
+        FinalsPublishedAt = now;
+        UpdatedAt = now;
+        Raise(new FinalPhotosReady(Id, BookingId, PhotographerId, PackagePhotoIds.Count, now));
+    }
+
+    /// <summary>
+    /// Delivers the gallery (G7): the client can download the final photos. The caller checks that the balance is zero; the gallery
+    /// does not know about money. Delivering a gallery that was already delivered does nothing.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was delivered now; <see langword="false"/> when it already was.</returns>
+    /// <exception cref="DomainException">When the final photos are not published.</exception>
+    public bool Deliver(DateTimeOffset now)
+    {
+        if (Status is GalleryStatus.Delivered or GalleryStatus.Archived)
+        {
+            return false;
+        }
+
+        if (Status != GalleryStatus.Ready)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {Status} cannot be delivered.");
+        }
+
+        Status = GalleryStatus.Delivered;
+        DeliveredAt = now;
+        UpdatedAt = now;
+        Raise(new GalleryDelivered(Id, BookingId, PhotographerId, now));
+        return true;
+    }
+
+    /// <summary>
+    /// Lets the client download the extra photos that already have their final. The photographer does it by hand once the client paid
+    /// them; the system never charges them. Releasing twice does nothing.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when they were released now; <see langword="false"/> when they already were.</returns>
+    /// <exception cref="DomainException">When the final photos are not published, or no extra photo has its final yet.</exception>
+    public bool ReleaseExtras(DateTimeOffset now)
+    {
+        if (Status is not (GalleryStatus.Ready or GalleryStatus.Delivered))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"The extra photos of a gallery in state {Status} cannot be released.");
+        }
+
+        if (ExtrasReleasedAt is not null)
+        {
+            return false;
+        }
+
+        if (!ExtraPhotoIds.Any(HasFinal))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryFinalsIncomplete, "No extra photo has its final photo yet.");
+        }
+
+        ExtrasReleasedAt = now;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Records that the client was told that the gallery was delivered.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was recorded now; <see langword="false"/> when it already was.</returns>
+    public bool MarkDeliveryNotified(DateTimeOffset now)
+    {
+        if (DeliveryNotifiedAt is not null)
+        {
+            return false;
+        }
+
+        DeliveryNotifiedAt = now;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Tells whether the final photo of a chosen photo was uploaded.
+    /// </summary>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <returns><see langword="true"/> when its final was registered.</returns>
+    public bool HasFinal(Guid photoId) => _photos.Any(photo => photo.Id == photoId && photo.HasFinal);
+
+    /// <summary>
+    /// Tells whether every photo the package covers has its final.
+    /// </summary>
+    /// <returns><see langword="true"/> when none is missing.</returns>
+    private bool HasAllPackageFinals() => PackagePhotoIds.All(HasFinal);
+
+    /// <summary>
     /// Records that the client was told that the proofs are ready.
     /// </summary>
     /// <param name="now">Current instant.</param>
@@ -405,8 +639,45 @@ public sealed class Gallery : AggregateRoot<Guid>
     {
         GalleryStatus.Pending => PendingActions(),
         GalleryStatus.InSelection => [GalleryAction.EditTerms],
+        GalleryStatus.InEditing => EditingActions(),
+        GalleryStatus.Ready or GalleryStatus.Delivered => DeliveryActions(),
         _ => [],
     };
+
+    /// <summary>
+    /// Lists the actions of a gallery whose selection the photographer is editing.
+    /// </summary>
+    /// <returns>The allowed actions.</returns>
+    private List<GalleryAction> EditingActions()
+    {
+        var actions = new List<GalleryAction> { GalleryAction.UploadFinals };
+        if (HasAllPackageFinals())
+        {
+            actions.Add(GalleryAction.PublishFinals);
+        }
+
+        return actions;
+    }
+
+    /// <summary>
+    /// Lists the actions of a gallery whose final photos are published: only the extras can still change.
+    /// </summary>
+    /// <returns>The allowed actions.</returns>
+    private List<GalleryAction> DeliveryActions()
+    {
+        var actions = new List<GalleryAction>();
+        if (ExtraPhotoIds.Count > 0)
+        {
+            actions.Add(GalleryAction.UploadFinals);
+        }
+
+        if (ExtrasReleasedAt is null && ExtraPhotoIds.Any(HasFinal))
+        {
+            actions.Add(GalleryAction.ReleaseExtras);
+        }
+
+        return actions;
+    }
 
     /// <summary>
     /// Lists the actions of a gallery that is waiting for its proofs.

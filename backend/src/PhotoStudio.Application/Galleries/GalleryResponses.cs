@@ -23,6 +23,9 @@ namespace PhotoStudio.Application.Galleries;
 /// <param name="SelectedPhotoCount">How many photos the client chose; 0 until they send the selection.</param>
 /// <param name="ExtraPhotoCount">How many of those go beyond what the package includes.</param>
 /// <param name="SelectionSubmittedAt">Instant the client sent the selection (UTC), or <see langword="null"/> while they did not.</param>
+/// <param name="FinalsPublishedAt">Instant the final photos of the package were published (UTC), or <see langword="null"/> while they were not.</param>
+/// <param name="DeliveredAt">Instant the gallery was delivered (UTC), or <see langword="null"/> while it was not.</param>
+/// <param name="ExtrasReleasedAt">Instant the extra photos were released to the client (UTC), or <see langword="null"/> while they were not.</param>
 public sealed record GalleryResponse(
     Guid Id,
     Guid BookingId,
@@ -40,7 +43,10 @@ public sealed record GalleryResponse(
     IReadOnlyList<GalleryAction> AllowedActions,
     int SelectedPhotoCount = 0,
     int ExtraPhotoCount = 0,
-    DateTimeOffset? SelectionSubmittedAt = null);
+    DateTimeOffset? SelectionSubmittedAt = null,
+    DateTimeOffset? FinalsPublishedAt = null,
+    DateTimeOffset? DeliveredAt = null,
+    DateTimeOffset? ExtrasReleasedAt = null);
 
 /// <summary>
 /// One page of the galleries of a photographer, the most recently created first.
@@ -80,6 +86,9 @@ public static class GalleryResponseMappings
             gallery.GetAllowedActions(),
             gallery.SelectedPhotoIds.Count,
             gallery.ExtraPhotoCount,
-            gallery.SelectionSubmittedAt);
+            gallery.SelectionSubmittedAt,
+            gallery.FinalsPublishedAt,
+            gallery.DeliveredAt,
+            gallery.ExtrasReleasedAt);
     }
 }

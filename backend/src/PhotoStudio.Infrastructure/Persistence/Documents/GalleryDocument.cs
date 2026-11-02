@@ -80,6 +80,22 @@ public sealed class GalleryDocument
     [BsonElement("selectionSubmittedAt")]
     public DateTime? SelectionSubmittedAt { get; set; }
 
+    /// <summary>Gets or sets the instant the final photos were published (UTC), if they were.</summary>
+    [BsonElement("finalsPublishedAt")]
+    public DateTime? FinalsPublishedAt { get; set; }
+
+    /// <summary>Gets or sets the instant the gallery was delivered (UTC), if it was.</summary>
+    [BsonElement("deliveredAt")]
+    public DateTime? DeliveredAt { get; set; }
+
+    /// <summary>Gets or sets the instant the client was told about the delivery (UTC), if they were.</summary>
+    [BsonElement("deliveryNotifiedAt")]
+    public DateTime? DeliveryNotifiedAt { get; set; }
+
+    /// <summary>Gets or sets the instant the extra photos were released (UTC), if they were.</summary>
+    [BsonElement("extrasReleasedAt")]
+    public DateTime? ExtrasReleasedAt { get; set; }
+
     /// <summary>Gets or sets the instant the gallery was created (UTC).</summary>
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }
@@ -110,6 +126,14 @@ public sealed class GalleryPhotoDocument
     /// <summary>Gets or sets the instant the proof was registered (UTC).</summary>
     [BsonElement("uploadedAt")]
     public DateTime UploadedAt { get; set; }
+
+    /// <summary>Gets or sets the size of the final photo in bytes, if it was uploaded.</summary>
+    [BsonElement("finalBytes")]
+    public long? FinalBytes { get; set; }
+
+    /// <summary>Gets or sets the instant the final photo was registered (UTC), if it was.</summary>
+    [BsonElement("finalUploadedAt")]
+    public DateTime? FinalUploadedAt { get; set; }
 }
 
 /// <summary>
@@ -147,10 +171,16 @@ public static class GalleryDocumentMappings
                 Name = photo.OriginalName,
                 ProofBytes = photo.ProofBytes,
                 UploadedAt = photo.UploadedAt.UtcDateTime,
+                FinalBytes = photo.FinalBytes,
+                FinalUploadedAt = photo.FinalUploadedAt?.UtcDateTime,
             })],
             SelectionNotifiedAt = gallery.SelectionNotifiedAt?.UtcDateTime,
             SelectedPhotoIds = [.. gallery.SelectedPhotoIds],
             SelectionSubmittedAt = gallery.SelectionSubmittedAt?.UtcDateTime,
+            FinalsPublishedAt = gallery.FinalsPublishedAt?.UtcDateTime,
+            DeliveredAt = gallery.DeliveredAt?.UtcDateTime,
+            DeliveryNotifiedAt = gallery.DeliveryNotifiedAt?.UtcDateTime,
+            ExtrasReleasedAt = gallery.ExtrasReleasedAt?.UtcDateTime,
             CreatedAt = gallery.CreatedAt.UtcDateTime,
             UpdatedAt = gallery.UpdatedAt.UtcDateTime,
         };
@@ -177,10 +207,14 @@ public static class GalleryDocumentMappings
             Money.Restore(document.ExtraPhotoPrice, document.Currency),
             ToOffset(document.CreatedAt),
             ToOffset(document.UpdatedAt),
-            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt))),
+            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt), photo.FinalBytes, photo.FinalUploadedAt is null ? null : ToOffset(photo.FinalUploadedAt.Value))),
             document.SelectionNotifiedAt is null ? null : ToOffset(document.SelectionNotifiedAt.Value),
             document.SelectedPhotoIds,
-            document.SelectionSubmittedAt is null ? null : ToOffset(document.SelectionSubmittedAt.Value));
+            document.SelectionSubmittedAt is null ? null : ToOffset(document.SelectionSubmittedAt.Value),
+            document.FinalsPublishedAt is null ? null : ToOffset(document.FinalsPublishedAt.Value),
+            document.DeliveredAt is null ? null : ToOffset(document.DeliveredAt.Value),
+            document.DeliveryNotifiedAt is null ? null : ToOffset(document.DeliveryNotifiedAt.Value),
+            document.ExtrasReleasedAt is null ? null : ToOffset(document.ExtrasReleasedAt.Value));
     }
 
     /// <summary>

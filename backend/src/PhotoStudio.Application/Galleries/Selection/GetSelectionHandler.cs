@@ -16,7 +16,9 @@ public sealed record GetSelectionQuery(Guid PhotographerId, Guid GalleryId);
 /// </summary>
 /// <param name="Id">Photo identifier.</param>
 /// <param name="Name">Name of the file the photographer uploaded it from: what to look for in Lightroom.</param>
-public sealed record SelectedPhotoResponse(Guid Id, string Name);
+/// <param name="IsExtra">Whether it is beyond what the package covers (the first photos chosen are the package, the rest are extras).</param>
+/// <param name="FinalBytes">Size of its final photo, or <see langword="null"/> while the photographer has not uploaded it.</param>
+public sealed record SelectedPhotoResponse(Guid Id, string Name, bool IsExtra = false, long? FinalBytes = null);
 
 /// <summary>
 /// What the client chose, for the photographer to edit.
@@ -47,10 +49,11 @@ public sealed class GetSelectionHandler(IGalleryRepository galleries) : IQueryHa
 
         var gallery = await galleries.GetOwnedAsync(query.GalleryId, query.PhotographerId, cancellationToken);
         var names = gallery.Photos.ToDictionary(photo => photo.Id, photo => photo.OriginalName);
+        var finals = gallery.Photos.ToDictionary(photo => photo.Id, photo => photo.FinalBytes);
         return new SelectionResponse(
             gallery.SelectionSubmittedAt,
             gallery.ExtraPhotoCount,
             gallery.ExtraPhotoTotal.ToResponse(),
-            [.. gallery.SelectedPhotoIds.Where(names.ContainsKey).Select(id => new SelectedPhotoResponse(id, names[id]))]);
+            [.. gallery.SelectedPhotoIds.Where(names.ContainsKey).Select(id => new SelectedPhotoResponse(id, names[id], gallery.IsExtra(id), finals[id]))]);
     }
 }

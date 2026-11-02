@@ -28,6 +28,17 @@ public sealed record PortalProofResponse(Guid Id, Uri Url, DateTimeOffset Expire
 public sealed record PortalSelectionResponse(IReadOnlyList<Guid> PhotoIds, DateTimeOffset SubmittedAt, int ExtraPhotos, MoneyResponse ExtraTotal);
 
 /// <summary>
+/// A final photo the client can download, with an address that lasts a few minutes.
+/// </summary>
+/// <param name="Id">Photo identifier, the same as its proof.</param>
+/// <param name="FileName">Name to save the file with.</param>
+/// <param name="Url">Signed address to download it.</param>
+/// <param name="ExpiresAt">Instant the address stops working (UTC).</param>
+/// <param name="Bytes">Size of the file in bytes.</param>
+/// <param name="IsExtra">Whether it is one of the extra photos.</param>
+public sealed record PortalFinalResponse(Guid Id, string FileName, Uri Url, DateTimeOffset ExpiresAt, long Bytes, bool IsExtra);
+
+/// <summary>
 /// The gallery as its client sees it, once they confirmed the code: the proofs and the terms to choose them. It holds no file
 /// name and nothing of the photographer.
 /// </summary>
@@ -36,9 +47,13 @@ public sealed record PortalSelectionResponse(IReadOnlyList<Guid> PhotoIds, DateT
 /// <param name="ExtraPhotoPrice">Price of each photo beyond that.</param>
 /// <param name="Photos">The proofs, in the order they were uploaded, each with a signed address that lasts a few minutes.</param>
 /// <param name="Selection">The selection that was sent, or <see langword="null"/> while the client has not sent one.</param>
+/// <param name="Finals">The final photos the client can download now: none until the gallery is delivered; extras only once released.</param>
+/// <param name="ExtrasReleased">Whether the photographer released the extra photos.</param>
 public sealed record PortalGalleryResponse(
     GalleryStatus Status,
     int SelectablePhotos,
     MoneyResponse ExtraPhotoPrice,
     IReadOnlyList<PortalProofResponse> Photos,
-    PortalSelectionResponse? Selection);
+    PortalSelectionResponse? Selection,
+    IReadOnlyList<PortalFinalResponse>? Finals = null,
+    bool ExtrasReleased = false);

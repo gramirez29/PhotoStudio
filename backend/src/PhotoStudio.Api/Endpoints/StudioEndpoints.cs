@@ -5,6 +5,7 @@ using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Api.Studio;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
+using PhotoStudio.Application.Galleries.Finals;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.Proofs;
 using PhotoStudio.Application.Galleries.Selection;
@@ -62,6 +63,25 @@ public sealed record ProofRegistrationRequest(Guid PhotoId, string? Name);
 public sealed record RegisterProofsRequest(IReadOnlyList<ProofRegistrationRequest>? Photos);
 
 /// <summary>
+/// One final photo in the request for places to upload finals.
+/// </summary>
+/// <param name="PhotoId">Identifier of the chosen photo the final belongs to.</param>
+/// <param name="Bytes">Size of the final in bytes.</param>
+public sealed record FinalFileRequest(Guid PhotoId, long Bytes);
+
+/// <summary>
+/// Body to ask for the places to upload final photos.
+/// </summary>
+/// <param name="Files">The files about to be uploaded, 1 to 50.</param>
+public sealed record RequestFinalUploadsRequest(IReadOnlyList<FinalFileRequest>? Files);
+
+/// <summary>
+/// Body to register the final photos that were uploaded.
+/// </summary>
+/// <param name="PhotoIds">The chosen photos whose finals were uploaded, 1 to 50.</param>
+public sealed record RegisterFinalsRequest(IReadOnlyList<Guid>? PhotoIds);
+
+/// <summary>
 /// The user of a web session, as the page sees them.
 /// </summary>
 /// <param name="User">Who is signed in.</param>
@@ -115,6 +135,10 @@ public static class StudioEndpoints
         galleries.MapPost("/{id:guid}/proofs", RegisterProofsAsync).WithName("StudioRegisterProofs").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/proofs/{photoId:guid}/remove", RemoveProofAsync).WithName("StudioRemoveProof").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/selection/open", OpenSelectionAsync).WithName("StudioOpenSelection").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/finals/uploads", RequestFinalUploadsAsync).WithName("StudioRequestFinalUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/finals", RegisterFinalsAsync).WithName("StudioRegisterFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/finals/publish", PublishFinalsAsync).WithName("StudioPublishFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("StudioReleaseExtras").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
 
         return endpoints;
     }
@@ -352,6 +376,72 @@ public static class StudioEndpoints
         ICommandHandler<RemoveProofCommand, GalleryResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new RemoveProofCommand(user.GetPhotographerId(), id, photoId), cancellationToken));
+
+    /// <summary>
+    /// Asks for the places to upload final photos, one per file. The bytes go straight to the storage, not through the API.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">The files about to be uploaded.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with a signed address per file; 409 <c>gallery.invalid_state</c>; 422 <c>gallery.invalid_photo</c> for a photo that was not chosen or a size that is not valid.</returns>
+    private static async Task<Ok<FinalUploadSlotsResponse>> RequestFinalUploadsAsync(
+        Guid id,
+        RequestFinalUploadsRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<RequestFinalUploadsCommand, FinalUploadSlotsResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(
+            new RequestFinalUploadsCommand(user.GetPhotographerId(), id, [.. (request.Files ?? []).Select(file => new FinalFile(file.PhotoId, file.Bytes))]),
+            cancellationToken));
+
+    /// <summary>
+    /// Registers the final photos that were uploaded, after the API looks at what is really in the storage.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">The uploads to register.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery and the uploads that were not kept, each with its reason.</returns>
+    private static async Task<Ok<RegisterFinalsResponse>> RegisterFinalsAsync(
+        Guid id,
+        RegisterFinalsRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<RegisterFinalsCommand, RegisterFinalsResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RegisterFinalsCommand(user.GetPhotographerId(), id, [.. request.PhotoIds ?? []]), cancellationToken));
+
+    /// <summary>
+    /// Publishes the final photos of the package (G6). The client can download them as soon as the balance is zero.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 409 <c>gallery.invalid_state</c> or <c>gallery.finals_incomplete</c> when a photo of the package has no final.</returns>
+    private static async Task<Ok<GalleryResponse>> PublishFinalsAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<PublishFinalsCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new PublishFinalsCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Lets the client download the extra photos, once the photographer agreed on their payment with the client.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 409 <c>gallery.invalid_state</c> before the finals are published, or <c>gallery.finals_incomplete</c> when no extra has its final.</returns>
+    private static async Task<Ok<GalleryResponse>> ReleaseExtrasAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<ReleaseExtrasCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ReleaseExtrasCommand(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Opens the selection: the proofs are published, the client can choose, and the client is told by email.

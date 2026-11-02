@@ -41,4 +41,13 @@ public enum GalleryAction
 
     /// <summary>Publish the proofs so the client can choose.</summary>
     OpenSelection,
+
+    /// <summary>Upload the final photos of the selection (after publishing, only those of the extra photos).</summary>
+    UploadFinals,
+
+    /// <summary>Publish the final photos of the package (G6).</summary>
+    PublishFinals,
+
+    /// <summary>Let the client download the extra photos, once the client agreed on their payment with the studio.</summary>
+    ReleaseExtras,
 }

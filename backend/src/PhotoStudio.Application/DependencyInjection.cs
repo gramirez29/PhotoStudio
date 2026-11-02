@@ -15,6 +15,7 @@ using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.EditTerms;
+using PhotoStudio.Application.Galleries.Finals;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.ListGalleries;
 using PhotoStudio.Application.Galleries.Proofs;
@@ -141,6 +142,14 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPortalGalleryQuery, PortalGalleryResponse>, GetPortalGalleryHandler>();
         services.AddScoped<ICommandHandler<SubmitPortalSelectionCommand, PortalGalleryResponse>, SubmitPortalSelectionHandler>();
         services.AddScoped<IDomainEventHandler<SelectionOpened>, SelectionOpenedEmailHandler>();
+        services.AddScoped<ICommandHandler<RequestFinalUploadsCommand, FinalUploadSlotsResponse>, RequestFinalUploadsHandler>();
+        services.AddScoped<ICommandHandler<RegisterFinalsCommand, RegisterFinalsResponse>, RegisterFinalsHandler>();
+        services.AddScoped<ICommandHandler<PublishFinalsCommand, GalleryResponse>, PublishFinalsHandler>();
+        services.AddScoped<ICommandHandler<ReleaseExtrasCommand, GalleryResponse>, ReleaseExtrasHandler>();
+        services.AddScoped<GalleryDelivery>();
+        services.AddScoped<IDomainEventHandler<FinalPhotosReady>, FinalPhotosReadyDeliveryHandler>();
+        services.AddScoped<IDomainEventHandler<PaymentVerified>, PaymentVerifiedDeliveryHandler>();
+        services.AddScoped<IDomainEventHandler<GalleryDelivered>, GalleryDeliveredEmailHandler>();
 
         return services;
     }
