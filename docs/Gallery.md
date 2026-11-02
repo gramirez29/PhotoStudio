@@ -336,7 +336,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 - **ZIP:** selector de archivos, hasta 500 MB, se envía desde el archivo (no se lee a memoria) con barra de progreso.
 - **Reglas:** la app debe quedar abierta mientras sube; una foto que falla se queda en la lista con su motivo y se reintenta; una petición que falla detiene la subida y deja el resto en espera. Los archivos temporales (pruebas hechas, copias del selector) viven en la caché de la app y se borran al terminar; **solo se borra lo que está en la caché de la app**, nunca la fototeca.
 
-**Requiere un build nuevo de EAS** (Skia, selector de fotos y de archivos, manipulador de imágenes).
+**Requiere un build nuevo de EAS** (Skia, selector de fotos y de archivos, manipulador de imágenes y **Reanimated/Worklets**: Skia 2.x los exige al importarse, aunque solo dibujemos fuera de pantalla; sin ellos la app falla al abrir la galería con "react-native-reanimated is not installed").
 
 **Por verificar en un teléfono real:** que el selector entregue el JPEG de los finales sin recomprimir, que las dimensiones de los finales salgan con la orientación correcta, el aspecto de la marca de agua frente a la de la web, y la memoria con fotos de muchos megapíxeles.
 
