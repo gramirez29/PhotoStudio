@@ -96,6 +96,22 @@ public sealed class GalleryDocument
     [BsonElement("extrasReleasedAt")]
     public DateTime? ExtrasReleasedAt { get; set; }
 
+    /// <summary>Gets or sets the size of the ZIP with the photos, if there is one.</summary>
+    [BsonElement("zipBytes")]
+    public long? ZipBytes { get; set; }
+
+    /// <summary>Gets or sets the instant the ZIP was registered (UTC), if there is one.</summary>
+    [BsonElement("zipUploadedAt")]
+    public DateTime? ZipUploadedAt { get; set; }
+
+    /// <summary>Gets or sets how many times the client asked to download the ZIP.</summary>
+    [BsonElement("zipDownloads")]
+    public int ZipDownloads { get; set; }
+
+    /// <summary>Gets or sets the last instant the client asked to download the ZIP (UTC), if they did.</summary>
+    [BsonElement("zipLastDownloadedAt")]
+    public DateTime? ZipLastDownloadedAt { get; set; }
+
     /// <summary>Gets or sets the instant the gallery was created (UTC).</summary>
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }
@@ -134,6 +150,22 @@ public sealed class GalleryPhotoDocument
     /// <summary>Gets or sets the instant the final photo was registered (UTC), if it was.</summary>
     [BsonElement("finalUploadedAt")]
     public DateTime? FinalUploadedAt { get; set; }
+
+    /// <summary>Gets or sets the width of the final in pixels, if the browser could read it.</summary>
+    [BsonElement("finalWidth")]
+    public int? FinalWidth { get; set; }
+
+    /// <summary>Gets or sets the height of the final in pixels, if the browser could read it.</summary>
+    [BsonElement("finalHeight")]
+    public int? FinalHeight { get; set; }
+
+    /// <summary>Gets or sets the instant the final was taken (UTC), if its metadata said so.</summary>
+    [BsonElement("finalCapturedAt")]
+    public DateTime? FinalCapturedAt { get; set; }
+
+    /// <summary>Gets or sets how many times the client asked to download the final.</summary>
+    [BsonElement("finalDownloads")]
+    public int FinalDownloads { get; set; }
 }
 
 /// <summary>
@@ -173,6 +205,10 @@ public static class GalleryDocumentMappings
                 UploadedAt = photo.UploadedAt.UtcDateTime,
                 FinalBytes = photo.FinalBytes,
                 FinalUploadedAt = photo.FinalUploadedAt?.UtcDateTime,
+                FinalWidth = photo.FinalWidth,
+                FinalHeight = photo.FinalHeight,
+                FinalCapturedAt = photo.FinalCapturedAt?.UtcDateTime,
+                FinalDownloads = photo.FinalDownloads,
             })],
             SelectionNotifiedAt = gallery.SelectionNotifiedAt?.UtcDateTime,
             SelectedPhotoIds = [.. gallery.SelectedPhotoIds],
@@ -181,6 +217,10 @@ public static class GalleryDocumentMappings
             DeliveredAt = gallery.DeliveredAt?.UtcDateTime,
             DeliveryNotifiedAt = gallery.DeliveryNotifiedAt?.UtcDateTime,
             ExtrasReleasedAt = gallery.ExtrasReleasedAt?.UtcDateTime,
+            ZipBytes = gallery.ZipBytes,
+            ZipUploadedAt = gallery.ZipUploadedAt?.UtcDateTime,
+            ZipDownloads = gallery.ZipDownloads,
+            ZipLastDownloadedAt = gallery.ZipLastDownloadedAt?.UtcDateTime,
             CreatedAt = gallery.CreatedAt.UtcDateTime,
             UpdatedAt = gallery.UpdatedAt.UtcDateTime,
         };
@@ -207,14 +247,18 @@ public static class GalleryDocumentMappings
             Money.Restore(document.ExtraPhotoPrice, document.Currency),
             ToOffset(document.CreatedAt),
             ToOffset(document.UpdatedAt),
-            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt), photo.FinalBytes, photo.FinalUploadedAt is null ? null : ToOffset(photo.FinalUploadedAt.Value))),
+            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt), photo.FinalBytes, photo.FinalUploadedAt is null ? null : ToOffset(photo.FinalUploadedAt.Value), photo.FinalWidth, photo.FinalHeight, photo.FinalCapturedAt is null ? null : ToOffset(photo.FinalCapturedAt.Value), photo.FinalDownloads)),
             document.SelectionNotifiedAt is null ? null : ToOffset(document.SelectionNotifiedAt.Value),
             document.SelectedPhotoIds,
             document.SelectionSubmittedAt is null ? null : ToOffset(document.SelectionSubmittedAt.Value),
             document.FinalsPublishedAt is null ? null : ToOffset(document.FinalsPublishedAt.Value),
             document.DeliveredAt is null ? null : ToOffset(document.DeliveredAt.Value),
             document.DeliveryNotifiedAt is null ? null : ToOffset(document.DeliveryNotifiedAt.Value),
-            document.ExtrasReleasedAt is null ? null : ToOffset(document.ExtrasReleasedAt.Value));
+            document.ExtrasReleasedAt is null ? null : ToOffset(document.ExtrasReleasedAt.Value),
+            document.ZipBytes,
+            document.ZipUploadedAt is null ? null : ToOffset(document.ZipUploadedAt.Value),
+            document.ZipDownloads,
+            document.ZipLastDownloadedAt is null ? null : ToOffset(document.ZipLastDownloadedAt.Value));
     }
 
     /// <summary>

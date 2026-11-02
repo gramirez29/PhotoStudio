@@ -101,6 +101,9 @@ public static class DomainErrorCodes
     /// <summary>The photos a client picked are not valid: none, a repeated one, or one the gallery does not have.</summary>
     public const string GalleryInvalidSelection = "gallery.invalid_selection";
 
+    /// <summary>The ZIP with the photos is not valid: it is empty or weighs more than allowed.</summary>
+    public const string GalleryInvalidZip = "gallery.invalid_zip";
+
     /// <summary>The final photos cannot be published: a photo of the package still has no final.</summary>
     public const string GalleryFinalsIncomplete = "gallery.finals_incomplete";
 

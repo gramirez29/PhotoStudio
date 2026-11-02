@@ -13,7 +13,21 @@ namespace PhotoStudio.Domain.Galleries;
 /// <param name="UploadedAt">Instant the proof was registered (UTC).</param>
 /// <param name="FinalBytes">Size of the final (edited) photo in bytes, or <see langword="null"/> while the photographer has not uploaded it.</param>
 /// <param name="FinalUploadedAt">Instant the final photo was registered (UTC), or <see langword="null"/> while it was not.</param>
-public sealed record GalleryPhoto(Guid Id, string OriginalName, long ProofBytes, DateTimeOffset UploadedAt, long? FinalBytes = null, DateTimeOffset? FinalUploadedAt = null)
+/// <param name="FinalWidth">Width of the final in pixels, as read by the photographer's browser, or <see langword="null"/> when unknown.</param>
+/// <param name="FinalHeight">Height of the final in pixels, or <see langword="null"/> when unknown.</param>
+/// <param name="FinalCapturedAt">Instant the final was taken, from its metadata, or <see langword="null"/> when unknown.</param>
+/// <param name="FinalDownloads">How many times the client asked to download the final.</param>
+public sealed record GalleryPhoto(
+    Guid Id,
+    string OriginalName,
+    long ProofBytes,
+    DateTimeOffset UploadedAt,
+    long? FinalBytes = null,
+    DateTimeOffset? FinalUploadedAt = null,
+    int? FinalWidth = null,
+    int? FinalHeight = null,
+    DateTimeOffset? FinalCapturedAt = null,
+    int FinalDownloads = 0)
 {
     /// <summary>The most a final photo can weigh.</summary>
     public const long MaxFinalBytes = 52_428_800;

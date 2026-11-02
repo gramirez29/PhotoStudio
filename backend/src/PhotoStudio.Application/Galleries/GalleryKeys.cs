@@ -10,6 +10,23 @@ public static class GalleryKeys
     public const string ProofContentType = "image/jpeg";
 
     /// <summary>
+    /// Content type of the ZIP with the photos. The signed address of the storage only accepts this one.
+    /// </summary>
+    public const string ZipContentType = "application/zip";
+
+    /// <summary>
+    /// Name the client saves the ZIP with.
+    /// </summary>
+    public const string ZipFileName = "PhotoSense-fotos.zip";
+
+    /// <summary>
+    /// Builds the key of the ZIP of a gallery. A gallery has one, so uploading another replaces it.
+    /// </summary>
+    /// <param name="galleryId">Gallery the ZIP belongs to.</param>
+    /// <returns>The key in the object storage.</returns>
+    public static string Zip(Guid galleryId) => $"galleries/{galleryId:D}/zip/photos.zip";
+
+    /// <summary>
     /// Builds the key of a proof.
     /// </summary>
     /// <param name="galleryId">Gallery the photo belongs to.</param>

@@ -57,7 +57,17 @@ public sealed record RequestFinalUploadsCommand(Guid PhotographerId, Guid Galler
 /// <param name="PhotographerId">Authenticated photographer.</param>
 /// <param name="GalleryId">Gallery the finals belong to.</param>
 /// <param name="PhotoIds">The chosen photos whose finals were uploaded.</param>
-public sealed record RegisterFinalsCommand(Guid PhotographerId, Guid GalleryId, IReadOnlyList<Guid> PhotoIds);
+/// <param name="Details">What the browser of the photographer read from the files (size in pixels, when they were taken), if anything.</param>
+public sealed record RegisterFinalsCommand(Guid PhotographerId, Guid GalleryId, IReadOnlyList<Guid> PhotoIds, IReadOnlyList<FinalDetailsEntry>? Details = null);
+
+/// <summary>
+/// What the browser read from one final photo.
+/// </summary>
+/// <param name="PhotoId">Identifier of the chosen photo the final belongs to.</param>
+/// <param name="Width">Width in pixels, or <see langword="null"/> when unknown.</param>
+/// <param name="Height">Height in pixels, or <see langword="null"/> when unknown.</param>
+/// <param name="CapturedAt">Instant the photo was taken, or <see langword="null"/> when unknown.</param>
+public sealed record FinalDetailsEntry(Guid PhotoId, int? Width, int? Height, DateTimeOffset? CapturedAt);
 
 /// <summary>
 /// Command to publish the final photos of the package (G6).
@@ -184,7 +194,8 @@ public sealed class RegisterFinalsHandler(IGalleryRepository galleries, IObjectS
                 {
                     if (failure is null)
                     {
-                        changed |= gallery.RegisterFinal(photoId, bytes, now);
+                        var entry = command.Details?.FirstOrDefault(candidate => candidate.PhotoId == photoId);
+                        changed |= gallery.RegisterFinal(photoId, bytes, now, entry is null ? null : new FinalDetails(entry.Width, entry.Height, entry.CapturedAt));
                     }
                     else
                     {

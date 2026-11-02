@@ -32,11 +32,54 @@ public sealed record PortalSelectionResponse(IReadOnlyList<Guid> PhotoIds, DateT
 /// </summary>
 /// <param name="Id">Photo identifier, the same as its proof.</param>
 /// <param name="FileName">Name to save the file with.</param>
-/// <param name="Url">Signed address to download it.</param>
-/// <param name="ExpiresAt">Instant the address stops working (UTC).</param>
 /// <param name="Bytes">Size of the file in bytes.</param>
 /// <param name="IsExtra">Whether it is one of the extra photos.</param>
-public sealed record PortalFinalResponse(Guid Id, string FileName, Uri Url, DateTimeOffset ExpiresAt, long Bytes, bool IsExtra);
+public sealed record PortalFinalResponse(Guid Id, string FileName, long Bytes, bool IsExtra);
+
+/// <summary>
+/// The ZIP with the photos, as the client sees it before asking for it.
+/// </summary>
+/// <param name="Bytes">Size of the ZIP, so the client knows what they are about to download.</param>
+public sealed record PortalZipResponse(long Bytes);
+
+/// <summary>
+/// An address to download one final photo, given when the client asks for it.
+/// </summary>
+/// <param name="Id">Photo identifier.</param>
+/// <param name="FileName">Name to save the file with.</param>
+/// <param name="Url">Signed address to download it; lasts a few minutes.</param>
+/// <param name="ExpiresAt">Instant the address stops working (UTC).</param>
+public sealed record PortalDownloadResponse(Guid Id, string FileName, Uri Url, DateTimeOffset ExpiresAt);
+
+/// <summary>
+/// The addresses to download the photos the client asked for.
+/// </summary>
+/// <param name="Items">One address per photo, in the order they were asked.</param>
+public sealed record PortalDownloadsResponse(IReadOnlyList<PortalDownloadResponse> Items);
+
+/// <summary>
+/// The address to download the ZIP.
+/// </summary>
+/// <param name="FileName">Name to save the file with.</param>
+/// <param name="Url">Signed address to download it; lasts a few minutes.</param>
+/// <param name="ExpiresAt">Instant the address stops working (UTC).</param>
+/// <param name="Bytes">Size of the ZIP.</param>
+public sealed record PortalZipDownloadResponse(string FileName, Uri Url, DateTimeOffset ExpiresAt, long Bytes);
+
+/// <summary>
+/// Command for the client to ask for the addresses to download some final photos. Asking counts as a download.
+/// </summary>
+/// <param name="Token">Secret token taken from the URL.</param>
+/// <param name="AuthorizedBookingId">Booking the portal session is valid for.</param>
+/// <param name="PhotoIds">The photos the client wants.</param>
+public sealed record RequestPortalDownloadsCommand(string Token, Guid AuthorizedBookingId, IReadOnlyList<Guid> PhotoIds);
+
+/// <summary>
+/// Command for the client to ask for the address to download the ZIP. Asking counts as a download.
+/// </summary>
+/// <param name="Token">Secret token taken from the URL.</param>
+/// <param name="AuthorizedBookingId">Booking the portal session is valid for.</param>
+public sealed record RequestPortalZipDownloadCommand(string Token, Guid AuthorizedBookingId);
 
 /// <summary>
 /// The gallery as its client sees it, once they confirmed the code: the proofs and the terms to choose them. It holds no file
@@ -49,6 +92,7 @@ public sealed record PortalFinalResponse(Guid Id, string FileName, Uri Url, Date
 /// <param name="Selection">The selection that was sent, or <see langword="null"/> while the client has not sent one.</param>
 /// <param name="Finals">The final photos the client can download now: none until the gallery is delivered; extras only once released.</param>
 /// <param name="ExtrasReleased">Whether the photographer released the extra photos.</param>
+/// <param name="Zip">The ZIP with the photos, when the gallery is delivered and has one.</param>
 public sealed record PortalGalleryResponse(
     GalleryStatus Status,
     int SelectablePhotos,
@@ -56,4 +100,5 @@ public sealed record PortalGalleryResponse(
     IReadOnlyList<PortalProofResponse> Photos,
     PortalSelectionResponse? Selection,
     IReadOnlyList<PortalFinalResponse>? Finals = null,
-    bool ExtrasReleased = false);
+    bool ExtrasReleased = false,
+    PortalZipResponse? Zip = null);

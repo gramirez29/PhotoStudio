@@ -26,6 +26,7 @@ namespace PhotoStudio.Application.Galleries;
 /// <param name="FinalsPublishedAt">Instant the final photos of the package were published (UTC), or <see langword="null"/> while they were not.</param>
 /// <param name="DeliveredAt">Instant the gallery was delivered (UTC), or <see langword="null"/> while it was not.</param>
 /// <param name="ExtrasReleasedAt">Instant the extra photos were released to the client (UTC), or <see langword="null"/> while they were not.</param>
+/// <param name="Zip">The ZIP with the photos, or <see langword="null"/> while there is none.</param>
 public sealed record GalleryResponse(
     Guid Id,
     Guid BookingId,
@@ -46,7 +47,17 @@ public sealed record GalleryResponse(
     DateTimeOffset? SelectionSubmittedAt = null,
     DateTimeOffset? FinalsPublishedAt = null,
     DateTimeOffset? DeliveredAt = null,
-    DateTimeOffset? ExtrasReleasedAt = null);
+    DateTimeOffset? ExtrasReleasedAt = null,
+    GalleryZipResponse? Zip = null);
+
+/// <summary>
+/// The ZIP with the photos that the photographer made and uploaded, and what the client did with it.
+/// </summary>
+/// <param name="Bytes">Size of the ZIP.</param>
+/// <param name="UploadedAt">Instant it was registered (UTC).</param>
+/// <param name="Downloads">How many times the client asked to download it.</param>
+/// <param name="LastDownloadedAt">Last instant the client asked to download it (UTC), or <see langword="null"/> if they never did.</param>
+public sealed record GalleryZipResponse(long Bytes, DateTimeOffset UploadedAt, int Downloads, DateTimeOffset? LastDownloadedAt);
 
 /// <summary>
 /// One page of the galleries of a photographer, the most recently created first.
@@ -89,6 +100,9 @@ public static class GalleryResponseMappings
             gallery.SelectionSubmittedAt,
             gallery.FinalsPublishedAt,
             gallery.DeliveredAt,
-            gallery.ExtrasReleasedAt);
+            gallery.ExtrasReleasedAt,
+            gallery.ZipBytes is { } zipBytes && gallery.ZipUploadedAt is { } zipUploadedAt
+                ? new GalleryZipResponse(zipBytes, zipUploadedAt, gallery.ZipDownloads, gallery.ZipLastDownloadedAt)
+                : null);
     }
 }
