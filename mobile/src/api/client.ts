@@ -2,6 +2,7 @@ import { env } from '../config/env';
 import { createAccountApi } from './accountApi';
 import { createBillingApi } from './billingApi';
 import { createBookingsApi } from './bookingsApi';
+import { createGalleryApi } from './galleryApi';
 import { createHealthApi } from './healthApi';
 import { createHttpClient } from './httpClient';
 import { createMaintenanceApi } from './maintenanceApi';
@@ -32,3 +33,6 @@ export const notificationsApi = createNotificationsApi(httpClient);
 
 /** Push device endpoints (register or forget the phone that receives push notifications). */
 export const pushDevicesApi = createPushDevicesApi(httpClient);
+
+/** API of the galleries: what the photographer does with them from the phone. */
+export const galleryApi = createGalleryApi(httpClient);

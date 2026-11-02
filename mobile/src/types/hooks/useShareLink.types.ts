@@ -6,4 +6,9 @@ export interface ShareLinkState {
   readonly errorMessage: string | null;
   /** Asks for confirmation and, when the photographer accepts, creates the link and opens WhatsApp with it. */
   readonly share: () => void;
+  /**
+   * Asks for confirmation and, when the photographer accepts, creates the link and opens the share sheet of the system with the
+   * message ready: from there the photographer can copy it or send it with any app.
+   */
+  readonly shareOther: () => void;
 }

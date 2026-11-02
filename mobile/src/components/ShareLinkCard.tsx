@@ -36,6 +36,7 @@ export function ShareLinkCard({ booking }: ShareLinkCardProps): ReactElement | n
         disabled={link.isPending}
         onPress={link.share}
       />
+      <ActionButton label="Copiar o enviar por otra app" disabled={link.isPending} onPress={link.shareOther} />
 
       {link.errorMessage !== null && <Text style={styles.error}>{link.errorMessage}</Text>}
     </AppCard>

@@ -1,13 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import { bookingsApi } from '../api/client';
-import { openExternalUrl } from '../navigation/externalLinks';
+import { openExternalUrl, shareText } from '../navigation/externalLinks';
 import type { BookingResponse } from '../types/api/booking';
 import type { ShareLinkState } from '../types/hooks/useShareLink.types';
 import type { ShareLinkOutcome } from '../types/utils/portalLink.types';
 import { NETWORK_ERROR_MESSAGE } from '../utils/apiErrors';
 import { buildWhatsAppUrl } from '../utils/notifications';
 import { buildLinkMessage, shareLinkOutcomeMessage } from '../utils/portalLink';
+
+/** How the link is handed over: straight to WhatsApp, or through the share sheet of the system (copy, or any other app). */
+type ShareLinkMode = 'whatsapp' | 'system';
 
 /**
  * Creates the link of a booking and opens WhatsApp with it ready to send. Creating a link cancels the previous one, so the
@@ -18,10 +21,14 @@ import { buildLinkMessage, shareLinkOutcomeMessage } from '../utils/portalLink';
  */
 export function useShareLink(booking: BookingResponse): ShareLinkState {
   // Not retried: every attempt creates a new link and cancels the previous one.
-  const sharing = useMutation<ShareLinkOutcome, Error>({
-    mutationFn: async () => {
+  const sharing = useMutation<ShareLinkOutcome, Error, ShareLinkMode>({
+    mutationFn: async (mode) => {
       const link = await bookingsApi.createBookingLink(booking.id);
       const message = buildLinkMessage(booking.clientName, booking.packageName, link.url, booking.clientEmail !== null);
+      if (mode === 'system') {
+        return (await shareText(message)) ? 'shared' : 'share-unavailable';
+      }
+
       const whatsAppUrl = buildWhatsAppUrl(booking.clientPhone, message);
       if (whatsAppUrl === null) {
         return 'invalid-phone';
@@ -47,7 +54,16 @@ export function useShareLink(booking: BookingResponse): ShareLinkState {
         'Se crea un enlace nuevo y se abre WhatsApp para enviarlo. Si ya habías enviado un enlace de esta reserva, dejará de funcionar.',
         [
           { text: 'Volver', style: 'cancel' },
-          { text: 'Crear y enviar', onPress: () => sharing.mutate() },
+          { text: 'Crear y enviar', onPress: () => sharing.mutate('whatsapp') },
+        ],
+      ),
+    shareOther: () =>
+      Alert.alert(
+        'Enlace para el cliente',
+        'Se crea un enlace nuevo y se abre el menú de compartir para que lo copies o lo mandes con otra app. Si ya habías enviado un enlace de esta reserva, dejará de funcionar.',
+        [
+          { text: 'Volver', style: 'cancel' },
+          { text: 'Crear y compartir', onPress: () => sharing.mutate('system') },
         ],
       ),
   };

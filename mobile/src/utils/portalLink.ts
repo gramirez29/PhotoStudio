@@ -31,5 +31,7 @@ export function shareLinkOutcomeMessage(outcome: ShareLinkOutcome): string | nul
       return 'El teléfono del cliente no es válido para WhatsApp.';
     case 'whatsapp-unavailable':
       return 'No se pudo abrir WhatsApp. Inténtalo de nuevo.';
+    case 'share-unavailable':
+      return 'No se pudo abrir el menú de compartir. Inténtalo de nuevo.';
   }
 }

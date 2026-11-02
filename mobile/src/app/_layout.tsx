@@ -84,6 +84,9 @@ export default function RootLayout(): ReactElement {
           <Stack.Screen name="bookings/reason" options={{ title: 'Motivo' }} />
           <Stack.Screen name="bookings/reject-payment" options={{ title: 'Rechazar comprobante' }} />
           <Stack.Screen name="bookings/[id]" options={{ title: 'Reserva' }} />
+          <Stack.Screen name="galleries/[id]" options={{ title: 'Galería' }} />
+          <Stack.Screen name="galleries/terms" options={{ title: 'Fotos y precio' }} />
+          <Stack.Screen name="galleries/reopen" options={{ title: 'Reabrir la selección' }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signedIn' && !emailVerified}>
           <Stack.Screen name="verify-email" options={{ title: 'Verifica tu correo', headerLeft: SignOutButton, headerBackVisible: false }} />
