@@ -139,7 +139,7 @@ describe('the gallery of the client', () => {
     expect(screen.queryByText(/foto adicional ×/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Foto 3, sin elegir' }));
-    expect(screen.getByText(/1 foto adicional × .*3.*000.* = .*3.*000.*Se suma a tu saldo/)).toBeInTheDocument();
+    expect(screen.getByText(/1 foto adicional × .*3.*000.* = .*3.*000.*PhotoSense Studio te contactará para coordinar el pago/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Foto 4, sin elegir' }));
     expect(screen.getByText(/2 fotos adicionales × .*3.*000.* = .*6.*000/)).toBeInTheDocument();
 
@@ -179,7 +179,7 @@ describe('the gallery of the client', () => {
     expect(await screen.findByRole('heading', { name: '¡Listo! Recibimos tu selección' })).toBeInTheDocument();
     expect(screen.getByText(/Tu fotógrafo ya sabe cuáles fotos va a editar/)).toBeInTheDocument();
     const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/gallery/selection'));
-    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ photoIds: ['p3', 'p1'] });
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ photoIds: ['p3', 'p1'], acceptExtras: false });
     expect(call?.[1]?.headers).toMatchObject({ Authorization: 'Bearer portal-jwt' });
     expect(window.sessionStorage.length).toBe(0);
   });
@@ -197,6 +197,58 @@ describe('the gallery of the client', () => {
     await user.click(screen.getByRole('button', { name: 'Seguir eligiendo' }));
 
     expect(screen.getByRole('button', { name: 'Foto 3, elegida' })).toBeInTheDocument();
+  });
+
+  it('tells the client how many extra photos there are and that the studio will contact them, and sends them only when accepted', async () => {
+    answer(
+      baseAnswers({
+        'GET /gallery': [jsonResponse(200, galleryBody({ selectablePhotos: 1 }))],
+        'POST /gallery/selection': [
+          jsonResponse(
+            200,
+            galleryBody({
+              status: 'InEditing',
+              selectablePhotos: 1,
+              selection: { photoIds: ['p1', 'p2'], submittedAt: '2026-10-30T12:00:00+00:00', extraPhotos: 1, extraTotal: { amount: 3000, currency: 'CRC' } },
+            }),
+          ),
+        ],
+      }),
+    );
+    const user = renderPage();
+    await openGallery(user);
+    await user.click(await screen.findByRole('button', { name: 'Foto 1, sin elegir' }));
+    await user.click(screen.getByRole('button', { name: 'Foto 2, sin elegir' }));
+    await user.click(screen.getByRole('button', { name: 'Revisar y enviar' }));
+    await user.click(screen.getByRole('button', { name: 'Sí, enviar mi selección' }));
+
+    expect(screen.getByText(/Seleccionaste/)).toHaveTextContent(/1 foto adicional.*PhotoSense Studio va a contactarte para coordinar el pago/);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/gallery/selection'))).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'Aceptar y enviar' }));
+
+    expect(await screen.findByRole('heading', { name: '¡Listo! Recibimos tu selección' })).toBeInTheDocument();
+    const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/gallery/selection'));
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ photoIds: ['p1', 'p2'], acceptExtras: true });
+  });
+
+  it('leaves the extra photos out when the client cancels, keeping the first ones chosen, and sends nothing yet', async () => {
+    answer(baseAnswers({ 'GET /gallery': [jsonResponse(200, galleryBody({ selectablePhotos: 1 }))] }));
+    const user = renderPage();
+    await openGallery(user);
+    await user.click(await screen.findByRole('button', { name: 'Foto 3, sin elegir' }));
+    await user.click(screen.getByRole('button', { name: 'Foto 1, sin elegir' }));
+    await user.click(screen.getByRole('button', { name: 'Revisar y enviar' }));
+    await user.click(screen.getByRole('button', { name: 'Sí, enviar mi selección' }));
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar y omitir las adicionales' }));
+
+    expect(screen.getByText(/Vas a enviar/)).toHaveTextContent('Vas a enviar 1 foto.');
+    expect(screen.queryByText(/foto adicional/)).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/gallery/selection'))).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Seguir eligiendo' }));
+    expect(screen.getByRole('button', { name: 'Foto 3, elegida' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Foto 1, sin elegir' })).toBeInTheDocument();
   });
 
   it('shows why the selection was not sent, and keeps what the client chose', async () => {
@@ -289,7 +341,7 @@ describe('the gallery of the client', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tu selección' })).toBeInTheDocument();
     expect(screen.getByText(/fotos elegidas./)).toHaveTextContent('3 fotos elegidas.');
-    expect(screen.getByText(/1 foto adicional: .*3.*000.*Se suma a tu saldo/)).toBeInTheDocument();
+    expect(screen.getByText(/1 foto adicional: .*3.*000.*PhotoSense Studio te contactará para coordinar el pago/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Revisar y enviar' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Foto \d, elegida$/ })).toHaveLength(3);
     expect(screen.getAllByRole('button', { name: /^Foto \d, elegida$/ }).every((tile) => (tile as HTMLButtonElement).disabled)).toBe(true);

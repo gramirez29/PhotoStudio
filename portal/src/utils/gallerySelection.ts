@@ -108,7 +108,7 @@ export function describeChoice(summary: ChoiceSummary, price: Money): ChoiceWord
     headline,
     extra:
       summary.extraPhotos > 0
-        ? `${summary.extraPhotos} ${summary.extraPhotos === 1 ? 'foto adicional' : 'fotos adicionales'} × ${each} = ${formatMoney(summary.extraTotal)}. Se suma a tu saldo.`
+        ? `${summary.extraPhotos} ${summary.extraPhotos === 1 ? 'foto adicional' : 'fotos adicionales'} × ${each} = ${formatMoney(summary.extraTotal)}. PhotoSense Studio te contactará para coordinar el pago.`
         : null,
     invitation:
       summary.remaining === 0

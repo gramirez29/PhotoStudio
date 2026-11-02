@@ -66,7 +66,7 @@ describe('describeChoice', () => {
   });
 
   it('says what the extra photos cost, in the singular and the plural', () => {
-    expect(describeChoice(summarizeChoice(16, { selectablePhotos: 15, extraPhotoPrice: PRICE }), PRICE).extra).toMatch(/^1 foto adicional × .* = .*Se suma a tu saldo\.$/);
+    expect(describeChoice(summarizeChoice(16, { selectablePhotos: 15, extraPhotoPrice: PRICE }), PRICE).extra).toMatch(/^1 foto adicional × .* = .*PhotoSense Studio te contactará para coordinar el pago\.$/);
     expect(describeChoice(summarizeChoice(18, { selectablePhotos: 15, extraPhotoPrice: PRICE }), PRICE).extra).toMatch(/^3 fotos adicionales × /);
   });
 

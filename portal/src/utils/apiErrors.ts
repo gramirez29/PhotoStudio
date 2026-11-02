@@ -249,6 +249,10 @@ export function describeSelectionError(error: unknown): ActionErrorView {
     return { message: 'Alguna de las fotos que elegiste ya no está disponible. Cierra y vuelve a abrir tus fotos.', retryAfterSeconds: null, sessionExpired: false };
   }
 
+  if (error instanceof ApiError && error.code === 'gallery.extras_not_accepted') {
+    return { message: 'Para enviar fotos adicionales necesitamos que aceptes que te contactaremos para coordinar el pago. Inténtalo de nuevo.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
   if (error instanceof ApiError && error.code === 'concurrency.conflict') {
     return { message: 'La galería cambió mientras elegías. Inténtalo de nuevo.', retryAfterSeconds: null, sessionExpired: false };
   }

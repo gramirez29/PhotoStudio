@@ -26,6 +26,7 @@ export function GalleryPicker({ token, session, gallery, onSessionExpired, onSen
   );
   const [open, setOpen] = useState<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [confirmingExtras, setConfirmingExtras] = useState(false);
   const [error, setError] = useState<ActionErrorView | null>(null);
 
   useEffect(() => {
@@ -45,11 +46,32 @@ export function GalleryPicker({ token, session, gallery, onSessionExpired, onSen
     setChosen((current) => toggleChoice(current, photoId));
   }
 
-  /** Sends the selection. A verification that expired takes the client back to the code, with the choice kept. */
-  function send(): void {
+  /** Asks to send. When there are photos beyond the package the client must first accept that the studio will contact them about the payment. */
+  function requestSend(): void {
+    if (summary.extraPhotos > 0) {
+      setError(null);
+      setConfirmingExtras(true);
+    } else {
+      send(false);
+    }
+  }
+
+  /** The client declined the extra photos: they are left out, the last ones chosen first, and the review shows what remains. */
+  function omitExtras(): void {
+    const kept = chosen.slice(0, gallery.selectablePhotos);
+    setChosen(kept);
+    setConfirmingExtras(false);
+    setReviewing(kept.length > 0);
+  }
+
+  /**
+   * Sends the selection. A verification that expired takes the client back to the code, with the choice kept.
+   * @param acceptExtras True when the client accepted that the studio contacts them to agree on the payment of the extra photos.
+   */
+  function send(acceptExtras: boolean): void {
     setError(null);
     submit.mutate(
-      { accessToken: session.accessToken, photoIds: chosen },
+      { accessToken: session.accessToken, photoIds: chosen, acceptExtras },
       {
         onSuccess: () => {
           clearDraft(token);
@@ -64,6 +86,32 @@ export function GalleryPicker({ token, session, gallery, onSessionExpired, onSen
           }
         },
       },
+    );
+  }
+
+  if (reviewing && confirmingExtras) {
+    return (
+      <section className="card" aria-labelledby="gallery-extras-title">
+        <StepHeading>Fotos adicionales</StepHeading>
+        <p>
+          Seleccionaste <strong>{summary.extraPhotos}</strong> {summary.extraPhotos === 1 ? 'foto adicional' : 'fotos adicionales'} ({formatMoney(summary.extraTotal)}).
+          PhotoSense Studio va a contactarte para coordinar el pago.
+        </p>
+        <p>Si aceptas, las enviamos junto con las fotos de tu paquete. Si cancelas, se omiten las adicionales (las últimas que elegiste).</p>
+        {error !== null && (
+          <p className="field__error" role="alert">
+            {error.message}
+          </p>
+        )}
+        <div className="actions">
+          <button type="button" className="button" disabled={submit.isPending} onClick={() => send(true)}>
+            {submit.isPending ? 'Enviando…' : 'Aceptar y enviar'}
+          </button>
+          <button type="button" className="button button--secondary" disabled={submit.isPending} onClick={omitExtras}>
+            Cancelar y omitir las adicionales
+          </button>
+        </div>
+      </section>
     );
   }
 
@@ -82,7 +130,7 @@ export function GalleryPicker({ token, session, gallery, onSessionExpired, onSen
           </p>
         )}
         <div className="actions">
-          <button type="button" className="button" disabled={submit.isPending} onClick={send}>
+          <button type="button" className="button" disabled={submit.isPending} onClick={requestSend}>
             {submit.isPending ? 'Enviando…' : 'Sí, enviar mi selección'}
           </button>
           <button type="button" className="button button--secondary" disabled={submit.isPending} onClick={() => setReviewing(false)}>

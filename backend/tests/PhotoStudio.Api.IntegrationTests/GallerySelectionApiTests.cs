@@ -48,7 +48,11 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
 
         var ids = photos.Select(photo => photo.GetProperty("id").GetGuid()).ToList();
         var chosen = new[] { ids[3], ids[0], ids[2] };
-        var sent = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = chosen });
+        var notAccepted = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = chosen });
+        notAccepted.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await notAccepted.ReadCodeAsync()).ShouldBe("gallery.extras_not_accepted");
+
+        var sent = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = chosen, acceptExtras = true });
         sent.StatusCode.ShouldBe(HttpStatusCode.OK);
         var sentBody = await sent.ReadJsonAsync();
         sentBody.GetProperty("status").GetString().ShouldBe("InEditing");
@@ -56,7 +60,7 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         sentBody.GetProperty("selection").GetProperty("extraTotal").GetProperty("amount").GetDecimal().ShouldBe(3_000m);
         sentBody.GetProperty("selection").GetProperty("photoIds").EnumerateArray().Select(id => id.GetGuid()).ShouldBe(chosen);
 
-        (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = chosen.Reverse() })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = chosen.Reverse(), acceptExtras = true })).StatusCode.ShouldBe(HttpStatusCode.OK);
         var another = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = new[] { ids[1] } });
         another.StatusCode.ShouldBe(HttpStatusCode.Conflict);
         (await another.ReadCodeAsync()).ShouldBe("gallery.invalid_state");

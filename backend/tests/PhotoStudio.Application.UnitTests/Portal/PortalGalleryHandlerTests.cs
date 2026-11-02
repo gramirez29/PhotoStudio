@@ -115,7 +115,7 @@ public sealed class PortalGalleryHandlerTests
         var gallery = MakeGallery(GalleryStatus.InSelection, 4, included: 2);
         var chosen = gallery.Photos.Take(3).Select(photo => photo.Id).ToList();
 
-        var response = await SubmitHandler().HandleAsync(new SubmitPortalSelectionCommand(PortalFixture.Token, _fixture.Booking.Id, chosen), TestContext.Current.CancellationToken);
+        var response = await SubmitHandler().HandleAsync(new SubmitPortalSelectionCommand(PortalFixture.Token, _fixture.Booking.Id, chosen, AcceptExtras: true), TestContext.Current.CancellationToken);
 
         response.Status.ShouldBe(GalleryStatus.InEditing);
         response.Selection.ShouldNotBeNull().PhotoIds.ShouldBe(chosen);
@@ -123,6 +123,24 @@ public sealed class PortalGalleryHandlerTests
         response.Selection.ExtraTotal.Amount.ShouldBe(3_000m);
         gallery.DomainEvents.ShouldHaveSingleItem().ShouldBeOfType<SelectionSubmitted>();
         await _galleries.Received(1).UpdateAsync(gallery, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A selection with photos beyond the package is refused while the client has not accepted them, and nothing is saved; within the
+    /// package it needs no acceptance.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task Submit_WithExtrasNotAccepted_IsRefused()
+    {
+        var gallery = MakeGallery(GalleryStatus.InSelection, 4, included: 2);
+        var chosen = gallery.Photos.Take(3).Select(photo => photo.Id).ToList();
+
+        var error = await Should.ThrowAsync<DomainException>(() => SubmitHandler().HandleAsync(
+            new SubmitPortalSelectionCommand(PortalFixture.Token, _fixture.Booking.Id, chosen), TestContext.Current.CancellationToken));
+
+        error.Code.ShouldBe(DomainErrorCodes.GalleryExtrasNotAccepted);
+        await _galleries.DidNotReceive().UpdateAsync(Arg.Any<Gallery>(), Arg.Any<CancellationToken>());
     }
 
     /// <summary>
