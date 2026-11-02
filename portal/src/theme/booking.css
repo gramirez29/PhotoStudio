@@ -90,3 +90,21 @@
   gap: var(--space-md);
   padding-top: var(--space-lg);
 }
+
+/* Notice that the email is already confirmed in this device. */
+.session-notice {
+  font-size: 0.85rem;
+  margin: 0;
+  text-align: center;
+}
+
+/* Closing the session looks like a link: it is a secondary action, not a button of the flow. */
+.session-notice__close {
+  background: none;
+  border: 0;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}

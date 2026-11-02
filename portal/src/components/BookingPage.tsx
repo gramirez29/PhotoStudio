@@ -1,6 +1,6 @@
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
+import { usePersistedSession } from '../hooks/usePersistedSession';
 import { usePortalBooking } from '../hooks/usePortalBooking';
-import type { PortalSession } from '../types/api/portal';
 import type { BookingPageProps } from '../types/components/BookingPage.types';
 import { describeLoadError } from '../utils/apiErrors';
 import { BookingView } from './BookingView';
@@ -9,16 +9,18 @@ import { GalleryFlow } from './GalleryFlow';
 import { LoadErrorScreen } from './LoadErrorScreen';
 import { LoadingScreen } from './LoadingScreen';
 import { ProofFlow } from './ProofFlow';
+import { SessionNotice } from './SessionNotice';
 
 /**
  * Screen of a booking link: loads the booking and shows it, or says why it cannot. The session that comes from confirming a
- * code lives here, so the contract and the payment proof share it and the client confirms their email once, not once per action.
+ * code lives here and is remembered in the browser, so the contract, the payment proof and the gallery share it and the client
+ * confirms their email once, not once per action and not once per visit.
  * @param props Component props.
  * @returns The screen.
  */
 export function BookingPage({ token }: BookingPageProps): ReactElement {
   const query = usePortalBooking(token);
-  const [session, setSession] = useState<PortalSession | null>(null);
+  const [session, setSession] = usePersistedSession(token);
 
   if (query.isPending) {
     return <LoadingScreen />;
@@ -36,6 +38,7 @@ export function BookingPage({ token }: BookingPageProps): ReactElement {
           <ContractFlow token={token} booking={query.data} session={session} onSessionChange={setSession} />
           <ProofFlow token={token} booking={query.data} session={session} onSessionChange={setSession} />
           <GalleryFlow token={token} session={session} onSessionChange={setSession} />
+          <SessionNotice session={session} onClose={() => setSession(null)} />
         </>
       }
     />
