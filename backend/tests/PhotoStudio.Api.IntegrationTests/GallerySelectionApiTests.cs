@@ -69,7 +69,7 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         gallery.GetProperty("status").GetString().ShouldBe("InEditing");
         gallery.GetProperty("selectedPhotoCount").GetInt32().ShouldBe(3);
         gallery.GetProperty("extraPhotoCount").GetInt32().ShouldBe(1);
-        gallery.GetProperty("allowedActions").EnumerateArray().Select(action => action.GetString()).ShouldBe(["UploadFinals"]);
+        gallery.GetProperty("allowedActions").EnumerateArray().Select(action => action.GetString()).ShouldBe(["UploadFinals", "ReopenSelection"]);
 
         var notice = await WaitForNoticeAsync(scenario);
         notice.GetProperty("selectedPhotos").GetInt32().ShouldBe(3);
@@ -83,6 +83,71 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         var names = await (await browser.GetAsync($"/api/web/galleries/{scenario.GalleryId}/selection", TestContext.Current.CancellationToken)).ReadJsonAsync();
         names.GetProperty("extraPhotos").GetInt32().ShouldBe(1);
         names.GetProperty("photos").EnumerateArray().Select(photo => photo.GetProperty("name").GetString()).ShouldBe(["IMG_0003.jpg", "IMG_0000.jpg", "IMG_0002.jpg"]);
+    }
+
+    /// <summary>
+    /// What the photographer does from the app, with the token of the app and not the cookie of the web: reads the selection, reopens
+    /// it with a reason (the client is told by email and chooses again, and the photographer gets a second notice), and the endpoints
+    /// refuse anyone else's token and no token.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task FromTheApp_ThePhotographerReadsAndReopensTheSelection()
+    {
+        Assume();
+        var scenario = await StartAsync(GalleryStatus.InSelection, photos: 4, included: 2);
+        var session = await scenario.OpenPortalSessionAsync(fixture);
+        var ids = (await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync())
+            .GetProperty("photos").EnumerateArray().Select(photo => photo.GetProperty("id").GetGuid()).ToList();
+        (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = new[] { ids[0], ids[1], ids[2] }, acceptExtras = true })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        await WaitForNoticeAsync(scenario);
+        var path = $"/api/galleries/{scenario.GalleryId}";
+
+        var selection = await (await scenario.Client.SendAsync(HttpMethod.Get, $"{path}/selection", scenario.Photographer.AccessToken)).ReadJsonAsync();
+        selection.GetProperty("photos").EnumerateArray().Select(photo => photo.GetProperty("isExtra").GetBoolean()).ShouldBe([false, false, true]);
+        (await scenario.Client.SendAsync(HttpMethod.Get, $"{path}/proofs", scenario.Photographer.AccessToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        (await scenario.Client.SendAsync(HttpMethod.Get, $"{path}/selection", null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        var stranger = await StartAsync(GalleryStatus.InSelection, photos: 1, included: 1);
+        (await stranger.Client.SendAsync(HttpMethod.Get, $"{path}/selection", stranger.Photographer.AccessToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await stranger.Client.SendAsync(HttpMethod.Post, $"{path}/selection/reopen", stranger.Photographer.AccessToken, new { reason = "x" })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        var noReason = await scenario.Client.SendAsync(HttpMethod.Post, $"{path}/selection/reopen", scenario.Photographer.AccessToken, new { reason = " " });
+        noReason.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await noReason.ReadCodeAsync()).ShouldBe("booking.reason_required");
+
+        var reopened = await scenario.Client.SendAsync(HttpMethod.Post, $"{path}/selection/reopen", scenario.Photographer.AccessToken, new { reason = "El cliente quiere cambiar una foto" });
+        reopened.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await reopened.ReadJsonAsync();
+        body.GetProperty("status").GetString().ShouldBe("InSelection");
+        body.GetProperty("selectedPhotoCount").GetInt32().ShouldBe(0);
+        body.GetProperty("selectionReopenReason").GetString().ShouldBe("El cliente quiere cambiar una foto");
+        (await scenario.Client.SendAsync(HttpMethod.Post, $"{path}/selection/reopen", scenario.Photographer.AccessToken, new { reason = "otra vez" })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        var again = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync();
+        again.GetProperty("status").GetString().ShouldBe("InSelection");
+        again.GetProperty("selection").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
+        (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/selection", session, new { photoIds = new[] { ids[3] } })).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var notices = 0;
+        for (var attempt = 0; attempt < 30 && notices < 2; attempt++)
+        {
+            await RunMaintenancePassAsync();
+            var inbox = await (await scenario.Client.SendAsync(HttpMethod.Get, "/api/notifications", scenario.Photographer.AccessToken)).ReadJsonAsync();
+            notices = inbox.GetProperty("items").EnumerateArray().Count(item => item.GetProperty("type").GetString() == "SelectionSubmitted");
+            await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        }
+
+        notices.ShouldBe(2);
+        for (var attempt = 0; attempt < 20 && !ReopenEmailArrived(); attempt++)
+        {
+            await RunMaintenancePassAsync();
+            await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        }
+
+        ReopenEmailArrived().ShouldBeTrue();
+
+        bool ReopenEmailArrived() => fixture.Emails.Messages.Any(message => message.To == scenario.ClientEmail && message.Subject == "Tu selección está abierta otra vez");
     }
 
     /// <summary>

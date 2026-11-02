@@ -234,6 +234,46 @@ describe('the final photos on the page of a gallery', () => {
     expect(within(screen.getByRole('group', { name: 'Fotos adicionales (1)' })).getByText(/final subido/)).toBeInTheDocument();
   });
 
+  it('reopens the selection only after asking for the reason and confirming, and the page goes back to the client choosing', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ allowedActions: ['UploadFinals', 'ReopenSelection'] }))],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection())],
+        [`POST ${GALLERY_PATH}/selection/reopen`]: [
+          jsonResponse(200, gallery({ status: 'InSelection', selectionSubmittedAt: null, selectedPhotoCount: 0, allowedActions: ['EditTerms'], selectionReopenReason: 'cambio', selectionReopenedAt: '2026-11-04T12:00:00+00:00' })),
+        ],
+      }),
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Reabrir la selección' }));
+    expect(screen.getByRole('button', { name: 'Sí, reabrir la selección' })).toBeDisabled();
+    await user.type(screen.getByLabelText('Motivo (solo lo ves tú)'), '  El cliente quiere cambiar dos fotos ');
+    expect(requests().some((request) => request.endsWith('/selection/reopen'))).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Sí, reabrir la selección' }));
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Fotos finales' })).not.toBeInTheDocument());
+    const sent = fetchMock.mock.calls.find(([input]) => String(input).endsWith('/selection/reopen'));
+    expect(JSON.parse(String(sent?.[1]?.body))).toEqual({ reason: 'El cliente quiere cambiar dos fotos' });
+  });
+
+  it('says why reopening was refused', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ allowedActions: ['UploadFinals', 'ReopenSelection'] }))],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection())],
+        [`POST ${GALLERY_PATH}/selection/reopen`]: [jsonResponse(409, { code: 'gallery.invalid_state', detail: 'x' })],
+      }),
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Reabrir la selección' }));
+    await user.type(screen.getByLabelText('Motivo (solo lo ves tú)'), 'cambio');
+    await user.click(screen.getByRole('button', { name: 'Sí, reabrir la selección' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('ya no está en un estado que permita esta acción');
+  });
+
   describe('the ZIP', () => {
     const DELIVERED = { status: 'Delivered', deliveredAt: '2026-11-03T13:00:00+00:00', finalsPublishedAt: '2026-11-03T13:00:00+00:00' };
 

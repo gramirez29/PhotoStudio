@@ -4,8 +4,11 @@ using PhotoStudio.Api.Auth;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.EditTerms;
+using PhotoStudio.Application.Galleries.Finals;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.ListGalleries;
+using PhotoStudio.Application.Galleries.Proofs;
+using PhotoStudio.Application.Galleries.Selection;
 using PhotoStudio.Application.Pagination;
 
 namespace PhotoStudio.Api.Endpoints;
@@ -17,6 +20,12 @@ namespace PhotoStudio.Api.Endpoints;
 /// <param name="BonusPhotos">Photos given on top.</param>
 /// <param name="ExtraPhotoPrice">Price of each photo beyond those, in the currency of the booking.</param>
 public sealed record EditGalleryTermsRequest(int IncludedPhotos, int BonusPhotos, decimal ExtraPhotoPrice);
+
+/// <summary>
+/// HTTP body to reopen the selection of a client.
+/// </summary>
+/// <param name="Reason">Why the selection is reopened; required.</param>
+public sealed record ReopenSelectionRequest(string? Reason);
 
 /// <summary>
 /// Photographer-facing gallery endpoints. A gallery is created by the system when a session is completed, so there is no
@@ -40,6 +49,18 @@ public static class GalleryEndpoints
         group.MapGet("/by-booking/{bookingId:guid}", GetByBookingAsync).WithName("GetGalleryByBooking");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetGallery");
         group.MapPost("/{id:guid}/terms", EditTermsAsync).WithName("EditGalleryTerms");
+
+        // What the photographer does with a gallery from the app. The same handlers serve the web area; here the session is the
+        // token of the app instead of the cookie. Uploading files is not here: it needs the phone to prepare the photos.
+        group.MapGet("/{id:guid}/proofs", ListProofsAsync).WithName("AppListProofs");
+        group.MapGet("/{id:guid}/selection", GetSelectionAsync).WithName("AppGetSelection");
+        group.MapPost("/{id:guid}/proofs/{photoId:guid}/remove", RemoveProofAsync).WithName("AppRemoveProof");
+        group.MapPost("/{id:guid}/selection/open", OpenSelectionAsync).WithName("AppOpenSelection");
+        group.MapPost("/{id:guid}/selection/reopen", ReopenSelectionAsync).WithName("AppReopenSelection");
+        group.MapPost("/{id:guid}/finals/publish", PublishFinalsAsync).WithName("AppPublishFinals");
+        group.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("AppReleaseExtras");
+        group.MapPost("/{id:guid}/zip/remove", RemoveZipAsync).WithName("AppRemoveZip");
+        group.MapGet("/{id:guid}/finals/{photoId:guid}/download", GetFinalDownloadAsync).WithName("AppGetFinalDownload");
 
         return endpoints;
     }
@@ -92,6 +113,147 @@ public static class GalleryEndpoints
         IQueryHandler<GetGalleryByBookingQuery, GalleryResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new GetGalleryByBookingQuery(user.GetPhotographerId(), bookingId), cancellationToken));
+
+    /// <summary>
+    /// Lists the proofs of a gallery, each with a signed address that works for a few minutes.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the proofs; 404 when the gallery does not exist or is another photographer's.</returns>
+    private static async Task<Ok<ProofListResponse>> ListProofsAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IQueryHandler<ListProofsQuery, ProofListResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ListProofsQuery(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Reads what the client chose, with the names of the files, the details of each final and its downloads.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the selection (empty until the client sends it); 404 when the gallery does not exist or is another photographer's.</returns>
+    private static async Task<Ok<SelectionResponse>> GetSelectionAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        IQueryHandler<GetSelectionQuery, SelectionResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetSelectionQuery(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Removes a proof, while the selection is not open.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="photoId">Photo identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 404 when the gallery or the photo does not exist; 409 <c>gallery.invalid_state</c> once the selection is open.</returns>
+    private static async Task<Ok<GalleryResponse>> RemoveProofAsync(
+        Guid id,
+        Guid photoId,
+        ClaimsPrincipal user,
+        ICommandHandler<RemoveProofCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RemoveProofCommand(user.GetPhotographerId(), id, photoId), cancellationToken));
+
+    /// <summary>
+    /// Opens the selection: the proofs are published, the client can choose, and the client is told by email.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 409 <c>gallery.no_photos</c> without proofs, or <c>gallery.invalid_state</c> when it is already open.</returns>
+    private static async Task<Ok<GalleryResponse>> OpenSelectionAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<OpenSelectionCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new OpenSelectionCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Reopens the selection of the client, so they can choose again. The client is told by email.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">Why it is reopened.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery, in selection again; 409 <c>gallery.invalid_state</c> when it is not in editing; 422 <c>booking.reason_required</c> without a reason.</returns>
+    private static async Task<Ok<GalleryResponse>> ReopenSelectionAsync(
+        Guid id,
+        ReopenSelectionRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<ReopenSelectionCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ReopenSelectionCommand(user.GetPhotographerId(), id, request.Reason), cancellationToken));
+
+    /// <summary>
+    /// Publishes the final photos of the package. The client downloads them as soon as the balance is zero.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 409 <c>gallery.invalid_state</c> or <c>gallery.finals_incomplete</c> when a photo of the package has no final.</returns>
+    private static async Task<Ok<GalleryResponse>> PublishFinalsAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<PublishFinalsCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new PublishFinalsCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Lets the client download the extra photos, once the photographer agreed on their payment with the client.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 409 <c>gallery.invalid_state</c> before the finals are published, or <c>gallery.finals_incomplete</c> when no extra has its final.</returns>
+    private static async Task<Ok<GalleryResponse>> ReleaseExtrasAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<ReleaseExtrasCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ReleaseExtrasCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Deletes the ZIP, from the gallery and from the storage.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery.</returns>
+    private static async Task<Ok<GalleryResponse>> RemoveZipAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<RemoveZipCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RemoveZipCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Gives the photographer the address to download one final photo. It is not counted as a download of the client.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="photoId">Photo identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the address; 404 when the gallery or the final does not exist or is another photographer's.</returns>
+    private static async Task<Ok<FinalDownloadResponse>> GetFinalDownloadAsync(
+        Guid id,
+        Guid photoId,
+        ClaimsPrincipal user,
+        IQueryHandler<GetFinalDownloadQuery, FinalDownloadResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetFinalDownloadQuery(user.GetPhotographerId(), id, photoId), cancellationToken));
 
     /// <summary>
     /// Changes the terms of a gallery: included photos, gift photos and the price of an extra photo.

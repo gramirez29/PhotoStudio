@@ -94,6 +94,8 @@ export function describeFinalsRequestError(error: unknown): string {
     switch (error.code) {
       case 'gallery.finals_incomplete':
         return 'Faltan finales: cada foto del paquete necesita el suyo antes de publicar, y las extras necesitan al menos uno para liberarlas.';
+      case 'booking.reason_required':
+        return 'Escribe el motivo, de hasta 500 caracteres.';
       case 'gallery.invalid_state':
         return 'La galería ya no está en un estado que permita esta acción. Recarga la página.';
       case 'gallery.invalid_photo':

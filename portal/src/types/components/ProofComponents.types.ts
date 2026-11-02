@@ -34,6 +34,14 @@ export interface StudioZipProps {
   readonly gallery: StudioGallery;
 }
 
+/** Props of the `ReopenSelectionPanel` component. */
+export interface ReopenSelectionPanelProps {
+  /** The gallery whose selection is reopened. */
+  readonly gallery: StudioGallery;
+  /** True while finals are still going up. */
+  readonly disabled: boolean;
+}
+
 /** Props of the `FinalsPicker` component. */
 export interface FinalsPickerProps {
   /** True while an upload is running: nothing more can be chosen. */

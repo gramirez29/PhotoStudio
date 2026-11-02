@@ -257,3 +257,17 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 - **ZIP:** si el fotógrafo subió uno, aparece "Todas en un solo archivo" con el botón **Descargar todo en un ZIP (X MB)**. Al pulsarlo pide confirmar: *Se va a descargar un paquete de X MB. Según tu conexión a internet puede tomar tiempo.* con "Sí, descargar el ZIP" y "Cancelar". Sin ZIP no se menciona.
 
 **Pruebas del portal (415):** lector de JPEG con archivos sintéticos (orden de bytes de las dos formas, fecha con y sin zona, giro de la cámara, archivo sin metadatos o cortado), validación del ZIP, parsers nuevos, subir el ZIP de punta a punta (con rechazo de lo que no es ZIP o pesa de más), mostrar y borrar el ZIP, la ficha de cada foto con su botón de descarga, y las descargas del cliente (direcciones pedidas solo al descargar, una por una, marcadas, error, ZIP con confirmación y sin ZIP).
+
+## 22. Reabrir la selección (G5) y la galería desde la app (PR 8a, backend y web)
+
+**Regla acordada para reabrir:** solo con la galería **en edición** (`InEditing`), es decir, antes de publicar los finales, porque después el cliente puede estar descargando. **Motivo obligatorio** (hasta 500 caracteres; es para tu registro y **no se manda al cliente**). Lo que el cliente eligió **se descarta**; la galería vuelve a `InSelection` y el cliente elige de nuevo, con el paquete y las extras recalculados. **No se borra nada**: los finales ya subidos quedan atados a su foto, así que si el cliente vuelve a elegir esa foto, su final ya está. Los finales de fotos que ya no se elijan se limpian en el PR 10.
+
+- `POST /api/web/galleries/{id}/selection/reopen` y `POST /api/galleries/{id}/selection/reopen` con `{ reason }`. 409 `gallery.invalid_state` fuera de edición; 422 `booking.reason_required` sin motivo o con más de 500 caracteres. La acción `ReopenSelection` aparece en `allowedActions` solo en edición.
+- **Correo al cliente** ("Tu selección está abierta otra vez"), **sin enlace y sin el motivo**, una vez por reapertura (`reopenNotifiedAt`; una reapertura posterior se avisa de nuevo). Evento `SelectionReopened`.
+- `GalleryResponse` suma `selectionReopenedAt` y `selectionReopenReason`.
+- **El aviso al fotógrafo "Selección recibida" ahora es uno por selección enviada**: su llave lleva la galería y el instante de la selección **en milisegundos** (es la precisión que guarda Mongo; con más, la llave armada desde el evento y la armada desde la galería guardada no coincidían y el aviso nunca llegaba). Sin esto, el segundo envío tras reabrir no avisaba, porque la llave era una por galería.
+- **Web:** en "Fotos finales", mientras la galería está en edición, "Reabrir la selección" pide el motivo y confirmar.
+
+**Rutas para la app (token del fotógrafo, `/api/galleries/{id}/…`)** con los mismos manejadores que la web, para operar desde el celular: `GET proofs`, `GET selection`, `POST proofs/{photoId}/remove`, `POST selection/open`, `POST selection/reopen`, `POST finals/publish`, `POST extras/release`, `POST zip/remove`, `GET finals/{photoId}/download` (más `terms` y la lectura, que ya existían). **Subir archivos no está aquí:** es el PR 9, porque necesita que el teléfono prepare las fotos.
+
+**Pruebas:** dominio 11 nuevas, aplicación 6 nuevas, la de API recorre la app de punta a punta (leer, rechazos por token ajeno y sin token, reabrir sin motivo y con motivo, el cliente elige de nuevo, llegan **dos** avisos al fotógrafo y el correo al cliente), y 2 del portal (reabrir con motivo y confirmación, y el rechazo).

@@ -40,7 +40,7 @@ public sealed class SelectionNotificationsTests
                 notice.Type == NotificationType.SelectionSubmitted
                 && notice.PhotographerId == booking.PhotographerId
                 && notice.BookingId == booking.Id
-                && notice.DedupKey == Notification.SelectionSubmittedKey(occurred.GalleryId)
+                && notice.DedupKey == Notification.SelectionSubmittedKey(occurred.GalleryId, occurred.OccurredAt)
                 && notice.DueAt == BookingFactory.CreatedAt),
             Arg.Any<CancellationToken>());
     }
@@ -112,7 +112,7 @@ public sealed class SelectionNotificationsTests
         }
 
         var notice = Notification.Schedule(
-            booking.PhotographerId, booking.Id, NotificationType.SelectionSubmitted, Notification.SelectionSubmittedKey(gallery.Id), BookingFactory.CreatedAt, BookingFactory.CreatedAt);
+            booking.PhotographerId, booking.Id, NotificationType.SelectionSubmitted, Notification.SelectionSubmittedKey(gallery.Id, BookingFactory.CreatedAt), BookingFactory.CreatedAt, BookingFactory.CreatedAt);
         _bookings.GetByIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(booking);
         _galleries.GetByBookingIdAsync(booking.Id, Arg.Any<CancellationToken>()).Returns(gallery);
         _notifications.ListDueAsync(Arg.Any<DateTimeOffset>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns([notice]);

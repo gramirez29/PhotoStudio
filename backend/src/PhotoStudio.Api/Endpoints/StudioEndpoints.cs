@@ -151,6 +151,7 @@ public static class StudioEndpoints
         galleries.MapPost("/{id:guid}/proofs", RegisterProofsAsync).WithName("StudioRegisterProofs").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/proofs/{photoId:guid}/remove", RemoveProofAsync).WithName("StudioRemoveProof").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/selection/open", OpenSelectionAsync).WithName("StudioOpenSelection").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/selection/reopen", ReopenSelectionAsync).WithName("StudioReopenSelection").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/finals/uploads", RequestFinalUploadsAsync).WithName("StudioRequestFinalUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/finals", RegisterFinalsAsync).WithName("StudioRegisterFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/finals/publish", PublishFinalsAsync).WithName("StudioPublishFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
@@ -462,6 +463,23 @@ public static class StudioEndpoints
         ICommandHandler<ReleaseExtrasCommand, GalleryResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new ReleaseExtrasCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Reopens the selection of the client, so they can choose again. The client is told by email.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">Why it is reopened.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery, in selection again; 409 <c>gallery.invalid_state</c> when it is not in editing; 422 <c>booking.reason_required</c> without a reason.</returns>
+    private static async Task<Ok<GalleryResponse>> ReopenSelectionAsync(
+        Guid id,
+        ReopenSelectionRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<ReopenSelectionCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ReopenSelectionCommand(user.GetPhotographerId(), id, request.Reason), cancellationToken));
 
     /// <summary>
     /// Gives the photographer the address to download one final photo. It is not counted as a download of the client.

@@ -91,6 +91,26 @@ export function useRemoveProof(galleryId: string): UseMutationResult<StudioGalle
 }
 
 /**
+ * Mutation that reopens the selection of the client. The gallery it answers with replaces the cached one, and what the client had
+ * chosen is dropped from the cache. It is never retried on its own: it sends an email.
+ * @param galleryId Gallery identifier.
+ * @returns The TanStack Query mutation; its variable is the reason.
+ */
+export function useReopenSelection(galleryId: string): UseMutationResult<StudioGallery, Error, string> {
+  const queryClient = useQueryClient();
+  const guard = useSessionGuard();
+
+  return useMutation({
+    mutationFn: (reason: string) => guard(() => studioApi.reopenSelection(galleryId, reason)),
+    onSuccess: (gallery) => {
+      queryClient.setQueryData(galleryKey(galleryId), gallery);
+      queryClient.removeQueries({ queryKey: selectionKey(galleryId) });
+      void queryClient.invalidateQueries({ queryKey: STUDIO_DATA_PREFIX, exact: true });
+    },
+  });
+}
+
+/**
  * Mutation that publishes the final photos of the package. The gallery it answers with replaces the cached one; the client is told
  * by the system when the balance is zero, not by this call. It is never retried on its own.
  * @param galleryId Gallery identifier.

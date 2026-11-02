@@ -74,6 +74,8 @@ export const galleryPayload = {
   deliveredAt: null,
   extrasReleasedAt: null,
   zip: null,
+  selectionReopenedAt: null,
+  selectionReopenReason: null,
 } as const;
 
 /** The photographer of a web session as the API sends them. */

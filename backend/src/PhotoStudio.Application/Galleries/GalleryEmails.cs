@@ -13,6 +13,42 @@ internal static class GalleryEmails
     private static readonly CultureInfo CostaRica = CultureInfo.GetCultureInfo("es-CR");
 
     /// <summary>
+    /// Builds the email that tells the client the photographer reopened their selection, so they can choose again. It carries no link,
+    /// like the one about the proofs, and it does not give the reason: that is the photographer's record.
+    /// </summary>
+    /// <param name="to">The client's email.</param>
+    /// <param name="gallery">The gallery whose selection was reopened.</param>
+    /// <param name="logoUrl">Public address of the logo, or <see langword="null"/>.</param>
+    /// <returns>The email.</returns>
+    public static EmailMessage SelectionReopened(string to, Gallery gallery, string? logoUrl)
+    {
+        ArgumentNullException.ThrowIfNull(gallery);
+
+        var firstName = gallery.Snapshot.ClientName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? gallery.Snapshot.ClientName;
+        var photos = gallery.SelectablePhotos;
+        var steps = new List<string>
+        {
+            "Abre el enlace de tu reserva, el mismo que te enviamos por WhatsApp.",
+            "Entra a «Ver galería» y confirma con el código que te llegará a este correo.",
+            photos == 1 ? "Elige de nuevo la foto que quieres que editemos y envía tu selección." : $"Elige de nuevo tus fotos (tu paquete incluye {photos}) y envía tu selección.",
+        };
+
+        var content = new EmailContent(
+            "Ya puedes elegir tus fotos de nuevo.",
+            "Tu selección está abierta otra vez",
+            [$"Hola {firstName}, tu fotógrafo reabrió la selección de tu sesión de {gallery.Snapshot.PackageName} para que puedas elegir de nuevo."],
+            steps,
+            "La selección anterior ya no cuenta: al enviar la nueva, esa es la que se edita.",
+            "Si no encuentras tu enlace, escríbele a tu fotógrafo y te lo enviamos de nuevo.");
+
+        return new EmailMessage(
+            to,
+            "Tu selección está abierta otra vez",
+            BrandedEmail.RenderText(StudioBrand.Name, content),
+            BrandedEmail.RenderHtml(StudioBrand.Name, logoUrl, content));
+    }
+
+    /// <summary>
     /// Builds the email that tells the client the final photos are ready to download. Like the other one it carries no link.
     /// </summary>
     /// <param name="to">The client's email.</param>
