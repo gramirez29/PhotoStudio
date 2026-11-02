@@ -1,4 +1,5 @@
 import type { Money, PortalGallery } from '../types/api/portal';
+import type { SplitChoice } from '../types/utils/downloads.types';
 import type { ChoiceSummary, ChoiceWords } from '../types/utils/gallerySelection.types';
 import { formatMoney } from './format';
 
@@ -13,6 +14,17 @@ const DRAFT_PREFIX = 'photosense.gallery.draft.';
  */
 export function toggleChoice(chosen: readonly string[], photoId: string): string[] {
   return chosen.includes(photoId) ? chosen.filter((id) => id !== photoId) : [...chosen, photoId];
+}
+
+/**
+ * Splits the photos a client chose in what the package covers and what is beyond it. The first photos chosen, as many as the package
+ * covers, are the package; the rest are extras. The server draws the same line, so both sides agree on which photo is which.
+ * @param photoIds The photos chosen, in the order they were chosen.
+ * @param selectable How many photos the package covers.
+ * @returns The two groups.
+ */
+export function splitChoice(photoIds: readonly string[], selectable: number): SplitChoice {
+  return { packageIds: photoIds.slice(0, selectable), extraIds: photoIds.slice(selectable) };
 }
 
 /**

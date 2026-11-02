@@ -208,8 +208,8 @@ describe('the page of a gallery and its proofs', () => {
           extraPhotos: 1,
           extraTotal: { amount: 3000, currency: 'CRC' },
           photos: [
-            { id: 'p-3', name: 'IMG_0003.jpg' },
-            { id: 'p-1', name: 'IMG_0001.jpg' },
+            { id: 'p-3', name: 'IMG_0003.jpg', isExtra: false, finalBytes: 4_404_019 },
+            { id: 'p-1', name: 'IMG_0001.jpg', isExtra: true, finalBytes: null },
           ],
         }),
       ],
@@ -219,16 +219,22 @@ describe('the page of a gallery and its proofs', () => {
 
     expect(await screen.findByRole('heading', { name: 'Selección del cliente' })).toBeInTheDocument();
     expect(screen.getByText('2 fotos elegidas')).toBeInTheDocument();
-    expect(screen.getByText(/1 es adicional: .*3.*000/)).toBeInTheDocument();
-    const names = within(screen.getByRole('heading', { name: 'Selección del cliente' }).closest('section') as HTMLElement).getAllByRole('listitem');
-    expect(names.map((item) => item.textContent)).toEqual(['IMG_0003.jpg', 'IMG_0001.jpg']);
+    expect(screen.getByText(/Fuera del paquete: .*3.*000/)).toBeInTheDocument();
+    const packageBlock = screen.getByRole('group', { name: 'Fotos del paquete (1)' });
+    const extrasBlock = screen.getByRole('group', { name: 'Fotos adicionales (1)' });
+    expect(within(packageBlock).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['IMG_0003.jpg · final subido (4,2 MB)']);
+    expect(within(extrasBlock).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['IMG_0001.jpg']);
+    expect(within(packageBlock).getByText('1 de 1 con su final')).toBeInTheDocument();
+    expect(within(extrasBlock).getByText('0 de 1 con su final')).toBeInTheDocument();
     expect(screen.queryByText(/Las pruebas ya están publicadas/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Elegir fotos')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Copiar los nombres de los archivos' }));
+    await user.click(within(extrasBlock).getByRole('button', { name: 'Copiar los nombres de los archivos' }));
 
-    expect(writeText).toHaveBeenCalledWith(['IMG_0003.jpg', 'IMG_0001.jpg'].join('\n'));
+    expect(writeText).toHaveBeenCalledWith('IMG_0001.jpg');
     expect(await screen.findByText(/Pégalos en la búsqueda/)).toBeInTheDocument();
+    await user.click(within(packageBlock).getByRole('button', { name: 'Copiar los nombres de los archivos' }));
+    expect(writeText).toHaveBeenLastCalledWith('IMG_0003.jpg');
   });
 
   it('says so when the browser does not let the names be copied', async () => {

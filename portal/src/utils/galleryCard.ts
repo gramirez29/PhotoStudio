@@ -5,8 +5,8 @@ import type { GalleryCardWords } from '../types/utils/gallerySelection.types';
 const WORDS: Readonly<Partial<Record<GalleryStatus, GalleryCardWords>>> = {
   InSelection: { text: 'Tus fotos de prueba ya están listas. Elige las que quieres que tu fotógrafo edite.', action: 'Ver mis fotos y elegir' },
   InEditing: { text: 'Ya enviaste tu selección. Tu fotógrafo está editando tus fotos.', action: 'Ver mi selección' },
-  Ready: { text: 'Tu fotógrafo terminó de editar tus fotos.', action: 'Ver mi selección' },
-  Delivered: { text: 'Tus fotos fueron entregadas.', action: 'Ver mi selección' },
+  Ready: { text: 'Tu fotógrafo terminó de editar tus fotos. Las podrás descargar en cuanto tu saldo esté en cero.', action: 'Ver mi selección' },
+  Delivered: { text: 'Tus fotos están listas para descargar.', action: 'Descargar mis fotos' },
   Archived: { text: 'Esta galería ya fue archivada.', action: null },
 };
 

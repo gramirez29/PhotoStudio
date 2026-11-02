@@ -90,6 +90,42 @@ export function useRemoveProof(galleryId: string): UseMutationResult<StudioGalle
 }
 
 /**
+ * Mutation that publishes the final photos of the package. The gallery it answers with replaces the cached one; the client is told
+ * by the system when the balance is zero, not by this call. It is never retried on its own.
+ * @param galleryId Gallery identifier.
+ * @returns The TanStack Query mutation.
+ */
+export function usePublishFinals(galleryId: string): UseMutationResult<StudioGallery, Error, void> {
+  const queryClient = useQueryClient();
+  const guard = useSessionGuard();
+
+  return useMutation({
+    mutationFn: () => guard(() => studioApi.publishFinals(galleryId)),
+    onSuccess: (gallery) => {
+      queryClient.setQueryData(galleryKey(galleryId), gallery);
+      void queryClient.invalidateQueries({ queryKey: selectionKey(galleryId) });
+      void queryClient.invalidateQueries({ queryKey: STUDIO_DATA_PREFIX, exact: true });
+    },
+  });
+}
+
+/**
+ * Mutation that lets the client download the extra photos. The gallery it answers with replaces the cached one. It is never
+ * retried on its own.
+ * @param galleryId Gallery identifier.
+ * @returns The TanStack Query mutation.
+ */
+export function useReleaseExtras(galleryId: string): UseMutationResult<StudioGallery, Error, void> {
+  const queryClient = useQueryClient();
+  const guard = useSessionGuard();
+
+  return useMutation({
+    mutationFn: () => guard(() => studioApi.releaseExtras(galleryId)),
+    onSuccess: (gallery) => queryClient.setQueryData(galleryKey(galleryId), gallery),
+  });
+}
+
+/**
  * Mutation that opens the selection: the proofs are published and the client is told by email. The gallery it answers with
  * replaces the cached one, so the page shows it as in selection. It is never retried on its own: it sends an email.
  * @param galleryId Gallery identifier.

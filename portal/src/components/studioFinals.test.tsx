@@ -1,0 +1,238 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { galleryPayload, jsonResponse, studioUserPayload } from '../test/fixtures';
+import { StudioPage } from './StudioPage';
+
+const ID = '0197a000-0000-7000-8000-000000000001';
+const GALLERY_PATH = `/api/web/galleries/${ID}`;
+const SESSION = { user: studioUserPayload };
+const SENT = '2026-11-03T12:00:00+00:00';
+
+/**
+ * Builds the gallery as the API sends it, with the selection of the client already sent and the photographer editing.
+ * @param overrides What differs from that.
+ * @returns The body.
+ */
+function gallery(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    ...galleryPayload,
+    status: 'InEditing',
+    photoCount: 3,
+    selectedPhotoCount: 3,
+    extraPhotoCount: 1,
+    selectionSubmittedAt: SENT,
+    allowedActions: ['UploadFinals'],
+    ...overrides,
+  };
+}
+
+/**
+ * Builds the selection as the API sends it: two photos of the package and one extra.
+ * @param finals Sizes of the finals already uploaded, by photo.
+ * @returns The body.
+ */
+function selection(finals: Record<string, number> = {}): Record<string, unknown> {
+  return {
+    submittedAt: SENT,
+    extraPhotos: 1,
+    extraTotal: { amount: 3000, currency: 'CRC' },
+    photos: [
+      { id: 'p1', name: 'IMG_0001.CR2', isExtra: false, finalBytes: finals.p1 ?? null },
+      { id: 'p2', name: 'IMG_0002.CR2', isExtra: false, finalBytes: finals.p2 ?? null },
+      { id: 'p3', name: 'IMG_0003.CR2', isExtra: true, finalBytes: finals.p3 ?? null },
+    ],
+  };
+}
+
+describe('the final photos on the page of a gallery', () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * Renders the page of the gallery with a client that never retries.
+   * @returns The user event driver.
+   */
+  function renderPage(): ReturnType<typeof userEvent.setup> {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <StudioPage galleryId={ID} />
+      </QueryClientProvider>,
+    );
+    return userEvent.setup();
+  }
+
+  /**
+   * Answers the requests by method and path; each answer is used once, in order, and the last one stays for the next requests.
+   * @param answers Answers by `METHOD path`.
+   */
+  function answer(answers: Record<string, Response[]>): void {
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input).replace(/^https?:\/\/[^/]+/, '');
+      const key = `${init?.method ?? 'GET'} ${url}`;
+      const queue = answers[key];
+      const next = queue === undefined ? undefined : queue.length > 1 ? queue.shift() : queue[0]?.clone();
+      return Promise.resolve(next ?? jsonResponse(500, { code: 'unexpected', detail: `No answer planned for ${key}` }));
+    });
+  }
+
+  /**
+   * Lists the requests the page sent, as `METHOD path`.
+   * @returns The requests in order.
+   */
+  function requests(): string[] {
+    return fetchMock.mock.calls.map(([input, init]) => `${init?.method ?? 'GET'} ${String(input).replace(/^https?:\/\/[^/]+/, '')}`);
+  }
+
+  /** The answers every scenario needs: the session, the proofs and the selection. */
+  function base(extra: Record<string, Response[]> = {}): Record<string, Response[]> {
+    return {
+      'GET /api/web/auth/session': [jsonResponse(200, SESSION)],
+      [`GET ${GALLERY_PATH}/proofs`]: [jsonResponse(200, { items: [] })],
+      ...extra,
+    };
+  }
+
+  it('says how many photos of the package have their final, and offers to choose the files', async () => {
+    answer(base({ [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery())], [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 4_000_000 }))] }));
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Fotos finales' })).toBeInTheDocument();
+    expect(await screen.findByText('1 de 2 del paquete con su final')).toBeInTheDocument();
+    expect(screen.getByLabelText('Elegir las fotos finales')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publicar finales' })).not.toBeInTheDocument();
+  });
+
+  it('pairs the files with the photos the client chose, shows the pairs first, and uploads them straight to the storage', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery())],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection()), jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+        [`POST ${GALLERY_PATH}/finals/uploads`]: [
+          jsonResponse(200, {
+            slots: [
+              { photoId: 'p1', url: 'https://account.r2.cloudflarestorage.com/f1?sig=secret', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: '2026-11-03T12:15:00+00:00' },
+              { photoId: 'p2', url: 'https://account.r2.cloudflarestorage.com/f2?sig=secret', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: '2026-11-03T12:15:00+00:00' },
+            ],
+          }),
+        ],
+        'PUT /f1?sig=secret': [new Response(null, { status: 200 })],
+        'PUT /f2?sig=secret': [new Response(null, { status: 200 })],
+        [`POST ${GALLERY_PATH}/finals`]: [jsonResponse(200, { gallery: gallery({ allowedActions: ['UploadFinals', 'PublishFinals'] }), rejected: [] })],
+      }),
+    );
+    const user = renderPage();
+
+    await user.upload(await screen.findByLabelText('Elegir las fotos finales'), [
+      new File([new Uint8Array(5)], 'IMG_0001-Edit.jpg', { type: 'image/jpeg' }),
+      new File([new Uint8Array(5)], 'img_0002.jpg', { type: 'image/jpeg' }),
+      new File([new Uint8Array(5)], 'vacaciones.jpg', { type: 'image/jpeg' }),
+    ]);
+
+    expect(await screen.findByText(/Se subirán 2 finales/)).toBeInTheDocument();
+    expect(screen.getByText('→ IMG_0001.CR2')).toBeInTheDocument();
+    expect(screen.getByText(/No se tomaron: 1 no coincide con ninguna foto que eligió el cliente/)).toBeInTheDocument();
+    expect(requests().some((request) => request.includes('/finals'))).toBe(false);
+
+    await user.click(screen.getByRole('button', { name: 'Subir 2 finales' }));
+
+    await waitFor(() => expect(requests()).toEqual(expect.arrayContaining([`POST ${GALLERY_PATH}/finals/uploads`, 'PUT /f1?sig=secret', 'PUT /f2?sig=secret', `POST ${GALLERY_PATH}/finals`])));
+    const registered = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/finals') && init?.method === 'POST');
+    expect(JSON.parse(String(registered?.[1]?.body))).toEqual({ photoIds: ['p1', 'p2'] });
+    expect(await screen.findByRole('button', { name: 'Publicar finales' })).toBeInTheDocument();
+  });
+
+  it('keeps a final that was refused in the queue with its reason', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery())],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection())],
+        [`POST ${GALLERY_PATH}/finals/uploads`]: [
+          jsonResponse(200, { slots: [{ photoId: 'p1', url: 'https://account.r2.cloudflarestorage.com/f1?sig=secret', headers: {}, expiresAt: '2026-11-03T12:15:00+00:00' }] }),
+        ],
+        'PUT /f1?sig=secret': [new Response(null, { status: 200 })],
+        [`POST ${GALLERY_PATH}/finals`]: [jsonResponse(200, { gallery: gallery(), rejected: [{ photoId: 'p1', reason: 'too_big' }] })],
+      }),
+    );
+    const user = renderPage();
+
+    await user.upload(await screen.findByLabelText('Elegir las fotos finales'), [new File([new Uint8Array(5)], 'IMG_0001.jpg', { type: 'image/jpeg' })]);
+    await user.click(await screen.findByRole('button', { name: 'Subir 1 final' }));
+
+    expect(await screen.findByText('La foto pesa más de lo permitido.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+  });
+
+  it('asks to confirm before publishing the package, and says what happens after', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ allowedActions: ['UploadFinals', 'PublishFinals'] }))],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+        [`POST ${GALLERY_PATH}/finals/publish`]: [jsonResponse(200, gallery({ status: 'Ready', allowedActions: ['UploadFinals'], finalsPublishedAt: '2026-11-03T13:00:00+00:00' }))],
+      }),
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Publicar finales' }));
+    expect(screen.getByText(/cuando se verifique su pago|descargarán/i)).toBeInTheDocument();
+    expect(requests().some((request) => request.endsWith('/finals/publish'))).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Sí, publicar los finales' }));
+
+    expect(await screen.findByText(/Publicadas el .*El cliente las descargará en cuanto su saldo esté en cero/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publicar finales' })).not.toBeInTheDocument();
+  });
+
+  it('says why publishing was refused when a photo of the package has no final', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ allowedActions: ['UploadFinals', 'PublishFinals'] }))],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+        [`POST ${GALLERY_PATH}/finals/publish`]: [jsonResponse(409, { code: 'gallery.finals_incomplete', detail: 'x' })],
+      }),
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Publicar finales' }));
+    await user.click(screen.getByRole('button', { name: 'Sí, publicar los finales' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Faltan finales');
+  });
+
+  it('releases the extras by hand, after asking whether the client already paid, and says so afterwards', async () => {
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ status: 'Delivered', allowedActions: ['UploadFinals', 'ReleaseExtras'], deliveredAt: '2026-11-03T13:00:00+00:00', finalsPublishedAt: '2026-11-03T13:00:00+00:00' }))],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5, p3: 5 }))],
+        [`POST ${GALLERY_PATH}/extras/release`]: [
+          jsonResponse(200, gallery({ status: 'Delivered', allowedActions: ['UploadFinals'], deliveredAt: '2026-11-03T13:00:00+00:00', extrasReleasedAt: '2026-11-03T14:00:00+00:00' })),
+        ],
+      }),
+    );
+    const user = renderPage();
+
+    expect(await screen.findByText(/Entregada el .*el cliente ya puede descargar sus fotos/)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Entregar las adicionales' }));
+    await user.click(screen.getByRole('button', { name: 'Sí, el cliente ya pagó' }));
+
+    expect(await screen.findByText('Las fotos adicionales ya están disponibles para el cliente.')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Fotos adicionales (1)' })).getByText(/final subido/)).toBeInTheDocument();
+  });
+
+  it('shows nothing to do with finals before the client sends the selection', async () => {
+    answer(base({ [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ status: 'InSelection', selectionSubmittedAt: null, allowedActions: ['EditTerms'] }))] }));
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'María Pérez' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Fotos finales' })).not.toBeInTheDocument();
+  });
+});

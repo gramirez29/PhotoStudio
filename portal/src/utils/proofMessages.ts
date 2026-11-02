@@ -26,6 +26,8 @@ const REJECTION_MESSAGES: Readonly<Record<string, string>> = {
   empty: 'La foto llegó vacía.',
   invalid_name: 'El nombre del archivo no es válido.',
   gallery_full: 'La galería ya tiene el máximo de pruebas.',
+  not_chosen: 'El cliente no eligió esta foto.',
+  locked: 'Este final ya está publicado y no se puede cambiar.',
 };
 
 /** Where each photo of the queue is, in words. */
@@ -79,6 +81,29 @@ export function describeUploadFailure(error: unknown): string {
   }
 
   return 'No se pudo subir esta foto. Vuelve a intentarlo.';
+}
+
+/**
+ * Says why a request about the final photos failed: asking for the places to upload, registering, publishing or releasing the
+ * extras. It says what to do, never what the server said.
+ * @param error Error of the request.
+ * @returns The message.
+ */
+export function describeFinalsRequestError(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'gallery.finals_incomplete':
+        return 'Faltan finales: cada foto del paquete necesita el suyo antes de publicar, y las extras necesitan al menos uno para liberarlas.';
+      case 'gallery.invalid_state':
+        return 'La galería ya no está en un estado que permita esta acción. Recarga la página.';
+      case 'gallery.invalid_photo':
+        return 'Alguna de las fotos no es válida: debe ser una que el cliente eligió, en JPEG y de hasta 50 MB.';
+      default:
+        break;
+    }
+  }
+
+  return describeProofRequestError(error);
 }
 
 /**

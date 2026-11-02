@@ -6,7 +6,7 @@ import type { CheckboxFieldProps } from '../types/components/ChoiceFields.types'
  * @param props Component props.
  * @returns The checkbox.
  */
-export function CheckboxField({ id, children, checked, onChange, error }: CheckboxFieldProps): ReactElement {
+export function CheckboxField({ id, children, checked, onChange, error, disabled }: CheckboxFieldProps): ReactElement {
   const errorId = `${id}-error`;
 
   return (
@@ -16,6 +16,7 @@ export function CheckboxField({ id, children, checked, onChange, error }: Checkb
           id={id}
           type="checkbox"
           checked={checked}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
           aria-invalid={error !== undefined}
           aria-describedby={error === undefined ? undefined : errorId}

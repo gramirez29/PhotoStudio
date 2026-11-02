@@ -7,6 +7,7 @@ import type {
   PortalCodeSent,
   PortalContract,
   PortalExtra,
+  PortalFinal,
   PortalGallery,
   PortalGallerySummary,
   PortalPayment,
@@ -176,6 +177,22 @@ export function parsePortalGallery(value: unknown): PortalGallery {
       return { id: readString(photo, 'id', itemPath), url: readString(photo, 'url', itemPath), expiresAt: readString(photo, 'expiresAt', itemPath) };
     }),
     selection: record.selection === null || record.selection === undefined ? null : parseSelection(record.selection, `${path}.selection`),
+    finals:
+      record.finals === null || record.finals === undefined
+        ? []
+        : readArray(record, 'finals', path).map((item, index): PortalFinal => {
+            const itemPath = `${path}.finals[${index}]`;
+            const final = expectRecord(item, itemPath);
+            return {
+              id: readString(final, 'id', itemPath),
+              fileName: readString(final, 'fileName', itemPath),
+              url: readString(final, 'url', itemPath),
+              expiresAt: readString(final, 'expiresAt', itemPath),
+              bytes: readNumber(final, 'bytes', itemPath),
+              isExtra: readBoolean(final, 'isExtra', itemPath),
+            };
+          }),
+    extrasReleased: record.extrasReleased === true,
   };
 }
 

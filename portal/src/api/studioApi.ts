@@ -1,5 +1,6 @@
 import { GALLERIES_PAGE_SIZE, GALLERY_ACTIONS, GALLERY_STATUSES } from '../constants/gallery';
 import type { HttpClient } from '../types/api/http';
+import type { FinalFileInfo } from '../types/api/finals';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from '../types/api/proofs';
 import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from '../types/api/studio';
 import type { StudioApi } from '../types/api/studioApi';
@@ -85,6 +86,9 @@ export function parseStudioGallery(value: unknown, path: string): StudioGallery 
     selectionSubmittedAt: readNullableString(record, 'selectionSubmittedAt', path),
     createdAt: readString(record, 'createdAt', path),
     allowedActions: readArray(record, 'allowedActions', path).flatMap(knownAction),
+    finalsPublishedAt: readNullableString(record, 'finalsPublishedAt', path),
+    deliveredAt: readNullableString(record, 'deliveredAt', path),
+    extrasReleasedAt: readNullableString(record, 'extrasReleasedAt', path),
   };
 }
 
@@ -175,7 +179,12 @@ export function parseStudioSelection(value: unknown): StudioSelection {
     photos: readArray(record, 'photos', path).map((item, index) => {
       const itemPath = `${path}.photos[${index}]`;
       const photo = expectRecord(item, itemPath);
-      return { id: readString(photo, 'id', itemPath), name: readString(photo, 'name', itemPath) };
+      return {
+        id: readString(photo, 'id', itemPath),
+        name: readString(photo, 'name', itemPath),
+        isExtra: photo.isExtra === true,
+        finalBytes: photo.finalBytes === null || photo.finalBytes === undefined ? null : readNumber(photo, 'finalBytes', itemPath),
+      };
     }),
   };
 }
@@ -243,5 +252,11 @@ export function createStudioApi(client: HttpClient): StudioApi {
       client.post(`/api/web/galleries/${galleryId}/proofs`, { photos }, parseRegisterProofs, { signal }),
     removeProof: (galleryId, photoId) => client.post(`/api/web/galleries/${galleryId}/proofs/${photoId}/remove`, {}, parseStudioGalleryBody),
     openSelection: (galleryId) => client.post(`/api/web/galleries/${galleryId}/selection/open`, {}, parseStudioGalleryBody),
+    requestFinalUploads: (galleryId, files: readonly FinalFileInfo[], signal) =>
+      client.post(`/api/web/galleries/${galleryId}/finals/uploads`, { files }, parseProofSlots, { signal }),
+    registerFinals: (galleryId, photoIds: readonly string[], signal) =>
+      client.post(`/api/web/galleries/${galleryId}/finals`, { photoIds }, parseRegisterProofs, { signal }),
+    publishFinals: (galleryId) => client.post(`/api/web/galleries/${galleryId}/finals/publish`, {}, parseStudioGalleryBody),
+    releaseExtras: (galleryId) => client.post(`/api/web/galleries/${galleryId}/extras/release`, {}, parseStudioGalleryBody),
   };
 }

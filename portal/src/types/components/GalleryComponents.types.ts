@@ -48,6 +48,19 @@ export interface GallerySentSummaryProps {
   readonly onClose: () => void;
 }
 
+/** Props of the `GalleryDownloads` component. */
+export interface GalleryDownloadsProps {
+  /** The gallery, delivered: its finals can be downloaded. */
+  readonly gallery: PortalGallery;
+  /**
+   * Loads the gallery again, so the signed addresses are fresh right before a download.
+   * @returns The gallery, or null when it could not be loaded.
+   */
+  readonly refresh: () => Promise<PortalGallery | null>;
+  /** Called when the client closes the gallery. */
+  readonly onClose: () => void;
+}
+
 /** Props of the `GalleryPhotoTile` component. */
 export interface GalleryPhotoTileProps {
   /** The proof to show. */

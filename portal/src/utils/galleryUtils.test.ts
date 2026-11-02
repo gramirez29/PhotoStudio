@@ -3,7 +3,7 @@ import { parseGallerySummary, parsePortalGallery } from '../api/portalApi';
 import { parseStudioSelection } from '../api/studioApi';
 import { describeGalleryCard } from './galleryCard';
 import { galleryFlowReducer, INITIAL_GALLERY_FLOW } from './galleryFlow';
-import { clearDraft, describeChoice, readDraft, saveDraft, summarizeChoice, toggleChoice } from './gallerySelection';
+import { clearDraft, describeChoice, readDraft, saveDraft, splitChoice, summarizeChoice, toggleChoice } from './gallerySelection';
 
 const PRICE = { amount: 3000, currency: 'CRC' };
 
@@ -20,6 +20,14 @@ function fakeStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> & { 
     removeItem: (key) => void items.delete(key),
   };
 }
+
+describe('splitChoice', () => {
+  it('takes the first photos chosen as the package and the rest as the extras', () => {
+    expect(splitChoice(['a', 'b', 'c', 'd'], 2)).toEqual({ packageIds: ['a', 'b'], extraIds: ['c', 'd'] });
+    expect(splitChoice(['a'], 3)).toEqual({ packageIds: ['a'], extraIds: [] });
+    expect(splitChoice(['a', 'b'], 0)).toEqual({ packageIds: [], extraIds: ['a', 'b'] });
+  });
+});
 
 describe('toggleChoice', () => {
   it('adds a photo at the end and takes it out when it is tapped again', () => {
@@ -144,7 +152,8 @@ describe('describeGalleryCard', () => {
   it('words each state the client can see, and nothing for a gallery that is not ready', () => {
     expect(describeGalleryCard('InSelection')?.action).toBe('Ver mis fotos y elegir');
     expect(describeGalleryCard('InEditing')?.text).toMatch(/Ya enviaste tu selección/);
-    expect(describeGalleryCard('Delivered')?.action).toBe('Ver mi selección');
+    expect(describeGalleryCard('Ready')?.text).toMatch(/saldo esté en cero/);
+    expect(describeGalleryCard('Delivered')?.action).toBe('Descargar mis fotos');
     expect(describeGalleryCard('Archived')?.action).toBeNull();
     expect(describeGalleryCard('Pending')).toBeNull();
   });
@@ -190,6 +199,32 @@ describe('the answers of the gallery', () => {
     });
     expect(
       parseStudioSelection({ submittedAt: '2026-10-30T12:00:00+00:00', extraPhotos: 1, extraTotal: PRICE, photos: [{ id: 'p1', name: 'IMG_0001.jpg' }] }).photos,
-    ).toEqual([{ id: 'p1', name: 'IMG_0001.jpg' }]);
+    ).toEqual([{ id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: null }]);
+  });
+
+  it('parses which photos of the selection are extra and the size of each final', () => {
+    const photos = parseStudioSelection({
+      submittedAt: '2026-10-30T12:00:00+00:00',
+      extraPhotos: 1,
+      extraTotal: PRICE,
+      photos: [
+        { id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: 4_400_000 },
+        { id: 'p2', name: 'IMG_0002.jpg', isExtra: true, finalBytes: null },
+      ],
+    }).photos;
+
+    expect(photos).toEqual([
+      { id: 'p1', name: 'IMG_0001.jpg', isExtra: false, finalBytes: 4_400_000 },
+      { id: 'p2', name: 'IMG_0002.jpg', isExtra: true, finalBytes: null },
+    ]);
+  });
+
+  it('parses the finals the client can download, and none when the gallery is not delivered', () => {
+    const body = { status: 'Delivered', selectablePhotos: 1, extraPhotoPrice: PRICE, photos: [], selection: null, extrasReleased: true };
+    expect(parsePortalGallery(body).finals).toEqual([]);
+    expect(
+      parsePortalGallery({ ...body, finals: [{ id: 'p1', fileName: 'IMG_0001.jpg', url: 'https://s/1', expiresAt: '2026-11-03T12:05:00+00:00', bytes: 4_400_000, isExtra: false }] }),
+    ).toMatchObject({ extrasReleased: true, finals: [{ id: 'p1', fileName: 'IMG_0001.jpg', bytes: 4_400_000, isExtra: false }] });
+    expect(() => parsePortalGallery({ ...body, finals: [{ id: 'p1' }] })).toThrow();
   });
 });
