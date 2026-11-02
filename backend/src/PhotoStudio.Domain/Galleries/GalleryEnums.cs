@@ -48,6 +48,12 @@ public enum GalleryAction
     /// <summary>Publish the final photos of the package (G6).</summary>
     PublishFinals,
 
+    /// <summary>Upload the ZIP with the photos, made by hand by the photographer.</summary>
+    UploadZip,
+
+    /// <summary>Delete the ZIP, for example to upload a new one.</summary>
+    RemoveZip,
+
     /// <summary>Let the client download the extra photos, once the client agreed on their payment with the studio.</summary>
     ReleaseExtras,
 }

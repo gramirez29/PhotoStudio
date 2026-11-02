@@ -229,3 +229,18 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 - **Botón del ZIP en la web del cliente** (solo si la galería tiene ZIP y está entregada), **con confirmación**: "Se va a descargar un paquete de X MB. Según tu conexión a internet puede tomar tiempo." Mismas reglas que los finales: saldo cero y dirección de 5 minutos.
 - **El fotógrafo ve si el cliente lo descargó** y puede **borrar el ZIP** desde su web (y volver a subirlo si se lo piden de nuevo).
 - **Ficha de cada foto** en la galería del fotógrafo: fecha en que se tomó, peso en MB, dimensiones (por ejemplo 1250 × 3000), **veces descargada** y un icono/botón de descarga. Pide leer los datos EXIF/dimensiones al subir (en el navegador del fotógrafo) y contar las descargas del cliente en el servidor.
+
+## 20. ZIP manual, descargas contadas y ficha de cada foto (PR 7c, backend)
+
+**Descargas contadas:** la galería del cliente (`GET /gallery`) **ya no trae direcciones** de los finales ni del ZIP, solo nombre, peso y si es extra (y el peso del ZIP). El cliente pide las direcciones al momento de descargar y **pedirlas cuenta como una descarga**:
+- `POST /public/bookings/{token}/gallery/downloads` `{ photoIds }` → una dirección de 5 minutos por foto, con el nombre del archivo. Cuenta 1 por foto (una vez por petición aunque se repita). Si alguna foto no es descargable (galería no entregada, sin final, extra sin liberar, no elegida) falla **toda** la petición con 422 `gallery.invalid_photo` y no cuenta nada; 409 `gallery.invalid_state` si no está entregada. Dos descargas simultáneas no se pierden: ante una colisión se recarga la galería y se vuelve a anotar.
+- `POST /public/bookings/{token}/gallery/zip/download` → dirección del ZIP (5 min), su peso, y suma 1 al contador con la fecha. 409 si no está entregada o no hay ZIP.
+- Es una medida de "el cliente pidió la descarga", no de que el archivo haya llegado completo.
+
+**ZIP hecho a mano (hasta 500 MB):** el servidor no arma ZIP. Web del fotógrafo: `POST /api/web/galleries/{id}/zip/upload` `{ bytes }` (dirección firmada, `application/zip`, solo con los finales publicados; 422 `gallery.invalid_zip` si pesa 0 o más de 500 MB), `POST .../zip` (registra tras mirar el objeto real; lo que no es un ZIP o pesa de más se borra, y si reemplazaba a otro, ese se olvida) y `POST .../zip/remove` (lo olvida y lo borra de R2). Hay un ZIP por galería (`galleries/{id}/zip/photos.zip`); subir otro de distinto tamaño lo reemplaza y reinicia su contador. `GalleryResponse.zip` trae `bytes`, `uploadedAt`, `downloads` y `lastDownloadedAt`. Acciones nuevas: `UploadZip`, `RemoveZip`.
+
+**Ficha de cada final:** al registrar los finales (`POST .../finals`) el navegador del fotógrafo puede mandar `details: [{ photoId, width, height, capturedAt }]` leídos del archivo. Es información: un valor sin sentido (lado de 0 o de más de 100 000 píxeles, fecha anterior a 1990 o futura) se descarta en vez de rechazar la foto. La selección del fotógrafo trae por foto `finalWidth`, `finalHeight`, `finalCapturedAt` y `finalDownloads`. Un archivo de otro peso reemplaza al anterior y reinicia sus descargas.
+
+**Descargar un final como fotógrafo:** `GET /api/web/galleries/{id}/finals/{photoId}/download` (dirección de 5 minutos; no cuenta como descarga del cliente).
+
+**Pruebas:** dominio 11 nuevas, aplicación 12 nuevas y la de API de punta a punta ahora cubre: ficha de la foto, descarga contada del cliente (y rechazo de una extra sin liberar), descarga del fotógrafo sin contar, ZIP (límite, subida a R2, ver su peso, descargar, contador con fecha, borrar).

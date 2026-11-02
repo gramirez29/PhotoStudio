@@ -76,10 +76,26 @@ public sealed record FinalFileRequest(Guid PhotoId, long Bytes);
 public sealed record RequestFinalUploadsRequest(IReadOnlyList<FinalFileRequest>? Files);
 
 /// <summary>
+/// What the browser read from one final photo.
+/// </summary>
+/// <param name="PhotoId">Identifier of the chosen photo the final belongs to.</param>
+/// <param name="Width">Width in pixels, or null when unknown.</param>
+/// <param name="Height">Height in pixels, or null when unknown.</param>
+/// <param name="CapturedAt">Instant the photo was taken, or null when unknown.</param>
+public sealed record FinalDetailsRequest(Guid PhotoId, int? Width, int? Height, DateTimeOffset? CapturedAt);
+
+/// <summary>
 /// Body to register the final photos that were uploaded.
 /// </summary>
 /// <param name="PhotoIds">The chosen photos whose finals were uploaded, 1 to 50.</param>
-public sealed record RegisterFinalsRequest(IReadOnlyList<Guid>? PhotoIds);
+/// <param name="Details">What the browser read from the files, if anything.</param>
+public sealed record RegisterFinalsRequest(IReadOnlyList<Guid>? PhotoIds, IReadOnlyList<FinalDetailsRequest>? Details = null);
+
+/// <summary>
+/// Body to ask for the place to upload the ZIP.
+/// </summary>
+/// <param name="Bytes">Size of the file in bytes.</param>
+public sealed record RequestZipUploadRequest(long Bytes);
 
 /// <summary>
 /// The user of a web session, as the page sees them.
@@ -138,6 +154,10 @@ public static class StudioEndpoints
         galleries.MapPost("/{id:guid}/finals/uploads", RequestFinalUploadsAsync).WithName("StudioRequestFinalUploads").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/finals", RegisterFinalsAsync).WithName("StudioRegisterFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/finals/publish", PublishFinalsAsync).WithName("StudioPublishFinals").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapGet("/{id:guid}/finals/{photoId:guid}/download", GetFinalDownloadAsync).WithName("StudioGetFinalDownload");
+        galleries.MapPost("/{id:guid}/zip/upload", RequestZipUploadAsync).WithName("StudioRequestZipUpload").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/zip", RegisterZipAsync).WithName("StudioRegisterZip").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/zip/remove", RemoveZipAsync).WithName("StudioRemoveZip").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("StudioReleaseExtras").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
 
         return endpoints;
@@ -411,7 +431,7 @@ public static class StudioEndpoints
         ClaimsPrincipal user,
         ICommandHandler<RegisterFinalsCommand, RegisterFinalsResponse> handler,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await handler.HandleAsync(new RegisterFinalsCommand(user.GetPhotographerId(), id, [.. request.PhotoIds ?? []]), cancellationToken));
+        TypedResults.Ok(await handler.HandleAsync(new RegisterFinalsCommand(user.GetPhotographerId(), id, [.. request.PhotoIds ?? []], [.. (request.Details ?? []).Select(detail => new FinalDetailsEntry(detail.PhotoId, detail.Width, detail.Height, detail.CapturedAt))]), cancellationToken));
 
     /// <summary>
     /// Publishes the final photos of the package (G6). The client can download them as soon as the balance is zero.
@@ -442,6 +462,70 @@ public static class StudioEndpoints
         ICommandHandler<ReleaseExtrasCommand, GalleryResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new ReleaseExtrasCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Gives the photographer the address to download one final photo. It is not counted as a download of the client.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="photoId">Photo identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the address; 404 when the gallery or the final does not exist or is another photographer's.</returns>
+    private static async Task<Ok<FinalDownloadResponse>> GetFinalDownloadAsync(
+        Guid id,
+        Guid photoId,
+        ClaimsPrincipal user,
+        IQueryHandler<GetFinalDownloadQuery, FinalDownloadResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetFinalDownloadQuery(user.GetPhotographerId(), id, photoId), cancellationToken));
+
+    /// <summary>
+    /// Asks for the place to upload the ZIP with the photos. The bytes go straight to the storage, not through the API.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="request">The size of the file.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the signed address; 409 <c>gallery.invalid_state</c> before the finals are published; 422 <c>gallery.invalid_zip</c> for a size that is not valid.</returns>
+    private static async Task<Ok<ZipUploadSlotResponse>> RequestZipUploadAsync(
+        Guid id,
+        RequestZipUploadRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<RequestZipUploadCommand, ZipUploadSlotResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RequestZipUploadCommand(user.GetPhotographerId(), id, request.Bytes), cancellationToken));
+
+    /// <summary>
+    /// Registers the ZIP that was uploaded, after the API looks at what is really in the storage.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery; 422 <c>gallery.invalid_zip</c> when the file is missing, is not a ZIP or weighs too much.</returns>
+    private static async Task<Ok<GalleryResponse>> RegisterZipAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<RegisterZipCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RegisterZipCommand(user.GetPhotographerId(), id), cancellationToken));
+
+    /// <summary>
+    /// Deletes the ZIP, from the gallery and from the storage.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery.</returns>
+    private static async Task<Ok<GalleryResponse>> RemoveZipAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<RemoveZipCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RemoveZipCommand(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Opens the selection: the proofs are published, the client can choose, and the client is told by email.

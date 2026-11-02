@@ -16,6 +16,11 @@ public sealed class Gallery : AggregateRoot<Guid>
     public const int MaxPhotos = 150;
 
     /// <summary>
+    /// Most a ZIP with the photos can weigh: 500 MB. It is made by hand and sent in a single request.
+    /// </summary>
+    public const long MaxZipBytes = 524_288_000;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Gallery"/> class. Use <see cref="Create"/> or <see cref="Restore"/>.
     /// </summary>
     private readonly List<GalleryPhoto> _photos;
@@ -42,7 +47,11 @@ public sealed class Gallery : AggregateRoot<Guid>
         DateTimeOffset? finalsPublishedAt,
         DateTimeOffset? deliveredAt,
         DateTimeOffset? deliveryNotifiedAt,
-        DateTimeOffset? extrasReleasedAt)
+        DateTimeOffset? extrasReleasedAt,
+        long? zipBytes,
+        DateTimeOffset? zipUploadedAt,
+        int zipDownloads,
+        DateTimeOffset? zipLastDownloadedAt)
         : base(id, version)
     {
         PhotographerId = photographerId;
@@ -62,6 +71,10 @@ public sealed class Gallery : AggregateRoot<Guid>
         DeliveredAt = deliveredAt;
         DeliveryNotifiedAt = deliveryNotifiedAt;
         ExtrasReleasedAt = extrasReleasedAt;
+        ZipBytes = zipBytes;
+        ZipUploadedAt = zipUploadedAt;
+        ZipDownloads = zipDownloads;
+        ZipLastDownloadedAt = zipLastDownloadedAt;
     }
 
     /// <summary>
@@ -148,6 +161,32 @@ public sealed class Gallery : AggregateRoot<Guid>
     public DateTimeOffset? ExtrasReleasedAt { get; private set; }
 
     /// <summary>
+    /// Gets the size of the ZIP with the photos, made and uploaded by hand by the photographer, or <see langword="null"/> while there
+    /// is none.
+    /// </summary>
+    public long? ZipBytes { get; private set; }
+
+    /// <summary>
+    /// Gets the instant the ZIP was registered (UTC), or <see langword="null"/> while there is none.
+    /// </summary>
+    public DateTimeOffset? ZipUploadedAt { get; private set; }
+
+    /// <summary>
+    /// Gets how many times the client asked to download the ZIP.
+    /// </summary>
+    public int ZipDownloads { get; private set; }
+
+    /// <summary>
+    /// Gets the last instant the client asked to download the ZIP (UTC), or <see langword="null"/> if they never did.
+    /// </summary>
+    public DateTimeOffset? ZipLastDownloadedAt { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the gallery has a ZIP.
+    /// </summary>
+    public bool HasZip => ZipBytes is not null;
+
+    /// <summary>
     /// Gets the chosen photos that the package covers: the first ones the client chose, as many as <see cref="SelectablePhotos"/>.
     /// </summary>
     public IReadOnlyList<Guid> PackagePhotoIds => [.. _selectedPhotoIds.Take(SelectablePhotos)];
@@ -225,6 +264,10 @@ public sealed class Gallery : AggregateRoot<Guid>
             null,
             null,
             null,
+            null,
+            null,
+            null,
+            0,
             null);
     }
 
@@ -250,6 +293,10 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <param name="deliveredAt">Instant the gallery was delivered, if it was.</param>
     /// <param name="deliveryNotifiedAt">Instant the client was told about the delivery, if they were.</param>
     /// <param name="extrasReleasedAt">Instant the extra photos were released, if they were.</param>
+    /// <param name="zipBytes">Size of the ZIP, if there is one.</param>
+    /// <param name="zipUploadedAt">Instant the ZIP was registered, if there is one.</param>
+    /// <param name="zipDownloads">How many times the client asked for the ZIP.</param>
+    /// <param name="zipLastDownloadedAt">Last instant the client asked for the ZIP, if they did.</param>
     /// <returns>The restored gallery.</returns>
     public static Gallery Restore(
         Guid id,
@@ -270,8 +317,12 @@ public sealed class Gallery : AggregateRoot<Guid>
         DateTimeOffset? finalsPublishedAt = null,
         DateTimeOffset? deliveredAt = null,
         DateTimeOffset? deliveryNotifiedAt = null,
-        DateTimeOffset? extrasReleasedAt = null) =>
-        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt, finalsPublishedAt, deliveredAt, deliveryNotifiedAt, extrasReleasedAt);
+        DateTimeOffset? extrasReleasedAt = null,
+        long? zipBytes = null,
+        DateTimeOffset? zipUploadedAt = null,
+        int zipDownloads = 0,
+        DateTimeOffset? zipLastDownloadedAt = null) =>
+        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt, finalsPublishedAt, deliveredAt, deliveryNotifiedAt, extrasReleasedAt, zipBytes, zipUploadedAt, zipDownloads, zipLastDownloadedAt);
 
     /// <summary>
     /// Changes the terms of the gallery: how many photos the package includes (for a custom package the photographer sets it
@@ -447,9 +498,10 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <param name="photoId">Identifier of the chosen photo the final belongs to.</param>
     /// <param name="finalBytes">Size of the stored final photo.</param>
     /// <param name="now">Current instant.</param>
+    /// <param name="details">What the photographer's browser read from the file (size in pixels, when it was taken), if anything.</param>
     /// <returns><see langword="true"/> when the final was recorded now; <see langword="false"/> when it was already recorded.</returns>
     /// <exception cref="DomainException">When the gallery does not take finals in its state, the photo was not chosen, or the size is not valid.</exception>
-    public bool RegisterFinal(Guid photoId, long finalBytes, DateTimeOffset now)
+    public bool RegisterFinal(Guid photoId, long finalBytes, DateTimeOffset now, FinalDetails? details = null)
     {
         if (Status is not (GalleryStatus.InEditing or GalleryStatus.Ready or GalleryStatus.Delivered))
         {
@@ -468,12 +520,24 @@ public sealed class Gallery : AggregateRoot<Guid>
         }
 
         GalleryPhoto.EnsureValidFinal(finalBytes);
-        if (_photos[index].FinalBytes == finalBytes)
+        var kept = (details ?? new FinalDetails(null, null, null)).Normalize(now);
+        var current = _photos[index];
+        if (current.FinalBytes == finalBytes && (details is null || (current.FinalWidth == kept.Width && current.FinalHeight == kept.Height && current.FinalCapturedAt == kept.CapturedAt)))
         {
             return false;
         }
 
-        _photos[index] = _photos[index] with { FinalBytes = finalBytes, FinalUploadedAt = now };
+        // A file of another size is another file: what was said about the previous one, and its downloads, no longer apply.
+        var replaced = current.FinalBytes != finalBytes;
+        _photos[index] = current with
+        {
+            FinalBytes = finalBytes,
+            FinalUploadedAt = replaced ? now : current.FinalUploadedAt,
+            FinalWidth = kept.Width,
+            FinalHeight = kept.Height,
+            FinalCapturedAt = kept.CapturedAt,
+            FinalDownloads = replaced ? 0 : current.FinalDownloads,
+        };
         UpdatedAt = now;
         return true;
     }
@@ -499,7 +563,7 @@ public sealed class Gallery : AggregateRoot<Guid>
             throw new DomainException(DomainErrorCodes.GalleryInvalidState, "The final photos of the package cannot change once they are published.");
         }
 
-        _photos[index] = _photos[index] with { FinalBytes = null, FinalUploadedAt = null };
+        _photos[index] = _photos[index] with { FinalBytes = null, FinalUploadedAt = null, FinalWidth = null, FinalHeight = null, FinalCapturedAt = null, FinalDownloads = 0 };
         UpdatedAt = now;
         return true;
     }
@@ -582,6 +646,115 @@ public sealed class Gallery : AggregateRoot<Guid>
         ExtrasReleasedAt = now;
         UpdatedAt = now;
         return true;
+    }
+
+    /// <summary>
+    /// Tells whether the client may download the final photo of a chosen photo now: the gallery is delivered, the final exists, and
+    /// if the photo is an extra the photographer released the extras.
+    /// </summary>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <returns><see langword="true"/> when the client may download it.</returns>
+    public bool IsDownloadable(Guid photoId) =>
+        Status == GalleryStatus.Delivered && _selectedPhotoIds.Contains(photoId) && HasFinal(photoId) && (!IsExtra(photoId) || ExtrasReleasedAt is not null);
+
+    /// <summary>
+    /// Counts that the client asked to download some final photos. The caller gives them an address only if this does not throw.
+    /// </summary>
+    /// <param name="photoIds">Identifiers of the photos.</param>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the gallery is not delivered, or a photo is not one the client may download.</exception>
+    public void RecordFinalDownloads(IReadOnlyCollection<Guid> photoIds, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(photoIds);
+
+        if (Status != GalleryStatus.Delivered)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {Status} cannot be downloaded.");
+        }
+
+        var distinct = photoIds.Distinct().ToList();
+        if (distinct.Count == 0 || distinct.Any(photoId => !IsDownloadable(photoId)))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, "Only the final photos that were delivered can be downloaded.");
+        }
+
+        foreach (var photoId in distinct)
+        {
+            var index = _photos.FindIndex(photo => photo.Id == photoId);
+            _photos[index] = _photos[index] with { FinalDownloads = _photos[index].FinalDownloads + 1 };
+        }
+
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Registers the ZIP with the photos that the photographer made and uploaded by hand. A ZIP of another size replaces the previous
+    /// one and starts its count of downloads again.
+    /// </summary>
+    /// <param name="zipBytes">Size of the stored ZIP.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was recorded now; <see langword="false"/> when the same one was already recorded.</returns>
+    /// <exception cref="DomainException">When the final photos are not published, or the size is not between 1 byte and <see cref="MaxZipBytes"/>.</exception>
+    public bool RegisterZip(long zipBytes, DateTimeOffset now)
+    {
+        if (Status is not (GalleryStatus.Ready or GalleryStatus.Delivered))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {Status} does not take a ZIP.");
+        }
+
+        if (zipBytes is < 1 or > MaxZipBytes)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidZip, $"A ZIP must weigh between 1 byte and {MaxZipBytes} bytes.");
+        }
+
+        if (ZipBytes == zipBytes)
+        {
+            return false;
+        }
+
+        ZipBytes = zipBytes;
+        ZipUploadedAt = now;
+        ZipDownloads = 0;
+        ZipLastDownloadedAt = null;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Forgets the ZIP, for example so the photographer can upload a new one. The photos stay.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when a ZIP was forgotten; <see langword="false"/> when there was none.</returns>
+    public bool RemoveZip(DateTimeOffset now)
+    {
+        if (!HasZip)
+        {
+            return false;
+        }
+
+        ZipBytes = null;
+        ZipUploadedAt = null;
+        ZipDownloads = 0;
+        ZipLastDownloadedAt = null;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Counts that the client asked to download the ZIP. The caller gives them an address only if this does not throw.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the gallery is not delivered or has no ZIP.</exception>
+    public void RecordZipDownload(DateTimeOffset now)
+    {
+        if (Status != GalleryStatus.Delivered || !HasZip)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, "There is no ZIP to download.");
+        }
+
+        ZipDownloads++;
+        ZipLastDownloadedAt = now;
+        UpdatedAt = now;
     }
 
     /// <summary>
@@ -674,6 +847,12 @@ public sealed class Gallery : AggregateRoot<Guid>
         if (ExtrasReleasedAt is null && ExtraPhotoIds.Any(HasFinal))
         {
             actions.Add(GalleryAction.ReleaseExtras);
+        }
+
+        actions.Add(GalleryAction.UploadZip);
+        if (HasZip)
+        {
+            actions.Add(GalleryAction.RemoveZip);
         }
 
         return actions;

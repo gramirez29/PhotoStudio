@@ -57,6 +57,12 @@ public sealed record PortalSignContractRequest(
 public sealed record SubmitSelectionRequest(IReadOnlyList<Guid>? PhotoIds, bool AcceptExtras = false);
 
 /// <summary>
+/// HTTP body for the client to ask for the addresses to download some final photos.
+/// </summary>
+/// <param name="PhotoIds">Identifiers of the photos the client wants.</param>
+public sealed record RequestDownloadsRequest(IReadOnlyList<Guid>? PhotoIds);
+
+/// <summary>
 /// Endpoints of the client portal under <c>/public/bookings/{token}</c>. The token of the link is the credential for reading
 /// the booking and asking for a code; every action that changes something also needs the portal session obtained by verifying
 /// that code. All of them are rate limited per client address, and none of them accepts a photographer token.
@@ -98,6 +104,14 @@ public static class PortalEndpoints
             .RequireRateLimiting(RateLimitingExtensions.PortalReadPolicy);
         group.MapPost("/gallery/selection", SubmitSelectionAsync)
             .WithName("SubmitPortalSelection")
+            .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
+            .RequireRateLimiting(RateLimitingExtensions.PortalActionPolicy);
+        group.MapPost("/gallery/downloads", RequestDownloadsAsync)
+            .WithName("RequestPortalDownloads")
+            .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
+            .RequireRateLimiting(RateLimitingExtensions.PortalActionPolicy);
+        group.MapPost("/gallery/zip/download", RequestZipDownloadAsync)
+            .WithName("RequestPortalZipDownload")
             .RequireAuthorization(ClientPortalExtensions.ClientPortalPolicy)
             .RequireRateLimiting(RateLimitingExtensions.PortalActionPolicy);
 
@@ -148,6 +162,38 @@ public static class PortalEndpoints
         ICommandHandler<SubmitPortalSelectionCommand, PortalGalleryResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new SubmitPortalSelectionCommand(token, user.GetPortalBookingId(), request.PhotoIds ?? [], request.AcceptExtras), cancellationToken));
+
+    /// <summary>
+    /// Gives the client the addresses to download some final photos. Each photo asked for counts as a download.
+    /// </summary>
+    /// <param name="token">Secret token of the link.</param>
+    /// <param name="request">The photos wanted.</param>
+    /// <param name="user">Authenticated portal session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with an address per photo; 401 without a valid session; 404 when the session is for another booking; 409 <c>gallery.invalid_state</c> when the gallery is not delivered; 422 <c>gallery.invalid_photo</c> for a photo the client may not download.</returns>
+    private static async Task<Ok<PortalDownloadsResponse>> RequestDownloadsAsync(
+        string token,
+        RequestDownloadsRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<RequestPortalDownloadsCommand, PortalDownloadsResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RequestPortalDownloadsCommand(token, user.GetPortalBookingId(), request.PhotoIds ?? []), cancellationToken));
+
+    /// <summary>
+    /// Gives the client the address to download the ZIP with the photos, and counts it as a download.
+    /// </summary>
+    /// <param name="token">Secret token of the link.</param>
+    /// <param name="user">Authenticated portal session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the address; 401 without a valid session; 404 when the session is for another booking; 409 <c>gallery.invalid_state</c> when the gallery is not delivered or has no ZIP.</returns>
+    private static async Task<Ok<PortalZipDownloadResponse>> RequestZipDownloadAsync(
+        string token,
+        ClaimsPrincipal user,
+        ICommandHandler<RequestPortalZipDownloadCommand, PortalZipDownloadResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new RequestPortalZipDownloadCommand(token, user.GetPortalBookingId()), cancellationToken));
 
     /// <summary>
     /// Reads the booking the link opens.

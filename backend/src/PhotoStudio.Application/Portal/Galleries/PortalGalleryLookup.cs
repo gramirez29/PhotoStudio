@@ -63,40 +63,39 @@ internal static class PortalGalleryLookup
             gallery.ExtraPhotoPrice.ToResponse(),
             photos,
             selection,
-            await DownloadableFinalsAsync(gallery, storage, cancellationToken),
-            gallery.ExtrasReleasedAt is not null);
+            DownloadableFinals(gallery),
+            gallery.ExtrasReleasedAt is not null,
+            gallery.Status == GalleryStatus.Delivered && gallery.ZipBytes is { } zipBytes ? new PortalZipResponse(zipBytes) : null);
     }
 
     /// <summary>
-    /// Signs the downloads of the final photos the client may take now: none until the gallery is delivered (the balance is zero),
-    /// then those of the package, and those of the extras only once the photographer released them.
+    /// Lists the final photos the client may take now: none until the gallery is delivered (the balance is zero), then those of the
+    /// package, and those of the extras only once the photographer released them. It carries no address: the client asks for them
+    /// when they download, so every download is counted and no address is waiting somewhere for someone to find.
     /// </summary>
     /// <param name="gallery">The gallery.</param>
-    /// <param name="storage">Object storage that signs the addresses.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The downloadable finals, in the order the client chose them.</returns>
-    private static async Task<IReadOnlyList<PortalFinalResponse>> DownloadableFinalsAsync(Gallery gallery, IObjectStorage storage, CancellationToken cancellationToken)
+    public static IReadOnlyList<PortalFinalResponse> DownloadableFinals(Gallery gallery)
     {
-        if (gallery.Status != GalleryStatus.Delivered)
-        {
-            return [];
-        }
+        ArgumentNullException.ThrowIfNull(gallery);
 
-        var finals = new List<PortalFinalResponse>();
-        foreach (var photoId in gallery.SelectedPhotoIds)
-        {
-            var photo = gallery.Photos.FirstOrDefault(candidate => candidate.Id == photoId);
-            var isExtra = gallery.IsExtra(photoId);
-            if (photo is not { FinalBytes: { } bytes } || (isExtra && gallery.ExtrasReleasedAt is null))
+        return [.. gallery.SelectedPhotoIds
+            .Where(gallery.IsDownloadable)
+            .Select(photoId =>
             {
-                continue;
-            }
+                var photo = gallery.Photos.First(candidate => candidate.Id == photoId);
+                return new PortalFinalResponse(photoId, FinalFileName(photo), photo.FinalBytes ?? 0, gallery.IsExtra(photoId));
+            })];
+    }
 
-            var fileName = Path.GetFileNameWithoutExtension(photo.OriginalName) + ".jpg";
-            var url = await storage.CreateDownloadUrlAsync(PhotoStudio.Application.Galleries.GalleryKeys.Final(gallery.Id, photoId), FinalUrlLifetime, fileName, cancellationToken);
-            finals.Add(new PortalFinalResponse(photoId, fileName, url.Url, url.ExpiresAt, bytes, isExtra));
-        }
-
-        return finals;
+    /// <summary>
+    /// Builds the name the client saves a final photo with: the name of the original file, as a JPEG.
+    /// </summary>
+    /// <param name="photo">The photo.</param>
+    /// <returns>The file name.</returns>
+    public static string FinalFileName(GalleryPhoto photo)
+    {
+        ArgumentNullException.ThrowIfNull(photo);
+        return Path.GetFileNameWithoutExtension(photo.OriginalName) + ".jpg";
     }
 }

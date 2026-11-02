@@ -146,6 +146,12 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<RegisterFinalsCommand, RegisterFinalsResponse>, RegisterFinalsHandler>();
         services.AddScoped<ICommandHandler<PublishFinalsCommand, GalleryResponse>, PublishFinalsHandler>();
         services.AddScoped<ICommandHandler<ReleaseExtrasCommand, GalleryResponse>, ReleaseExtrasHandler>();
+        services.AddScoped<ICommandHandler<RequestZipUploadCommand, ZipUploadSlotResponse>, RequestZipUploadHandler>();
+        services.AddScoped<ICommandHandler<RegisterZipCommand, GalleryResponse>, RegisterZipHandler>();
+        services.AddScoped<ICommandHandler<RemoveZipCommand, GalleryResponse>, RemoveZipHandler>();
+        services.AddScoped<IQueryHandler<GetFinalDownloadQuery, FinalDownloadResponse>, GetFinalDownloadHandler>();
+        services.AddScoped<ICommandHandler<RequestPortalDownloadsCommand, PortalDownloadsResponse>, RequestPortalDownloadsHandler>();
+        services.AddScoped<ICommandHandler<RequestPortalZipDownloadCommand, PortalZipDownloadResponse>, RequestPortalZipDownloadHandler>();
         services.AddScoped<GalleryDelivery>();
         services.AddScoped<IDomainEventHandler<FinalPhotosReady>, FinalPhotosReadyDeliveryHandler>();
         services.AddScoped<IDomainEventHandler<PaymentVerified>, PaymentVerifiedDeliveryHandler>();

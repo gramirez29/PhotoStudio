@@ -197,8 +197,57 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
         var finals = delivered.GetProperty("finals").EnumerateArray().ToList();
         finals.Select(final => final.GetProperty("fileName").GetString()).ShouldBe(["IMG_0002.jpg", "IMG_0000.jpg"]);
         finals.ShouldAllBe(final => !final.GetProperty("isExtra").GetBoolean());
-        var download = await new HttpClient().GetAsync(finals[0].GetProperty("url").GetString(), TestContext.Current.CancellationToken);
+        finals.ShouldAllBe(final => final.EnumerateObject().All(property => property.Name != "url"));
+
+        // The client asks for the addresses when they download, and each photo asked for is counted.
+        var downloads = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/downloads", session, new { photoIds = new[] { chosen[0] } });
+        downloads.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var link = (await downloads.ReadJsonAsync()).GetProperty("items")[0];
+        link.GetProperty("fileName").GetString().ShouldBe("IMG_0002.jpg");
+        var download = await new HttpClient().GetAsync(link.GetProperty("url").GetString(), TestContext.Current.CancellationToken);
         (await download.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)).ShouldBe(bytes);
+        var extraAsked = await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/downloads", session, new { photoIds = new[] { chosen[2] } });
+        extraAsked.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await extraAsked.ReadCodeAsync()).ShouldBe("gallery.invalid_photo");
+
+        var seen = (await (await browser.GetAsync($"{path}/selection", TestContext.Current.CancellationToken)).ReadJsonAsync()).GetProperty("photos").EnumerateArray().ToList();
+        seen.Select(photo => photo.GetProperty("finalDownloads").GetInt32()).ShouldBe([1, 0, 0]);
+        seen[0].GetProperty("finalWidth").GetInt32().ShouldBe(1250);
+        seen[0].GetProperty("finalHeight").GetInt32().ShouldBe(3000);
+        seen[0].TryGetProperty("finalCapturedAt", out var capturedAt).ShouldBeTrue();
+        capturedAt.ValueKind.ShouldBe(System.Text.Json.JsonValueKind.String);
+        var mine = await (await browser.GetAsync($"{path}/finals/{chosen[0]}/download", TestContext.Current.CancellationToken)).ReadJsonAsync();
+        (await new HttpClient().GetAsync(mine.GetProperty("url").GetString(), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await (await browser.GetAsync($"{path}/selection", TestContext.Current.CancellationToken)).ReadJsonAsync()).GetProperty("photos")[0].GetProperty("finalDownloads").GetInt32().ShouldBe(1);
+
+        // The ZIP, made by hand: uploaded, offered to the client with its size, counted when downloaded, and deleted.
+        var zipBytes = new byte[] { 0x50, 0x4B, 0x03, 0x04, 1, 2, 3, 4 };
+        (await PostAsync(browser, $"{path}/zip/upload", new { bytes = Gallery.MaxZipBytes + 1 })).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        var slot = await (await PostAsync(browser, $"{path}/zip/upload", new { bytes = zipBytes.Length })).ReadJsonAsync();
+        using (var put = new HttpRequestMessage(HttpMethod.Put, slot.GetProperty("url").GetString()) { Content = new ByteArrayContent(zipBytes) })
+        {
+            put.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+            (await new HttpClient().SendAsync(put, TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        var withZip = await PostAsync(browser, $"{path}/zip", new { });
+        withZip.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var zipInfo = (await withZip.ReadJsonAsync()).GetProperty("zip");
+        zipInfo.GetProperty("bytes").GetInt64().ShouldBe(zipBytes.Length);
+        zipInfo.GetProperty("downloads").GetInt32().ShouldBe(0);
+        var offered = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync();
+        offered.GetProperty("zip").GetProperty("bytes").GetInt64().ShouldBe(zipBytes.Length);
+        var zipLink = await (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/zip/download", session, new { })).ReadJsonAsync();
+        zipLink.GetProperty("bytes").GetInt64().ShouldBe(zipBytes.Length);
+        (await (await new HttpClient().GetAsync(zipLink.GetProperty("url").GetString(), TestContext.Current.CancellationToken)).Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken)).ShouldBe(zipBytes);
+        var counted = (await (await browser.GetAsync(path, TestContext.Current.CancellationToken)).ReadJsonAsync()).GetProperty("zip");
+        counted.GetProperty("downloads").GetInt32().ShouldBe(1);
+        counted.GetProperty("lastDownloadedAt").ValueKind.ShouldBe(System.Text.Json.JsonValueKind.String);
+
+        (await PostAsync(browser, $"{path}/zip/remove", new { })).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync()).TryGetProperty("zip", out var gone).ShouldBeTrue();
+        gone.ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
+        (await scenario.Client.SendAsync(HttpMethod.Post, $"/public/bookings/{scenario.Token}/gallery/zip/download", session, new { })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
         (await PostAsync(browser, $"{path}/extras/release", new { })).StatusCode.ShouldBe(HttpStatusCode.OK);
         var released = await (await scenario.Client.SendAsync(HttpMethod.Get, $"/public/bookings/{scenario.Token}/gallery", session)).ReadJsonAsync();
@@ -225,7 +274,8 @@ public sealed class GallerySelectionApiTests(ApiFixture fixture)
             (await new HttpClient().SendAsync(put, TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
         }
 
-        var registered = await PostAsync(browser, $"{galleryPath}/finals", new { photoIds });
+        var details = photoIds.Select(id => new { photoId = id, width = 1250, height = 3000, capturedAt = DateTimeOffset.UtcNow.AddDays(-3) });
+        var registered = await PostAsync(browser, $"{galleryPath}/finals", new { photoIds, details });
         registered.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await registered.ReadJsonAsync()).GetProperty("rejected").GetArrayLength().ShouldBe(0);
     }

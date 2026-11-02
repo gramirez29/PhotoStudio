@@ -152,3 +152,129 @@ public sealed class SubmitPortalSelectionHandler(
         return await gallery.ToPortalResponseAsync(storage, cancellationToken);
     }
 }
+
+/// <summary>
+/// Gives the client the addresses to download the final photos they ask for. Every photo asked for counts as a download, so the
+/// photographer knows what the client took. Only photos the client may download now are given; if one is not, none is.
+/// </summary>
+/// <param name="galleries">Gallery repository.</param>
+/// <param name="links">Link repository.</param>
+/// <param name="tokens">Hashes the token taken from the URL.</param>
+/// <param name="storage">Object storage that signs the addresses.</param>
+/// <param name="timeProvider">Clock abstraction.</param>
+public sealed class RequestPortalDownloadsHandler(
+    IGalleryRepository galleries,
+    IBookingLinkRepository links,
+    IRefreshTokenGenerator tokens,
+    IObjectStorage storage,
+    TimeProvider timeProvider) : ICommandHandler<RequestPortalDownloadsCommand, PortalDownloadsResponse>
+{
+    private const int Attempts = 3;
+
+    /// <summary>
+    /// Counts the downloads and signs the addresses.
+    /// </summary>
+    /// <param name="command">Token of the link, the booking of the session and the photos asked for.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>One address per photo.</returns>
+    /// <exception cref="NotFoundException">When the token does not open the booking the session was issued for, or there is no gallery.</exception>
+    /// <exception cref="DomainException">When the gallery is not delivered or a photo is not one the client may download.</exception>
+    /// <exception cref="ConflictException">When the gallery kept changing under the request.</exception>
+    public async Task<PortalDownloadsResponse> HandleAsync(RequestPortalDownloadsCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var now = timeProvider.GetUtcNow();
+        var link = await links.ResolveAsync(tokens, command.Token, now, cancellationToken);
+        if (link.BookingId != command.AuthorizedBookingId)
+        {
+            throw new NotFoundException(nameof(Gallery), Guid.Empty);
+        }
+
+        if (command.PhotoIds is null || command.PhotoIds.Count is < 1 or > Gallery.MaxPhotos)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, "Ask for 1 to " + Gallery.MaxPhotos + " photos.");
+        }
+
+        for (var attempt = 1; ; attempt++)
+        {
+            var gallery = await galleries.GetVisibleAsync(link, cancellationToken);
+            gallery.RecordFinalDownloads(command.PhotoIds, now);
+            try
+            {
+                await galleries.UpdateAsync(gallery, cancellationToken);
+            }
+            catch (ConflictException) when (attempt < Attempts)
+            {
+                continue;
+            }
+
+            var items = new List<PortalDownloadResponse>(command.PhotoIds.Count);
+            foreach (var photoId in command.PhotoIds.Distinct())
+            {
+                var photo = gallery.Photos.First(candidate => candidate.Id == photoId);
+                var fileName = PortalGalleryLookup.FinalFileName(photo);
+                var url = await storage.CreateDownloadUrlAsync(PhotoStudio.Application.Galleries.GalleryKeys.Final(gallery.Id, photoId), PortalGalleryLookup.FinalUrlLifetime, fileName, cancellationToken);
+                items.Add(new PortalDownloadResponse(photoId, fileName, url.Url, url.ExpiresAt));
+            }
+
+            return new PortalDownloadsResponse(items);
+        }
+    }
+}
+
+/// <summary>
+/// Gives the client the address to download the ZIP with the photos, and counts it as a download.
+/// </summary>
+/// <param name="galleries">Gallery repository.</param>
+/// <param name="links">Link repository.</param>
+/// <param name="tokens">Hashes the token taken from the URL.</param>
+/// <param name="storage">Object storage that signs the address.</param>
+/// <param name="timeProvider">Clock abstraction.</param>
+public sealed class RequestPortalZipDownloadHandler(
+    IGalleryRepository galleries,
+    IBookingLinkRepository links,
+    IRefreshTokenGenerator tokens,
+    IObjectStorage storage,
+    TimeProvider timeProvider) : ICommandHandler<RequestPortalZipDownloadCommand, PortalZipDownloadResponse>
+{
+    private const int Attempts = 3;
+
+    /// <summary>
+    /// Counts the download and signs the address.
+    /// </summary>
+    /// <param name="command">Token of the link and the booking of the session.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The address of the ZIP.</returns>
+    /// <exception cref="NotFoundException">When the token does not open the booking the session was issued for, or there is no gallery.</exception>
+    /// <exception cref="DomainException">When the gallery is not delivered or has no ZIP.</exception>
+    /// <exception cref="ConflictException">When the gallery kept changing under the request.</exception>
+    public async Task<PortalZipDownloadResponse> HandleAsync(RequestPortalZipDownloadCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var now = timeProvider.GetUtcNow();
+        var link = await links.ResolveAsync(tokens, command.Token, now, cancellationToken);
+        if (link.BookingId != command.AuthorizedBookingId)
+        {
+            throw new NotFoundException(nameof(Gallery), Guid.Empty);
+        }
+
+        for (var attempt = 1; ; attempt++)
+        {
+            var gallery = await galleries.GetVisibleAsync(link, cancellationToken);
+            gallery.RecordZipDownload(now);
+            try
+            {
+                await galleries.UpdateAsync(gallery, cancellationToken);
+            }
+            catch (ConflictException) when (attempt < Attempts)
+            {
+                continue;
+            }
+
+            var url = await storage.CreateDownloadUrlAsync(PhotoStudio.Application.Galleries.GalleryKeys.Zip(gallery.Id), PortalGalleryLookup.FinalUrlLifetime, PhotoStudio.Application.Galleries.GalleryKeys.ZipFileName, cancellationToken);
+            return new PortalZipDownloadResponse(PhotoStudio.Application.Galleries.GalleryKeys.ZipFileName, url.Url, url.ExpiresAt, gallery.ZipBytes ?? 0);
+        }
+    }
+}
