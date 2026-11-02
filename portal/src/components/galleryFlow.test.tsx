@@ -372,7 +372,9 @@ describe('the gallery of the client', () => {
 
       expect(await screen.findByRole('heading', { name: 'Tus fotos están listas' })).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Fotos de tu paquete' })).toHaveTextContent('Fotos de tu paquete (2)');
-      expect(screen.getByText(/IMG_0004.jpg \(4,2 MB\)/)).toBeInTheDocument();
+      expect(screen.getByText('IMG_0004.jpg')).toBeInTheDocument();
+      expect(screen.getAllByText('Tamaño: 4.2 MB')).toHaveLength(2);
+      expect(screen.getByRole('checkbox', { name: 'Seleccionar IMG_0004.jpg' })).not.toBeChecked();
       expect(screen.queryByRole('group', { name: 'Fotos adicionales' })).not.toBeInTheDocument();
       expect(screen.getByText(/Elegiste 1 foto adicional .*3.*000.*PhotoSense Studio te contactará/)).toBeInTheDocument();
     });
@@ -438,6 +440,37 @@ describe('the gallery of the client', () => {
       expect(JSON.parse(String(asked?.[1]?.body))).toEqual({ photoIds: ['p4', 'p2'] });
       expect(asked?.[1]?.headers).toMatchObject({ Authorization: 'Bearer portal-jwt' });
       click.mockRestore();
+    });
+
+    it('shows the proof of a photo that has no thumbnail yet, so the card is never an empty gap', async () => {
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')] }))],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      const card = await screen.findByRole('button', { name: 'Ver IMG_0004.jpg' });
+      expect(card.querySelector('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/p4?sig=secret');
+    });
+
+    it('shows an icon, not a broken image, when the picture of a card cannot be loaded', async () => {
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4')] }))],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      const card = await screen.findByRole('button', { name: 'Ver IMG_0004.jpg' });
+      fireEvent.error(card.querySelector('img') as HTMLImageElement);
+
+      expect(card.querySelector('img')).toBeNull();
+      expect(card.querySelector('svg')).not.toBeNull();
     });
 
     it('shows the thumbnail of each photo and opens the real one, as edited, without it being a download', async () => {

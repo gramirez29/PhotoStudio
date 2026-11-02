@@ -234,9 +234,16 @@ describe('the page of a gallery and its proofs', () => {
     const packageBlock = screen.getByRole('group', { name: 'Fotos del paquete (1)' });
     const extrasBlock = screen.getByRole('group', { name: 'Fotos adicionales (1)' });
     expect(within(packageBlock).getByText('IMG_0003.jpg')).toBeInTheDocument();
-    expect(within(packageBlock).getByText('final subido · 1250 × 3000 px · 4,2 MB · tomada el 17 de octubre de 2026 · descargada 2 veces')).toBeInTheDocument();
+    expect(within(packageBlock).getByText('1250 x 3000 px')).toBeInTheDocument();
+    expect(within(packageBlock).getByText('Tamaño: 4.2 MB')).toBeInTheDocument();
+    expect(within(packageBlock).getByText('Tomada: 17/10/2026')).toBeInTheDocument();
+    expect(within(packageBlock).getByText('Descargas hechas: 2')).toBeInTheDocument();
     expect(within(extrasBlock).getByText('IMG_0001.jpg')).toBeInTheDocument();
-    expect(within(extrasBlock).getByText('sin final')).toBeInTheDocument();
+    // What is not known is a dash, on its own line, so the four lines are always there.
+    expect(within(extrasBlock).getByText('Tamaño: -')).toBeInTheDocument();
+    expect(within(extrasBlock).getByText('Tomada: -')).toBeInTheDocument();
+    expect(within(extrasBlock).getByText('Descargas hechas: -')).toBeInTheDocument();
+    expect(within(extrasBlock).getByText('-')).toBeInTheDocument();
     expect(within(packageBlock).getByRole('button', { name: 'Ver IMG_0003.jpg' }).querySelector('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/thumb-3?sig=secret');
     expect(within(extrasBlock).getByRole('button', { name: 'Ver IMG_0001.jpg' }).querySelector('img')).toHaveAttribute('src', 'https://account.r2.cloudflarestorage.com/proof-1?sig=secret');
     expect(within(packageBlock).getByText('1 de 1 con su final')).toBeInTheDocument();

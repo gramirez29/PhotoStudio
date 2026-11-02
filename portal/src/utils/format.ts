@@ -16,6 +16,25 @@ export function formatMoney(money: Money): string {
 }
 
 /**
+ * Formats the size of a file in megabytes with one decimal and a point, for example "4.2 MB". It is the size as the cards of the
+ * photos show it.
+ * @param bytes Size in bytes.
+ * @returns The text.
+ */
+export function formatMegabytes(bytes: number): string {
+  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+}
+
+/**
+ * Formats a date as day, month and year with two digits each, in the Costa Rica time zone, for example "17/10/2026".
+ * @param isoDate Instant in ISO 8601.
+ * @returns The text.
+ */
+export function formatShortDate(isoDate: string): string {
+  return new Intl.DateTimeFormat(APP_LOCALE, { timeZone: APP_TIME_ZONE, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(isoDate));
+}
+
+/**
  * Formats the size of a file for people, in megabytes from one on and in kilobytes below, for example "4,2 MB" or "850 KB".
  * @param bytes Size in bytes.
  * @returns The text.

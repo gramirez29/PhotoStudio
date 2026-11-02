@@ -27,6 +27,30 @@ export function formatDateTime(isoDate: string): string {
 }
 
 /**
+ * Formats the size of a file in megabytes with one decimal and a point, for example "4.2 MB". It is the size as the cards of the
+ * photos show it.
+ * @param bytes Size in bytes.
+ * @returns The text.
+ */
+export function formatMegabytes(bytes: number): string {
+  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+}
+
+/**
+ * Formats a date as day, month and year with two digits each, in the device time zone, for example "17/10/2026".
+ * @param isoDate Instant in ISO 8601.
+ * @returns The text, or the same text when it is not a date.
+ */
+export function formatShortDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return isoDate;
+  }
+
+  return new Intl.DateTimeFormat(APP_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+}
+
+/**
  * Formats the size of a file for people, in megabytes from one on and in kilobytes below, for example "4,2 MB" or "850 KB".
  * @param bytes Size in bytes.
  * @returns The text.

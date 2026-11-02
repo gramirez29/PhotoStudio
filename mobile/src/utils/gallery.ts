@@ -1,6 +1,6 @@
 import type { GalleryResponse, GalleryStatus, SelectedPhoto, SelectionResponse } from '../types/api/gallery';
 import type { GalleryStatusView } from '../types/utils/gallery.types';
-import { formatBytes, formatDate, formatDateTime, formatMoney } from './format';
+import { formatBytes, formatDate, formatDateTime, formatMegabytes, formatMoney, formatShortDate } from './format';
 
 /** What each state of a gallery says to the photographer, and the color it takes. */
 const STATUS_VIEWS: Readonly<Record<GalleryStatus, GalleryStatusView>> = {
@@ -55,6 +55,23 @@ export function describeFinal(photo: SelectedPhoto): string {
 
   parts.push(photo.finalDownloads === 0 ? 'sin descargas' : `descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
   return parts.join(' · ');
+}
+
+/**
+ * Describes the final of a photo in four short lines for its card, each with its own value: the size in pixels, the weight, the date
+ * it was taken and how many times the client downloaded it. A value that is not known is shown as a dash, so the four lines are
+ * always there and the cards line up.
+ * @param photo The photo.
+ * @returns The four lines, one under the other.
+ */
+export function describeFinalLines(photo: SelectedPhoto): readonly string[] {
+  const hasFinal = photo.finalBytes !== null;
+  return [
+    photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} x ${photo.finalHeight} px` : '-',
+    `Tamaño: ${photo.finalBytes === null ? '-' : formatMegabytes(photo.finalBytes)}`,
+    `Tomada: ${photo.finalCapturedAt === null ? '-' : formatShortDate(photo.finalCapturedAt)}`,
+    `Descargas hechas: ${hasFinal ? photo.finalDownloads : '-'}`,
+  ];
 }
 
 /**

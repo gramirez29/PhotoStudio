@@ -1,6 +1,6 @@
 import { parseGallery, parseSelection } from '../../api/galleryApi';
 import { galleryPayload, selectionPayload } from '../../api/__fixtures__/galleryPayloads';
-import { describeFinal, describeGalleryStatus, describeTerms, describeZip, namesOf, splitSelection, validateReopenReason, validateTerms } from '../gallery';
+import { describeFinal, describeFinalLines, describeGalleryStatus, describeTerms, describeZip, namesOf, splitSelection, validateReopenReason, validateTerms } from '../gallery';
 
 const gallery = parseGallery(galleryPayload);
 const selection = parseSelection(selectionPayload);
@@ -31,6 +31,17 @@ describe('describeFinal', () => {
 
   it('says there is no final yet', () => {
     expect(describeFinal(selection.photos[1]!)).toBe('sin final');
+  });
+});
+
+describe('describeFinalLines', () => {
+  it('splits what is known about a final in short lines for its card', () => {
+    expect(describeFinalLines(selection.photos[0]!)).toEqual(['1250 x 3000 px', 'Tamaño: 4.2 MB', 'Tomada: 17/10/2026', 'Descargas hechas: 2']);
+  });
+
+  it('replaces every value that is not known by a dash, keeping the four lines', () => {
+    expect(describeFinalLines({ ...selection.photos[0]!, finalWidth: null, finalCapturedAt: null, finalDownloads: 0 })).toEqual(['-', 'Tamaño: 4.2 MB', 'Tomada: -', 'Descargas hechas: 0']);
+    expect(describeFinalLines(selection.photos[1]!)).toEqual(['-', 'Tamaño: -', 'Tomada: -', 'Descargas hechas: -']);
   });
 });
 
