@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using PhotoStudio.Application.Abstractions;
 
 namespace PhotoStudio.Application.Emails;
 
@@ -13,6 +14,8 @@ namespace PhotoStudio.Application.Emails;
 /// <param name="Paragraphs">The paragraphs before the steps.</param>
 /// <param name="Steps">Numbered steps, or <see langword="null"/> when there are none.</param>
 /// <param name="Note">A note set apart, or <see langword="null"/> when there is none.</param>
+/// <param name="Code">A code the reader has to copy or type, shown big in a box of its own, or <see langword="null"/>.</param>
+/// <param name="Document">A long text shown as it is, in a box, such as the contract that was signed, or <see langword="null"/>.</param>
 /// <param name="Closing">The last paragraph, after the steps and the note, or <see langword="null"/>.</param>
 public sealed record EmailContent(
     string Preheader,
@@ -20,7 +23,9 @@ public sealed record EmailContent(
     IReadOnlyList<string> Paragraphs,
     IReadOnlyList<string>? Steps = null,
     string? Note = null,
-    string? Closing = null);
+    string? Closing = null,
+    string? Code = null,
+    string? Document = null);
 
 /// <summary>
 /// Builds the emails of the product with the look of the app and the site: the slate blue band of the logo with the name of the studio
@@ -40,6 +45,26 @@ public static class BrandedEmail
     private const string Title = "'Josefin Sans','Trebuchet MS',Arial,sans-serif";
 
     /// <summary>
+    /// Builds a whole email in the look of the studio: the plain text, the HTML and the logo that travels inside it. Every email the
+    /// system sends goes through here, so they all look alike.
+    /// </summary>
+    /// <param name="to">Address of the reader.</param>
+    /// <param name="subject">Subject of the email.</param>
+    /// <param name="content">What the email says.</param>
+    /// <returns>The email.</returns>
+    public static EmailMessage Message(string to, string subject, EmailContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        return new EmailMessage(
+            to,
+            subject,
+            RenderText(StudioBrand.Name, content),
+            RenderHtml(StudioBrand.Name, "cid:" + StudioBrand.LogoContentId, content),
+            [StudioBrand.Logo]);
+    }
+
+    /// <summary>
     /// Builds the plain-text version of an email.
     /// </summary>
     /// <param name="studioName">Name of the studio, for the signature.</param>
@@ -54,6 +79,16 @@ public static class BrandedEmail
         foreach (var paragraph in content.Paragraphs)
         {
             text.Append(paragraph).Append("\n\n");
+        }
+
+        if (content.Code is not null)
+        {
+            text.Append("Tu código: ").Append(content.Code).Append("\n\n");
+        }
+
+        if (content.Document is not null)
+        {
+            text.Append("------------------------------\n").Append(content.Document).Append("\n------------------------------\n\n");
         }
 
         if (content.Steps is { Count: > 0 } steps)
@@ -97,7 +132,8 @@ public static class BrandedEmail
             .Append("<meta name=\"color-scheme\" content=\"light dark\"><meta name=\"supported-color-schemes\" content=\"light dark\">")
             .Append("<title>").Append(WebUtility.HtmlEncode(content.Heading)).Append("</title>")
             .Append("<style>@media (prefers-color-scheme: dark){.page{background:#020D2C !important}.card{background:#26324F !important}")
-            .Append(".text{color:#F4F1EC !important}.muted{color:#C9CDD6 !important}.rule{background:#E3A97F !important}.step{color:#E3A97F !important}}</style>")
+            .Append(".text{color:#F4F1EC !important}.muted{color:#C9CDD6 !important}.rule{background:#E3A97F !important}.step{color:#E3A97F !important}")
+            .Append(".code{background:#020D2C !important;border-color:#E3A97F !important;color:#F4F1EC !important}.doc{background:#020D2C !important;border-color:#E3A97F !important;color:#F4F1EC !important}}</style>")
             .Append("</head><body style=\"margin:0;padding:0;background:").Append(Page).Append(";\" class=\"page\">")
             .Append("<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">").Append(WebUtility.HtmlEncode(content.Preheader)).Append("</div>")
             .Append("<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" class=\"page\" style=\"background:").Append(Page).Append(";\"><tr><td align=\"center\" style=\"padding:0 12px 32px;\">")
@@ -123,6 +159,20 @@ public static class BrandedEmail
         {
             html.Append("<p class=\"text\" style=\"margin:0 0 14px;font-family:").Append(Body).Append(";font-size:16px;line-height:1.55;color:").Append(Text).Append(";\">")
                 .Append(WebUtility.HtmlEncode(paragraph)).Append("</p>");
+        }
+
+        if (content.Code is not null)
+        {
+            html.Append("<div class=\"code\" style=\"margin:6px 0 18px;padding:14px 12px;text-align:center;background:").Append(Page).Append(";border:2px dashed ").Append(Accent)
+                .Append(";border-radius:10px;font-family:").Append(Title).Append(";font-size:32px;font-weight:700;letter-spacing:8px;color:").Append(Brand).Append(";\">")
+                .Append(WebUtility.HtmlEncode(content.Code)).Append("</div>");
+        }
+
+        if (content.Document is not null)
+        {
+            html.Append("<div class=\"doc\" style=\"margin:6px 0 18px;padding:14px;white-space:pre-wrap;background:").Append(Page).Append(";border:1px solid ").Append(Brand)
+                .Append(";border-radius:10px;font-family:").Append(Body).Append(";font-size:14px;line-height:1.55;color:").Append(Text).Append(";\">")
+                .Append(WebUtility.HtmlEncode(content.Document)).Append("</div>");
         }
 
         if (content.Steps is { Count: > 0 } steps)

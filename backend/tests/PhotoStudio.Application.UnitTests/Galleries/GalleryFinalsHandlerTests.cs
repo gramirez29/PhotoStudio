@@ -280,7 +280,7 @@ public sealed class GalleryFinalsHandlerTests
     public async Task DeliveredEmail_IsSentOnce_AndHasNoLink()
     {
         _gallery = NewGallery(GalleryStatus.Delivered, photos: 3, included: 2, chosen: 2, finalsOfThePackage: true);
-        var handler = new GalleryDeliveredEmailHandler(_galleries, _bookings, _email, new PortalSettings("https://develop.photosensestudio.com"), new FixedTimeProvider(Now));
+        var handler = new GalleryDeliveredEmailHandler(_galleries, _bookings, _email, new FixedTimeProvider(Now));
         var delivered = new GalleryDelivered(_gallery.Id, _booking.Id, _gallery.PhotographerId, Now);
 
         await handler.HandleAsync(delivered, TestContext.Current.CancellationToken);
@@ -306,7 +306,7 @@ public sealed class GalleryFinalsHandlerTests
         _gallery = NewGallery(GalleryStatus.Delivered, photos: 3, included: 2, chosen: 2, finalsOfThePackage: true);
         _bookings.GetByIdAsync(_booking.Id, Arg.Any<CancellationToken>()).Returns(NewBooking(null));
 
-        await new GalleryDeliveredEmailHandler(_galleries, _bookings, _email, new PortalSettings("https://x.test"), new FixedTimeProvider(Now))
+        await new GalleryDeliveredEmailHandler(_galleries, _bookings, _email, new FixedTimeProvider(Now))
             .HandleAsync(new GalleryDelivered(_gallery.Id, _booking.Id, _gallery.PhotographerId, Now), TestContext.Current.CancellationToken);
 
         await _email.DidNotReceive().SendAsync(Arg.Any<EmailMessage>(), Arg.Any<CancellationToken>());

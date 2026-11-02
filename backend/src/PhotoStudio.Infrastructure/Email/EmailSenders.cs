@@ -70,6 +70,13 @@ public sealed class ResendEmailSender(HttpClient httpClient, EmailOptions option
                 subject = message.Subject,
                 text = message.TextBody,
                 html = message.HtmlBody,
+                attachments = message.InlineImages?.Select(image => new
+                {
+                    filename = image.FileName,
+                    content = Convert.ToBase64String(image.Content),
+                    content_type = image.ContentType,
+                    content_id = image.ContentId,
+                }),
             }),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);

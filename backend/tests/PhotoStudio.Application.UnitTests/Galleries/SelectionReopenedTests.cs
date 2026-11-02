@@ -151,7 +151,7 @@ public sealed class SelectionReopenedTests
     /// Builds the handler that sends the email.
     /// </summary>
     /// <returns>The handler.</returns>
-    private SelectionReopenedEmailHandler Handler() => new(_galleries, _bookings, _email, new PortalSettings("https://develop.photosensestudio.com"), new FixedTimeProvider(Now));
+    private SelectionReopenedEmailHandler Handler() => new(_galleries, _bookings, _email, new FixedTimeProvider(Now));
 
     /// <summary>
     /// Builds a booking with an email, or without one.

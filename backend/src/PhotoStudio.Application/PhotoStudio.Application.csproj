@@ -19,6 +19,11 @@
     <EmbeddedResource Include="Contracts\Templates\*.md" LogicalName="PhotoStudio.Application.Contracts.Templates.%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- The logo of the studio travels inside every email, so it shows even when the site is private or remote images are blocked. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Emails\logo.png" LogicalName="PhotoStudio.Application.Emails.logo.png" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="PhotoStudio.Application.UnitTests" />
   </ItemGroup>

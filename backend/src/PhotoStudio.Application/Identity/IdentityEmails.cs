@@ -1,5 +1,5 @@
-using System.Net;
 using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Application.Emails;
 using PhotoStudio.Domain.Identity;
 
 namespace PhotoStudio.Application.Identity;
@@ -19,19 +19,14 @@ internal static class IdentityEmails
     public static EmailMessage VerificationCode(string to, string name, string code)
     {
         var minutes = (int)EmailVerification.Lifetime.TotalMinutes;
-        var text =
-            $"Hola {name},\n\n" +
-            $"Tu código para verificar tu correo en PhotoSense Studio es: {code}\n\n" +
-            $"Vence en {minutes} minutos. Si no creaste una cuenta, ignora este mensaje: nadie puede usar tu correo sin este código.\n\n" +
-            "PhotoSense Studio";
+        var content = new EmailContent(
+            $"Tu código para verificar tu correo es {code}.",
+            "Verifica tu correo",
+            [$"Hola {name}, este es el código para verificar tu correo en PhotoSense Studio:"],
+            Note: $"Vence en {minutes} minutos. Si no creaste una cuenta, ignora este mensaje: nadie puede usar tu correo sin este código.",
+            Code: code);
 
-        var html =
-            $"<p>Hola {WebUtility.HtmlEncode(name)},</p>" +
-            $"<p>Tu código para verificar tu correo en PhotoSense Studio es:</p><p style=\"font-size:28px;font-weight:700;letter-spacing:6px\">{code}</p>" +
-            $"<p>Vence en {minutes} minutos. Si no creaste una cuenta, ignora este mensaje: nadie puede usar tu correo sin este código.</p>" +
-            "<p>PhotoSense Studio</p>";
-
-        return new EmailMessage(to, "Verifica tu correo de PhotoSense Studio", text, html);
+        return BrandedEmail.Message(to, "Verifica tu correo de PhotoSense Studio", content);
     }
 
     /// <summary>
@@ -44,18 +39,13 @@ internal static class IdentityEmails
     public static EmailMessage StudioLoginCode(string to, string name, string code)
     {
         var minutes = (int)StudioLoginChallenge.Lifetime.TotalMinutes;
-        var text =
-            $"Hola {name},\n\n" +
-            $"Tu código para entrar a la web de PhotoSense Studio es: {code}\n\n" +
-            $"Vence en {minutes} minutos y sirve una sola vez. Si no intentaste entrar, no compartas este código con nadie y cambia tu contraseña desde la app: alguien más ya la conoce.\n\n" +
-            "PhotoSense Studio";
+        var content = new EmailContent(
+            $"Tu código para entrar es {code}.",
+            "Tu código para entrar",
+            [$"Hola {name}, este es el código para entrar a la web de PhotoSense Studio:"],
+            Note: $"Vence en {minutes} minutos y sirve una sola vez. Si no intentaste entrar, no compartas este código con nadie y cambia tu contraseña desde la app: alguien más ya la conoce.",
+            Code: code);
 
-        var html =
-            $"<p>Hola {WebUtility.HtmlEncode(name)},</p>" +
-            $"<p>Tu código para entrar a la web de PhotoSense Studio es:</p><p style=\"font-size:28px;font-weight:700;letter-spacing:6px\">{code}</p>" +
-            $"<p>Vence en {minutes} minutos y sirve una sola vez. Si no intentaste entrar, no compartas este código con nadie y cambia tu contraseña desde la app: alguien más ya la conoce.</p>" +
-            "<p>PhotoSense Studio</p>";
-
-        return new EmailMessage(to, "Tu código para entrar a PhotoSense Studio", text, html);
+        return BrandedEmail.Message(to, "Tu código para entrar a PhotoSense Studio", content);
     }
 }
