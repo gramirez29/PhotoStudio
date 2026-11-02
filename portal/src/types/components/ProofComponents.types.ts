@@ -1,5 +1,6 @@
 import type { StudioGallery, StudioUser } from '../api/studio';
 import type { UploadItem } from '../media/proofUploader.types';
+import type { FinalMatch } from '../utils/finalMatching.types';
 
 /** Props of the `StudioGalleryDetail` component. */
 export interface StudioGalleryDetailProps {
@@ -19,6 +20,46 @@ export interface StudioProofsProps {
 export interface StudioSelectionProps {
   /** The gallery whose client sent the selection. */
   readonly gallery: StudioGallery;
+}
+
+/** Props of the `StudioFinals` component. */
+export interface StudioFinalsProps {
+  /** The gallery whose client sent the selection. */
+  readonly gallery: StudioGallery;
+}
+
+/** Props of the `FinalsPicker` component. */
+export interface FinalsPickerProps {
+  /** True while an upload is running: nothing more can be chosen. */
+  readonly disabled: boolean;
+  /** Called with the files the person chose. */
+  readonly onChoose: (files: readonly File[]) => void;
+}
+
+/** Props of the `FinalsStaged` component. */
+export interface FinalsStagedProps {
+  /** The files paired with the photo of the selection each is the final of. */
+  readonly staged: readonly FinalMatch[];
+  /** Called when the person confirms. */
+  readonly onConfirm: () => void;
+  /** Called when the person changes their mind. */
+  readonly onCancel: () => void;
+}
+
+/** Props of the `PublishFinalsPanel` component. */
+export interface PublishFinalsPanelProps {
+  /** The gallery whose finals are published. */
+  readonly gallery: StudioGallery;
+  /** True while finals are still going up: publishing then would leave some out. */
+  readonly disabled: boolean;
+}
+
+/** Props of the `ReleaseExtrasPanel` component. */
+export interface ReleaseExtrasPanelProps {
+  /** The gallery whose extras are released. */
+  readonly gallery: StudioGallery;
+  /** True while finals are still going up. */
+  readonly disabled: boolean;
 }
 
 /** Props of the `ProofPicker` component. */

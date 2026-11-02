@@ -83,7 +83,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 4. **Subida de pruebas (web)** (backend hecho en el PR 4a, `feature/gallery-proofs-backend`: fotos en la galería, lugares de subida firmados, registro con comprobación del objeto real, lista, borrado, G2 y el correo al cliente; la página con la marca de agua y la compresión es el PR 4b, hecho; detalle en las secciones 11 y 12): URLs firmadas, registro de la foto, módulo de marca de agua y compresión, página de subida y "Publicar pruebas" (G2) con el correo al cliente.
 5. **Selección del cliente en el portal** (backend hecho en el PR 5a, `feature/gallery-selection-backend`, sección 13; la página del cliente es el PR 5b, hecho, sección 14): sesión por código, cuadrícula con URLs de vida corta, contador, leyendas, mensaje de extras, sin clic derecho; enviar (G3) y push al fotógrafo.
 6. **Extras (decisión 2026-11-02, ver sección 15):** las fotos adicionales **no se cargan solas al saldo**; el estudio coordina su pago con el cliente. Ya no hay cargo automático en Billing. Queda, si se quiere, que el fotógrafo registre ese cobro a mano más adelante.
-7. **Finales, ZIP y entrega** (con la regla de las extras de la sección 16; partido en 7a backend, sección 17, 7b portal y 7c ZIP): subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
+7. **Finales, descargas y entrega** (con la regla de las extras de la sección 16; partido en 7a backend, sección 17; 7b portal, sección 18; 7c ZIP manual y ficha de cada foto, sección 19): subida de finales, publicar (G6), ZIP en el worker, entrega con saldo cero (G7), descarga del cliente con URLs firmadas y avisos.
 8. **App del fotógrafo:** tarjeta de galería en la reserva, cuadrícula de pruebas, selección con nombres de archivo, acciones (regalar fotos, abrir y reabrir selección, publicar), diálogo de copiar o WhatsApp para el enlace del cliente.
 9. **Subida desde el celular:** selector de fotos, reducción, marca y compresión en el dispositivo (Skia), subida con progreso y reintento; **requiere un build nuevo de EAS**.
 10. **Liberar espacio y archivo:** descarga de la galería para el fotógrafo, **Release** y el trabajo de G8.
@@ -205,3 +205,27 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Pruebas:** dominio 10 nuevas, aplicación 15 nuevas, y una de API de punta a punta (subir finales a R2, no poder publicar incompleto, publicar con saldo pendiente sin entregar, pagar, entrega automática, descarga real, extras ocultas hasta liberarlas).
 
 **Pendiente de este PR:** la página del fotógrafo para subir finales (7b), la separación visual paquete/extras en ambas webs (7b), el ZIP en el worker (7c) y "Reabrir selección" (PR 8).
+
+## 18. Finales y descargas en las webs (PR 7b, portal)
+
+**Web del fotógrafo (`/studio/galleries/{id}`)**
+- **Selección separada:** "Selección del cliente" ahora son dos bloques: **Fotos del paquete (N)** y **Fotos adicionales (M)** (este último con borde punteado y el total en colones, "se acuerdan con el cliente"). Cada bloque tiene su propio botón "Copiar los nombres de los archivos" y dice cuántas de sus fotos ya tienen final, con el peso de cada final subido. Las primeras fotos que el cliente eligió, tantas como cubre el paquete, son el paquete; el resto, extras (lo decide el servidor, `isExtra`).
+- **Fotos finales** (sección nueva, aparece cuando el cliente envió la selección): "X de Y del paquete con su final". **Elegir las fotos finales** abre el selector de archivos (solo JPEG, hasta 50 MB); cada archivo se **empareja por nombre** con la foto elegida: `IMG_0001.jpg` e `IMG_0001-Edit.jpg` van con `IMG_0001.CR2` (sin importar mayúsculas ni extensión; el nombre exacto gana a uno que solo empieza igual, así `IMG_0001` no toma el archivo de `IMG_00010`). Antes de subir muestra los pares ("archivo → foto") y lo que se dejó fuera con su motivo (no coincide, repetido, no es JPEG, vacío, más de 50 MB). Sube de 5 en 5, directo a R2 (3 a la vez), y registra cada tanda; lo que falle queda en la cola con su motivo y se puede reintentar.
+- **Publicar los finales del paquete:** botón con confirmación (después no se pueden cambiar). Si faltan finales, el servidor responde 409 y la página lo dice. El texto aclara que el cliente descarga de inmediato si no debe nada, o cuando se verifique su pago.
+- **Entregar las adicionales:** botón con confirmación ("Sí, el cliente ya pagó"), visible cuando hay al menos una extra con final. Es manual a propósito (sección 16).
+- La página muestra "Publicadas el …", "Entregada el …" y "Las fotos adicionales ya están disponibles" según el estado.
+
+**Web del cliente (`/b/{token}`, "Tus fotos")**
+- **Resumen de lo elegido:** "Fotos de tu paquete (N)" y "Fotos adicionales (M)" en cuadrículas separadas, con el aviso de que PhotoSense Studio contactará para coordinar el pago de las adicionales.
+- **Entregada (saldo cero):** la tarjeta dice "Tus fotos están listas para descargar" y abre **las descargas**: cada foto con su nombre, peso y botón **Descargar** (una por una), una casilla por foto, **"Seleccionar todas (N, X MB)"** y **"Descargar seleccionadas (N, X MB)"**, que dice cuánto pesa lo marcado, avisa que el navegador puede pedir permiso para varias descargas y que con conexión lenta puede tardar. Las descargas van una tras otra con una pausa corta (el navegador descarta algunas si son todas a la vez), y la galería se **vuelve a pedir justo antes** de cada tanda para que las direcciones de 5 minutos estén frescas.
+- **Extras:** aparecen en su propio grupo solo cuando el fotógrafo las liberó; mientras tanto la página dice que se coordinan con el estudio. Con la galería "lista" pero con saldo pendiente, el cliente ve que podrá descargar cuando su saldo esté en cero.
+- **No hay ZIP todavía.** Ver 7c.
+
+**Pruebas del portal (396, 23 nuevas):** emparejamiento de archivos, descargas en secuencia, parsers, el flujo completo de subir finales (pares, subida real simulada, rechazo, publicar con confirmación, error por faltantes, liberar extras) y las descargas del cliente (grupos, extras ocultas, "seleccionar todas", direcciones frescas, una por una).
+
+## 19. PR 7c, lo que falta (definido el 2026-11-03)
+
+- **ZIP manual:** desde la web del fotógrafo, subir un ZIP de **hasta 500 MB** (lo arma él; el servidor no crea ZIP, ni en el worker ni en el navegador). Una sola subida firmada a R2; solo se valida tipo y tamaño.
+- **Botón del ZIP en la web del cliente** (solo si la galería tiene ZIP y está entregada), **con confirmación**: "Se va a descargar un paquete de X MB. Según tu conexión a internet puede tomar tiempo." Mismas reglas que los finales: saldo cero y dirección de 5 minutos.
+- **El fotógrafo ve si el cliente lo descargó** y puede **borrar el ZIP** desde su web (y volver a subirlo si se lo piden de nuevo).
+- **Ficha de cada foto** en la galería del fotógrafo: fecha en que se tomó, peso en MB, dimensiones (por ejemplo 1250 × 3000), **veces descargada** y un icono/botón de descarga. Pide leer los datos EXIF/dimensiones al subir (en el navegador del fotógrafo) y contar las descargas del cliente en el servidor.

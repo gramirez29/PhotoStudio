@@ -166,6 +166,22 @@ export interface PortalSelection {
   readonly extraTotal: Money;
 }
 
+/** A final photo the client can download now (backend `PortalFinalResponse`). */
+export interface PortalFinal {
+  /** Photo identifier, the same as its proof. */
+  readonly id: string;
+  /** Name to save the file with. */
+  readonly fileName: string;
+  /** Signed address to download it; lasts a few minutes. It is a secret: it is never logged. */
+  readonly url: string;
+  /** Instant the address stops working (ISO 8601). */
+  readonly expiresAt: string;
+  /** Size of the file in bytes. */
+  readonly bytes: number;
+  /** Whether it is one of the extra photos. */
+  readonly isExtra: boolean;
+}
+
 /** The gallery as its client sees it (backend `PortalGalleryResponse`). */
 export interface PortalGallery {
   /** Where the gallery is: choosing, or already sent. */
@@ -178,4 +194,8 @@ export interface PortalGallery {
   readonly photos: readonly PortalProof[];
   /** The selection that was sent, or null while the client has not sent one. */
   readonly selection: PortalSelection | null;
+  /** The final photos the client can download now: none until the gallery is delivered; the extras only once released. */
+  readonly finals: readonly PortalFinal[];
+  /** Whether the photographer released the extra photos. */
+  readonly extrasReleased: boolean;
 }

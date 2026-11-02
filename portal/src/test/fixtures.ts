@@ -70,6 +70,9 @@ export const galleryPayload = {
   selectionSubmittedAt: null,
   createdAt: '2026-10-17T23:45:00+00:00',
   allowedActions: ['EditTerms'],
+  finalsPublishedAt: null,
+  deliveredAt: null,
+  extrasReleasedAt: null,
 } as const;
 
 /** The photographer of a web session as the API sends them. */

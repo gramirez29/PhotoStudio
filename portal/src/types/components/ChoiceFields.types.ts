@@ -36,4 +36,6 @@ export interface CheckboxFieldProps {
   readonly onChange: (checked: boolean) => void;
   /** Validation message; the box is marked invalid while there is one. */
   readonly error?: string | undefined;
+  /** True to keep the box from being changed, for example while an action that depends on it is running. */
+  readonly disabled?: boolean | undefined;
 }

@@ -1,3 +1,4 @@
+import type { FinalFileInfo } from './finals';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from './proofs';
 import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from './studio';
 
@@ -103,4 +104,36 @@ export interface StudioApi {
    * @returns The gallery, now in selection.
    */
   openSelection(galleryId: string): Promise<StudioGallery>;
+
+  /**
+   * Asks for the places to upload final photos, one per photo of the selection. The bytes go straight to the storage.
+   * @param galleryId Gallery identifier.
+   * @param files The finals about to be uploaded, 1 to 50.
+   * @param signal Optional signal to cancel the request.
+   * @returns One slot per file, in the same order.
+   */
+  requestFinalUploads(galleryId: string, files: readonly FinalFileInfo[], signal?: AbortSignal): Promise<readonly ProofUploadSlot[]>;
+
+  /**
+   * Registers the finals that were uploaded; the API looks at what is really in the storage first.
+   * @param galleryId Gallery identifier.
+   * @param photoIds The photos of the selection whose finals were uploaded, 1 to 50.
+   * @param signal Optional signal to cancel the request.
+   * @returns The gallery and the finals that were not accepted.
+   */
+  registerFinals(galleryId: string, photoIds: readonly string[], signal?: AbortSignal): Promise<RegisterProofsResult>;
+
+  /**
+   * Publishes the final photos of the package; the client downloads them as soon as the balance is zero.
+   * @param galleryId Gallery identifier.
+   * @returns The gallery, now with its finals published.
+   */
+  publishFinals(galleryId: string): Promise<StudioGallery>;
+
+  /**
+   * Lets the client download the extra photos, once the photographer agreed on their payment with the client.
+   * @param galleryId Gallery identifier.
+   * @returns The gallery, with the extras released.
+   */
+  releaseExtras(galleryId: string): Promise<StudioGallery>;
 }

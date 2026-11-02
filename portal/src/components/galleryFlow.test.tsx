@@ -343,8 +343,101 @@ describe('the gallery of the client', () => {
     expect(screen.getByText(/fotos elegidas./)).toHaveTextContent('3 fotos elegidas.');
     expect(screen.getByText(/1 foto adicional: .*3.*000.*PhotoSense Studio te contactará para coordinar el pago/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Revisar y enviar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Fotos de tu paquete' })).toHaveTextContent('Fotos de tu paquete (2)');
+    expect(screen.getByRole('group', { name: 'Fotos adicionales' })).toHaveTextContent('Fotos adicionales (1)');
     expect(screen.getAllByRole('button', { name: /^Foto \d, elegida$/ })).toHaveLength(3);
     expect(screen.getAllByRole('button', { name: /^Foto \d, elegida$/ }).every((tile) => (tile as HTMLButtonElement).disabled)).toBe(true);
+  });
+
+  describe('once delivered', () => {
+    const FINAL = (id: string, extra = false): Record<string, unknown> => ({
+      id,
+      fileName: `IMG_000${id.slice(1)}.jpg`,
+      url: `https://account.r2.cloudflarestorage.com/final-${id}?sig=secret`,
+      expiresAt: '2026-11-03T12:05:00+00:00',
+      bytes: 4_404_019,
+      isExtra: extra,
+    });
+    const SELECTION = { photoIds: ['p4', 'p2', 'p1'], submittedAt: '2026-10-30T12:00:00+00:00', extraPhotos: 1, extraTotal: { amount: 3000, currency: 'CRC' } };
+
+    it('lists the finals of the package apart, with their size, and says the extras are agreed on with the studio', async () => {
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')], extrasReleased: false }))],
+        }),
+      );
+      const user = renderPage();
+
+      expect(await screen.findByText('Tus fotos están listas para descargar.')).toBeInTheDocument();
+      await openGallery(user, 'Descargar mis fotos');
+
+      expect(await screen.findByRole('heading', { name: 'Tus fotos están listas' })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Fotos de tu paquete' })).toHaveTextContent('Fotos de tu paquete (2)');
+      expect(screen.getByText(/IMG_0004.jpg \(4,2 MB\)/)).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: 'Fotos adicionales' })).not.toBeInTheDocument();
+      expect(screen.getByText(/Elegiste 1 foto adicional .*3.*000.*PhotoSense Studio te contactará/)).toBeInTheDocument();
+    });
+
+    it('shows the extras once the photographer released them, apart from the package', async () => {
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2'), FINAL('p1', true)], extrasReleased: true }))],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      expect(await screen.findByRole('group', { name: 'Fotos adicionales' })).toHaveTextContent('Fotos adicionales (1)');
+      expect(screen.queryByText(/te contactará para coordinar el pago y entregártelas/)).not.toBeInTheDocument();
+    });
+
+    it('downloads the photos that are marked, with fresh addresses, after telling how much they weigh', async () => {
+      const started: string[] = [];
+      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+        started.push(`${this.download}|${this.getAttribute('href')}`);
+      });
+      const fresh = galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')], extrasReleased: false });
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')] })), jsonResponse(200, fresh)],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      expect(await screen.findByRole('button', { name: /Descargar seleccionadas \(0\)/ })).toBeDisabled();
+      await user.click(screen.getByRole('checkbox', { name: /Seleccionar todas \(2, 8,4 MB\)/ }));
+      expect(screen.getByRole('button', { name: /Descargar seleccionadas \(2, 8,4 MB\)/ })).toBeEnabled();
+      await user.click(screen.getByRole('button', { name: /Descargar seleccionadas/ }));
+
+      await waitFor(() => expect(started).toHaveLength(2), { timeout: 4000 });
+      expect(started[0]).toBe('IMG_0004.jpg|https://account.r2.cloudflarestorage.com/final-p4?sig=secret');
+      expect(fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith('/gallery') && (init?.method ?? 'GET') === 'GET')).toHaveLength(2);
+      click.mockRestore();
+    });
+
+    it('downloads one photo with its own button', async () => {
+      const started: string[] = [];
+      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+        started.push(this.download);
+      });
+      answer(
+        baseAnswers({
+          'GET /gallery/summary': [jsonResponse(200, { status: 'Delivered' })],
+          'GET /gallery': [jsonResponse(200, galleryBody({ status: 'Delivered', selection: SELECTION, finals: [FINAL('p4'), FINAL('p2')] }))],
+        }),
+      );
+      const user = renderPage();
+      await openGallery(user, 'Descargar mis fotos');
+
+      await user.click(await screen.findByRole('button', { name: 'Descargar IMG_0002.jpg' }));
+
+      await waitFor(() => expect(started).toEqual(['IMG_0002.jpg']));
+      click.mockRestore();
+    });
   });
 
   it('does not offer the browser menu on a photo', async () => {

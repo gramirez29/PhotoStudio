@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { useGallery } from '../hooks/usePortalGallery';
 import type { GalleryChooserProps } from '../types/components/GalleryComponents.types';
 import { describeGalleryLoadError } from '../utils/apiErrors';
+import { GalleryDownloads } from './GalleryDownloads';
 import { GalleryPicker } from './GalleryPicker';
 import { GallerySentSummary } from './GallerySentSummary';
 import { StepHeading } from './StepHeading';
@@ -55,6 +56,19 @@ export function GalleryChooser({ token, session, onSessionExpired, onClose }: Ga
           </button>
         </div>
       </section>
+    );
+  }
+
+  if (gallery.data.status === 'Delivered') {
+    return (
+      <GalleryDownloads
+        gallery={gallery.data}
+        refresh={async () => {
+          const result = await gallery.refetch();
+          return result.data ?? null;
+        }}
+        onClose={onClose}
+      />
     );
   }
 

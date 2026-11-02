@@ -84,6 +84,12 @@ export interface StudioGallery {
   readonly createdAt: string;
   /** What the photographer can do with it now. */
   readonly allowedActions: readonly GalleryAction[];
+  /** Instant the final photos of the package were published (ISO 8601), or null while they were not. */
+  readonly finalsPublishedAt: string | null;
+  /** Instant the gallery was delivered, with a zero balance (ISO 8601), or null while it was not. */
+  readonly deliveredAt: string | null;
+  /** Instant the extra photos were released to the client (ISO 8601), or null while they were not. */
+  readonly extrasReleasedAt: string | null;
 }
 
 /** One page of galleries, the most recently created first. */
@@ -100,6 +106,10 @@ export interface StudioSelectedPhoto {
   readonly id: string;
   /** Name of the original file. */
   readonly name: string;
+  /** Whether it is beyond what the package covers: the first photos chosen are the package, the rest are extras. */
+  readonly isExtra: boolean;
+  /** Size of its final photo in bytes, or null while the photographer has not uploaded it. */
+  readonly finalBytes: number | null;
 }
 
 /** What the client chose in a gallery. */

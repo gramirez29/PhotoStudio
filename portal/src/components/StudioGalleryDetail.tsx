@@ -7,6 +7,7 @@ import { formatDateTime } from '../utils/format';
 import { describeExtraPhoto, describeGalleryStatus, describePhotos } from '../utils/studio';
 import { LoadingScreen } from './LoadingScreen';
 import { StatusBadge } from './StatusBadge';
+import { StudioFinals } from './StudioFinals';
 import { StudioProofs } from './StudioProofs';
 
 /**
@@ -66,6 +67,7 @@ export function StudioGalleryDetail({ galleryId, user }: StudioGalleryDetailProp
         <p className="muted">{describeExtraPhoto(gallery.data)}</p>
       </section>
       <StudioProofs gallery={gallery.data} />
+      {gallery.data.selectionSubmittedAt !== null && gallery.data.status !== 'Archived' && <StudioFinals gallery={gallery.data} />}
     </div>
   );
 }

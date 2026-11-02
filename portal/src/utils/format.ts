@@ -16,6 +16,20 @@ export function formatMoney(money: Money): string {
 }
 
 /**
+ * Formats the size of a file for people, in megabytes from one on and in kilobytes below, for example "4,2 MB" or "850 KB".
+ * @param bytes Size in bytes.
+ * @returns The text.
+ */
+export function formatBytes(bytes: number): string {
+  const megabytes = bytes / 1_048_576;
+  if (megabytes >= 1) {
+    return `${megabytes.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })} MB`;
+  }
+
+  return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString(APP_LOCALE)} KB`;
+}
+
+/**
  * Formats a day and time, for example "sábado, 17 de octubre de 2026, 3:30 p. m.".
  * @param isoDate Instant in ISO 8601.
  * @returns The text, in the Costa Rica time zone.
