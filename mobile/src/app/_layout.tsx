@@ -77,6 +77,7 @@ export default function RootLayout(): ReactElement {
           <Stack.Screen name="bookings/new" options={{ title: 'Nueva reserva' }} />
           <Stack.Screen name="bookings/reschedule" options={{ title: 'Reprogramar' }} />
           <Stack.Screen name="refunds" options={{ title: 'Reembolsos' }} />
+          <Stack.Screen name="archivable" options={{ title: 'Galerías por archivar' }} />
           <Stack.Screen name="bookings/refund" options={{ title: 'Registrar reembolso' }} />
           <Stack.Screen name="bookings/contract" options={{ title: 'Firmar contrato' }} />
           <Stack.Screen name="bookings/edit" options={{ title: 'Editar reserva' }} />

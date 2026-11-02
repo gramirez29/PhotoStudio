@@ -157,6 +157,16 @@ export function parseFinalDownload(value: unknown): FinalDownloadResponse {
 }
 
 /**
+ * Parses a list of galleries.
+ * @param value Unknown response body.
+ * @returns The galleries, in the order the API sent them.
+ */
+export function parseGalleryItems(value: unknown): readonly GalleryResponse[] {
+  const path = 'galleries';
+  return readArray(expectRecord(value, path), 'items', path).map((item, index) => parseGallery(item, `${path}.items[${index}]`));
+}
+
+/**
  * Reads the headers a signed address must be used with.
  * @param value Unknown value from the response.
  * @param path Location of the value, for error messages.
@@ -261,6 +271,8 @@ export function createGalleryApi(client: HttpClient): GalleryApi {
     publishFinals: (galleryId) => post(galleryId, '/finals/publish'),
     releaseExtras: (galleryId) => post(galleryId, '/extras/release'),
     removeZip: (galleryId) => post(galleryId, '/zip/remove'),
+    release: (galleryId) => post(galleryId, '/release'),
+    listArchivable: (signal) => client.get('/api/galleries/archivable', parseGalleryItems, signal),
     getFinalDownload: (galleryId, photoId, signal) =>
       client.get(path(galleryId, `/finals/${encodeURIComponent(photoId)}/download`), parseFinalDownload, signal),
     requestProofUploads: (galleryId, files, signal) => client.post(path(galleryId, '/proofs/uploads'), { files }, parseProofSlots, signal),

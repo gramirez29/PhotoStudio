@@ -26,6 +26,18 @@ public sealed class Gallery : AggregateRoot<Guid>
     public const int MaxReasonLength = 500;
 
     /// <summary>
+    /// Days after delivery when the photographer is told that the gallery can be released. The system does not delete anything then:
+    /// the photographer decides.
+    /// </summary>
+    public const int ArchiveNoticeDays = 90;
+
+    /// <summary>
+    /// Days after delivery when the system archives the gallery by itself (G8), as a last resort for the ones the photographer never
+    /// released: the photos and the ZIP are deleted from the storage.
+    /// </summary>
+    public const int RetentionDays = 180;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Gallery"/> class. Use <see cref="Create"/> or <see cref="Restore"/>.
     /// </summary>
     private readonly List<GalleryPhoto> _photos;
@@ -695,6 +707,46 @@ public sealed class Gallery : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Archives the gallery (G8): from now on it has no files. The photographer does it to free the space before the term (Release) and
+    /// the system does it when the retention ends. It cannot be undone, so the caller deletes the files of the storage first. The ZIP
+    /// is forgotten too. Archiving an archived gallery does nothing.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was archived now; <see langword="false"/> when it already was.</returns>
+    /// <exception cref="DomainException">When the gallery was not delivered: until then the client has not downloaded anything.</exception>
+    public bool Archive(DateTimeOffset now)
+    {
+        if (Status == GalleryStatus.Archived)
+        {
+            return false;
+        }
+
+        if (Status != GalleryStatus.Delivered)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {Status} cannot be archived.");
+        }
+
+        RemoveZip(now);
+        Status = GalleryStatus.Archived;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
+    /// Tells whether a delivered gallery has been so long that the photographer should be told it can be released.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the gallery is delivered and the notice term is over.</returns>
+    public bool IsArchiveNoticeDue(DateTimeOffset now) => Status == GalleryStatus.Delivered && DeliveredAt is { } at && at.AddDays(ArchiveNoticeDays) <= now;
+
+    /// <summary>
+    /// Tells whether the retention of a delivered gallery has ended.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the gallery is delivered and its term is over.</returns>
+    public bool IsRetentionOver(DateTimeOffset now) => Status == GalleryStatus.Delivered && DeliveredAt is { } at && at.AddDays(RetentionDays) <= now;
+
+    /// <summary>
     /// Lets the client download the extra photos that already have their final. The photographer does it by hand once the client paid
     /// them; the system never charges them. Releasing twice does nothing.
     /// </summary>
@@ -981,6 +1033,11 @@ public sealed class Gallery : AggregateRoot<Guid>
         if (HasZip)
         {
             actions.Add(GalleryAction.RemoveZip);
+        }
+
+        if (Status == GalleryStatus.Delivered)
+        {
+            actions.Add(GalleryAction.Release);
         }
 
         return actions;

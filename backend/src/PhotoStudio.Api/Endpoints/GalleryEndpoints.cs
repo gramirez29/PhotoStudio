@@ -4,6 +4,7 @@ using PhotoStudio.Api.Auth;
 using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
+using PhotoStudio.Application.Galleries.Archive;
 using PhotoStudio.Application.Galleries.EditTerms;
 using PhotoStudio.Application.Galleries.Finals;
 using PhotoStudio.Application.Galleries.GetGallery;
@@ -47,6 +48,7 @@ public static class GalleryEndpoints
         var group = endpoints.MapGroup("/api/galleries").WithTags("Galleries").RequireAuthorization();
 
         group.MapGet("/", ListAsync).WithName("ListGalleries");
+        group.MapGet("/archivable", ListArchivableAsync).WithName("ListArchivableGalleries");
         group.MapGet("/by-booking/{bookingId:guid}", GetByBookingAsync).WithName("GetGalleryByBooking");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetGallery");
         group.MapPost("/{id:guid}/terms", EditTermsAsync).WithName("EditGalleryTerms");
@@ -61,6 +63,7 @@ public static class GalleryEndpoints
         group.MapPost("/{id:guid}/finals/publish", PublishFinalsAsync).WithName("AppPublishFinals");
         group.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("AppReleaseExtras");
         group.MapPost("/{id:guid}/zip/remove", RemoveZipAsync).WithName("AppRemoveZip");
+        group.MapPost("/{id:guid}/release", StudioEndpoints.ReleaseAsync).WithName("AppReleaseGallery");
         group.MapGet("/{id:guid}/finals/{photoId:guid}/download", GetFinalDownloadAsync).WithName("AppGetFinalDownload");
 
         // Uploading files from the phone: the phone prepares the photos (a proof is reduced and marked on the device) and the bytes go
@@ -94,6 +97,19 @@ public static class GalleryEndpoints
         TypedResults.Ok(await handler.HandleAsync(
             new ListGalleriesQuery(user.GetPhotographerId(), PageCursors.Read(cursor), PageSizes.Resolve(limit)),
             cancellationToken));
+
+    /// <summary>
+    /// Lists the galleries whose space can be freed (the delivered ones), the one delivered longest ago first.
+    /// </summary>
+    /// <param name="user">Authenticated photographer.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with up to 100 galleries; there is no next page.</returns>
+    private static async Task<Ok<GalleryListResponse>> ListArchivableAsync(
+        ClaimsPrincipal user,
+        IQueryHandler<ListArchivableGalleriesQuery, GalleryListResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ListArchivableGalleriesQuery(user.GetPhotographerId()), cancellationToken));
 
     /// <summary>
     /// Reads a gallery.

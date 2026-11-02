@@ -34,6 +34,14 @@ export interface StudioZipProps {
   readonly gallery: StudioGallery;
 }
 
+/** Props of the `ReleaseGalleryPanel` component. */
+export interface ReleaseGalleryPanelProps {
+  /** The gallery to release. */
+  readonly gallery: StudioGallery;
+  /** Whether another action is running, which blocks this one. */
+  readonly disabled: boolean;
+}
+
 /** Props of the `ReopenSelectionPanel` component. */
 export interface ReopenSelectionPanelProps {
   /** The gallery whose selection is reopened. */

@@ -101,6 +101,20 @@ export interface GalleryApi {
   removeZip(galleryId: string): Promise<GalleryResponse>;
 
   /**
+   * Frees the space of a delivered gallery: every photo and the ZIP are deleted from the storage and the gallery is archived. It cannot be undone.
+   * @param galleryId Gallery identifier.
+   * @returns The gallery, archived.
+   */
+  release(galleryId: string): Promise<GalleryResponse>;
+
+  /**
+   * Lists the galleries whose space can be freed: the delivered ones, the one delivered longest ago first.
+   * @param signal Optional signal to cancel the request.
+   * @returns The galleries.
+   */
+  listArchivable(signal?: AbortSignal): Promise<readonly GalleryResponse[]>;
+
+  /**
    * Asks for the address to download one final. It is not counted as a download of the client.
    * @param galleryId Gallery identifier.
    * @param photoId Photo identifier.

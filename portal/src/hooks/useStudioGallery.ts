@@ -146,6 +146,25 @@ export function useRemoveZip(galleryId: string): UseMutationResult<StudioGallery
 }
 
 /**
+ * Mutation that frees the space of a delivered gallery: its files are deleted and it is archived. The gallery it answers with replaces
+ * the cached one and the lists are loaded again. It is never retried on its own, and it cannot be undone.
+ * @param galleryId Gallery identifier.
+ * @returns The TanStack Query mutation.
+ */
+export function useReleaseGallery(galleryId: string): UseMutationResult<StudioGallery, Error, void> {
+  const queryClient = useQueryClient();
+  const guard = useSessionGuard();
+
+  return useMutation({
+    mutationFn: () => guard(() => studioApi.releaseGallery(galleryId)),
+    onSuccess: async (gallery) => {
+      queryClient.setQueryData(galleryKey(galleryId), gallery);
+      await queryClient.invalidateQueries({ queryKey: proofsKey(galleryId) });
+    },
+  });
+}
+
+/**
  * Mutation that asks for the address of one final photo and starts its download in the browser, for the photographer. It is not
  * counted as a download of the client.
  * @param galleryId Gallery identifier.

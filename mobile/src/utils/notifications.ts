@@ -32,6 +32,13 @@ export function describeNotification(notification: NotificationResponse): Notifi
     };
   }
 
+  if (notification.type === 'GalleryArchiveDue') {
+    return {
+      title: 'Galería lista para liberar',
+      detail: `La galería de ${notification.clientName} (${notification.packageName}) lleva 90 días entregada. Libera el espacio cuando ya tengas las fotos.`,
+    };
+  }
+
   return {
     title: 'Sesión próxima',
     detail: `${notification.clientName} · ${notification.packageName} · ${formatDateTime(notification.sessionStart)}`,

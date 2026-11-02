@@ -331,6 +331,7 @@ export function createStudioApi(client: HttpClient): StudioApi {
     requestZipUpload: (galleryId, bytes, signal) => client.post(`/api/web/galleries/${galleryId}/zip/upload`, { bytes }, parseZipSlot, { signal }),
     registerZip: (galleryId, signal) => client.post(`/api/web/galleries/${galleryId}/zip`, {}, parseStudioGalleryBody, { signal }),
     removeZip: (galleryId) => client.post(`/api/web/galleries/${galleryId}/zip/remove`, {}, parseStudioGalleryBody),
+    releaseGallery: (galleryId) => client.post(`/api/web/galleries/${galleryId}/release`, {}, parseStudioGalleryBody),
     getFinalDownload: (galleryId, photoId, signal) => client.get(`/api/web/galleries/${galleryId}/finals/${photoId}/download`, parseFinalDownload, { signal }),
     publishFinals: (galleryId) => client.post(`/api/web/galleries/${galleryId}/finals/publish`, {}, parseStudioGalleryBody),
     releaseExtras: (galleryId) => client.post(`/api/web/galleries/${galleryId}/extras/release`, {}, parseStudioGalleryBody),

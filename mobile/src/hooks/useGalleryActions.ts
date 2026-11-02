@@ -61,6 +61,14 @@ export function useGalleryActions(gallery: GalleryResponse): GalleryActionHandle
         { kind: 'removeZip' },
         true,
       ),
+    release: () =>
+      confirmAnd(
+        'Liberar espacio',
+        '¿Ya descargaste las fotos? Se borran de forma definitiva las pruebas, los finales y el ZIP, y la galería queda archivada: el cliente ya no podrá descargar. No se puede deshacer.',
+        'Sí, borrar todo',
+        { kind: 'release' },
+        true,
+      ),
     removeProof: (photoId: string) =>
       confirmAnd('Quitar esta prueba', 'Se quita de la galería. Solo se puede mientras el cliente no haya empezado a elegir.', 'Quitar', { kind: 'removeProof', photoId }, true),
   };

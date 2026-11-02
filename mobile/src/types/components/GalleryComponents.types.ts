@@ -117,3 +117,11 @@ export interface SplitSelection {
   /** The selection as the API sent it. */
   readonly selection: SelectionResponse;
 }
+
+/** Props of the `ArchivableGalleryItem` component. */
+export interface ArchivableGalleryItemProps {
+  /** The delivered gallery. */
+  readonly gallery: GalleryResponse;
+  /** Current instant in milliseconds since the epoch, to say how long ago it was delivered. */
+  readonly now: number;
+}

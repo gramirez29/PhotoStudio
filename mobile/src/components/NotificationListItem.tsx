@@ -25,6 +25,8 @@ export function NotificationListItem({
   const text = describeNotification(notification);
   const unread = notification.readAt === null;
   const isProof = notification.type === 'PaymentProofSubmitted';
+  const isArchive = notification.type === 'GalleryArchiveDue';
+  const opensBooking = isProof || isArchive;
 
   return (
     <AppCard style={[styles.card, unread && styles.unreadCard]}>
@@ -35,13 +37,13 @@ export function NotificationListItem({
       <Text style={styles.detail}>{text.detail}</Text>
       <Text style={styles.time}>{formatDateTime(notification.deliveredAt)}</Text>
       <View style={styles.actions}>
-        {isProof ? (
-          <ActionButton label="Revisar comprobante" onPress={() => onOpenBooking(notification)} />
+        {opensBooking ? (
+          <ActionButton label={isProof ? 'Revisar comprobante' : 'Abrir la reserva y su galería'} onPress={() => onOpenBooking(notification)} />
         ) : (
           <ActionButton label="Enviar por WhatsApp" onPress={() => onSendWhatsApp(notification)} />
         )}
         <View style={styles.secondaryRow}>
-          {!isProof && (
+          {!opensBooking && (
             <Pressable accessibilityRole="button" onPress={() => onOpenBooking(notification)} hitSlop={spacing.sm}>
               <Text style={styles.link}>Ver reserva</Text>
             </Pressable>

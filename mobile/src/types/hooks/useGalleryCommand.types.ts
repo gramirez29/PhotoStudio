@@ -8,4 +8,5 @@ export type GalleryCommand =
   | { readonly kind: 'reopenSelection'; readonly reason: string }
   | { readonly kind: 'publishFinals' }
   | { readonly kind: 'releaseExtras' }
-  | { readonly kind: 'removeZip' };
+  | { readonly kind: 'removeZip' }
+  | { readonly kind: 'release' };

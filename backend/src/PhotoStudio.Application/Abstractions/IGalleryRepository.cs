@@ -43,6 +43,24 @@ public interface IGalleryRepository
     Task UpdateAsync(Gallery gallery, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lists the delivered galleries of a photographer, the one delivered longest ago first: the ones whose space can be freed.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="limit">Maximum number of galleries to return.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The galleries, possibly empty.</returns>
+    Task<IReadOnlyList<Gallery>> ListDeliveredByPhotographerAsync(Guid photographerId, int limit, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lists delivered galleries whose delivery was at or before an instant, the oldest first: the ones whose retention ended.
+    /// </summary>
+    /// <param name="deliveredBefore">Latest delivery instant that is included.</param>
+    /// <param name="limit">Maximum number of galleries to return.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The galleries, possibly empty.</returns>
+    Task<IReadOnlyList<Gallery>> ListDeliveredBeforeAsync(DateTimeOffset deliveredBefore, int limit, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lists the galleries of a photographer, the most recently created first.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>

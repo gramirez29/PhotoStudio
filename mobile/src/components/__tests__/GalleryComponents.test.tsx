@@ -43,7 +43,7 @@ const booking = { ...parseBooking(bookingPayload), status: 'Completed' as const 
  * @returns The handlers.
  */
 function handlers(overrides: Partial<GalleryActionHandlers> = {}): GalleryActionHandlers {
-  return { isPending: false, errorMessage: null, openSelection: jest.fn(), publishFinals: jest.fn(), releaseExtras: jest.fn(), removeZip: jest.fn(), removeProof: jest.fn(), ...overrides };
+  return { isPending: false, errorMessage: null, openSelection: jest.fn(), publishFinals: jest.fn(), releaseExtras: jest.fn(), removeZip: jest.fn(), release: jest.fn(), removeProof: jest.fn(), ...overrides };
 }
 
 /**

@@ -5,6 +5,7 @@ using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Api.Studio;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Galleries;
+using PhotoStudio.Application.Galleries.Archive;
 using PhotoStudio.Application.Galleries.Finals;
 using PhotoStudio.Application.Galleries.GetGallery;
 using PhotoStudio.Application.Galleries.Proofs;
@@ -159,6 +160,7 @@ public static class StudioEndpoints
         galleries.MapPost("/{id:guid}/zip/upload", RequestZipUploadAsync).WithName("StudioRequestZipUpload").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/zip", RegisterZipAsync).WithName("StudioRegisterZip").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/zip/remove", RemoveZipAsync).WithName("StudioRemoveZip").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
+        galleries.MapPost("/{id:guid}/release", ReleaseAsync).WithName("StudioReleaseGallery").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
         galleries.MapPost("/{id:guid}/extras/release", ReleaseExtrasAsync).WithName("StudioReleaseExtras").RequireRateLimiting(RateLimitingExtensions.StudioUploadPolicy);
 
         return endpoints;
@@ -497,6 +499,21 @@ public static class StudioEndpoints
         IQueryHandler<GetFinalDownloadQuery, FinalDownloadResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new GetFinalDownloadQuery(user.GetPhotographerId(), id, photoId), cancellationToken));
+
+    /// <summary>
+    /// Frees the space of a delivered gallery: every photo and the ZIP are deleted from the storage and the gallery is archived. It cannot be undone.
+    /// </summary>
+    /// <param name="id">Gallery identifier.</param>
+    /// <param name="user">The principal of the session.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the gallery, archived; 409 <c>gallery.invalid_state</c> when it was not delivered; 404 when it does not exist or is another photographer's.</returns>
+    internal static async Task<Ok<GalleryResponse>> ReleaseAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        ICommandHandler<ReleaseGalleryCommand, GalleryResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new ReleaseGalleryCommand(user.GetPhotographerId(), id), cancellationToken));
 
     /// <summary>
     /// Asks for the place to upload the ZIP with the photos. The bytes go straight to the storage, not through the API.

@@ -16,6 +16,7 @@ export const GALLERY_ACTIONS = [
   'UploadFinals',
   'PublishFinals',
   'ReleaseExtras',
+  'Release',
   'UploadZip',
   'RemoveZip',
 ] as const;

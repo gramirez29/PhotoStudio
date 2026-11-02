@@ -14,4 +14,5 @@ public sealed record RunMaintenanceCommand;
 /// <param name="EventsProcessed">Outbox messages that were claimed for delivery.</param>
 /// <param name="NotificationsDelivered">Notifications that reached a photographer's inbox.</param>
 /// <param name="MoreWorkPending">Whether the pass stopped at its size limit and a new pass would find more to do.</param>
-public sealed record MaintenanceResponse(int BookingsExpired, int BookingsSkipped, int EventsProcessed, int NotificationsDelivered, bool MoreWorkPending);
+/// <param name="GalleriesArchived">Delivered galleries whose retention ended and whose files were deleted.</param>
+public sealed record MaintenanceResponse(int BookingsExpired, int BookingsSkipped, int EventsProcessed, int NotificationsDelivered, bool MoreWorkPending, int GalleriesArchived = 0);

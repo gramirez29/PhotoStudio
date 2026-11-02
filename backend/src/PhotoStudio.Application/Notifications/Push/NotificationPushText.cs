@@ -46,6 +46,9 @@ public static class NotificationPushText
                 var extra = details.ExtraPhotos is > 0 ? $" ({details.ExtraPhotos} extra)" : string.Empty;
                 return ("Selección recibida", $"{details.ClientName} eligió {selected} {(selected == 1 ? "foto" : "fotos")}{extra}.");
 
+            case NotificationType.GalleryArchiveDue:
+                return ("Galería lista para liberar", $"La galería de {details.ClientName} lleva {PhotoStudio.Domain.Galleries.Gallery.ArchiveNoticeDays} días entregada. Libera el espacio cuando ya tengas las fotos.");
+
             default:
                 return ("Sesión próxima", $"{details.ClientName} · {details.PackageName} · {FormatDateTime(details.SessionStart)}");
         }
