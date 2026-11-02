@@ -3,7 +3,7 @@ import { Alert, type AlertButton } from 'react-native';
 import { bookingsApi } from '../../api/client';
 import { parseBooking } from '../../api/bookingsApi';
 import { bookingPayload } from '../../api/__fixtures__/testResponses';
-import { openExternalUrl } from '../../navigation/externalLinks';
+import { openExternalUrl, shareText } from '../../navigation/externalLinks';
 import { createQueryWrapper } from '../__fixtures__/queryWrapper';
 import { useShareLink } from '../useShareLink';
 
@@ -40,6 +40,39 @@ describe('useShareLink', () => {
 
     expect(Alert.alert).toHaveBeenCalledWith('Enlace para el cliente', expect.stringContaining('dejará de funcionar'), expect.any(Array));
     expect(bookingsApi.createBookingLink).not.toHaveBeenCalled();
+  });
+
+  it('can hand the link to the share sheet of the system instead, to copy it or send it with another app', async () => {
+    jest.mocked(bookingsApi.createBookingLink).mockResolvedValue(link);
+    jest.mocked(shareText).mockResolvedValue(true);
+    const { result } = renderHook(() => useShareLink(booking), { wrapper: Wrapper });
+
+    act(() => result.current.shareOther());
+    expect(Alert.alert).toHaveBeenCalledWith('Enlace para el cliente', expect.stringContaining('menú de compartir'), expect.any(Array));
+    expect(bookingsApi.createBookingLink).not.toHaveBeenCalled();
+    act(() => {
+      const buttons: readonly AlertButton[] = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] ?? [];
+      buttons.find((button) => button.text === 'Crear y compartir')?.onPress?.();
+    });
+
+    await waitFor(() => expect(shareText).toHaveBeenCalledTimes(1));
+    expect(shareText).toHaveBeenCalledWith(expect.stringContaining(link.url));
+    expect(openExternalUrl).not.toHaveBeenCalled();
+    expect(result.current.errorMessage).toBeNull();
+  });
+
+  it('says so when the share sheet cannot be opened', async () => {
+    jest.mocked(bookingsApi.createBookingLink).mockResolvedValue(link);
+    jest.mocked(shareText).mockResolvedValue(false);
+    const { result } = renderHook(() => useShareLink(booking), { wrapper: Wrapper });
+
+    act(() => result.current.shareOther());
+    act(() => {
+      const buttons: readonly AlertButton[] = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2] ?? [];
+      buttons.find((button) => button.text === 'Crear y compartir')?.onPress?.();
+    });
+
+    await waitFor(() => expect(result.current.errorMessage).toContain('menú de compartir'));
   });
 
   it('creates the link and opens WhatsApp with the message and the URL', async () => {

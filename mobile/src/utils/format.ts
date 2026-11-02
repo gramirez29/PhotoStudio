@@ -27,6 +27,20 @@ export function formatDateTime(isoDate: string): string {
 }
 
 /**
+ * Formats the size of a file for people, in megabytes from one on and in kilobytes below, for example "4,2 MB" or "850 KB".
+ * @param bytes Size in bytes.
+ * @returns The text.
+ */
+export function formatBytes(bytes: number): string {
+  const megabytes = bytes / 1_048_576;
+  if (megabytes >= 1) {
+    return `${new Intl.NumberFormat(APP_LOCALE, { maximumFractionDigits: 1 }).format(megabytes)} MB`;
+  }
+
+  return `${new Intl.NumberFormat(APP_LOCALE).format(Math.max(1, Math.round(bytes / 1024)))} KB`;
+}
+
+/**
  * Formats a date as a long weekday and date in the device time zone, for example "sábado, 17 de octubre de 2026".
  * @param date Date to format.
  * @returns The formatted date.

@@ -43,7 +43,7 @@ function reviewState(overrides: Partial<PaymentReviewState> = {}): PaymentReview
  * @returns The state.
  */
 function shareState(overrides: Partial<ShareLinkState> = {}): ShareLinkState {
-  return { isPending: false, errorMessage: null, share: jest.fn(), ...overrides };
+  return { isPending: false, errorMessage: null, share: jest.fn(), shareOther: jest.fn(), ...overrides };
 }
 
 describe('PendingPaymentsCard', () => {

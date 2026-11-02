@@ -108,3 +108,27 @@ export function openSettings(): void {
 export function openNotifications(): void {
   router.push('/notifications');
 }
+
+/**
+ * Opens the gallery of a session, where the photographer sees the selection and runs the steps of the delivery.
+ * @param galleryId Gallery identifier.
+ */
+export function openGallery(galleryId: string): void {
+  router.push({ pathname: '/galleries/[id]', params: { id: galleryId } });
+}
+
+/**
+ * Opens the screen where the photographer changes the terms of a gallery: included photos, gift photos and the price of an extra.
+ * @param galleryId Gallery identifier.
+ */
+export function openGalleryTerms(galleryId: string): void {
+  router.push({ pathname: '/galleries/terms', params: { id: galleryId } });
+}
+
+/**
+ * Opens the screen where the photographer writes why the selection of the client is reopened.
+ * @param galleryId Gallery identifier.
+ */
+export function openGalleryReopen(galleryId: string): void {
+  router.push({ pathname: '/galleries/reopen', params: { id: galleryId } });
+}

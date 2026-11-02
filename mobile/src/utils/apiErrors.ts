@@ -4,6 +4,34 @@ import { ApiError } from '../api/httpClient';
 export const NETWORK_ERROR_MESSAGE = 'No se pudo conectar con el servidor. Revisa la conexión e inténtalo de nuevo.';
 
 /**
+ * Converts the error of a failed gallery request into a message for the photographer.
+ * @param error Error of the query or the mutation.
+ * @returns The message in Spanish.
+ */
+export function galleryErrorMessage(error: Error): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'gallery.invalid_state':
+        return 'La galería ya no está en un estado que permita esta acción. Vuelve atrás y revisa su estado.';
+      case 'gallery.finals_incomplete':
+        return 'Faltan finales: cada foto del paquete necesita el suyo antes de publicar, y las extras necesitan al menos uno para entregarlas.';
+      case 'gallery.no_photos':
+        return 'Sube al menos una prueba antes de publicar.';
+      case 'gallery.invalid_terms':
+        return 'Esos números no son válidos: revisa las fotos incluidas, las de regalo y el precio.';
+      case 'booking.reason_required':
+        return 'Escribe el motivo, de hasta 500 caracteres.';
+      case 'resource.not_found':
+        return 'No encontramos esta galería.';
+      default:
+        break;
+    }
+  }
+
+  return NETWORK_ERROR_MESSAGE;
+}
+
+/**
  * Converts the error of a failed "load booking" request into a message for the photographer.
  * @param error Error of the query.
  * @returns The message in Spanish.

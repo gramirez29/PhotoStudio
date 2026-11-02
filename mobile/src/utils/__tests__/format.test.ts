@@ -1,4 +1,13 @@
-import { formatDate, formatDateTime, formatMoney, formatTime } from '../format';
+import { formatBytes, formatDate, formatDateTime, formatMoney, formatTime } from '../format';
+
+describe('formatBytes', () => {
+  it('writes megabytes from one on and kilobytes below, in Spanish', () => {
+    expect(formatBytes(4_404_019)).toBe('4,2 MB');
+    expect(formatBytes(1_048_576)).toBe('1 MB');
+    expect(formatBytes(870_000)).toBe('850 KB');
+    expect(formatBytes(10)).toBe('1 KB');
+  });
+});
 
 describe('formatMoney', () => {
   it('formats colones with the currency symbol', () => {

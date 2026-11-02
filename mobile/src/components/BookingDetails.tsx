@@ -6,6 +6,7 @@ import { formatDateTime } from '../utils/format';
 import { AmountRow } from './AmountRow';
 import { BookingActions } from './BookingActions';
 import { ContractCard } from './ContractCard';
+import { GalleryCard } from './GalleryCard';
 import { PendingPaymentsCard } from './PendingPaymentsCard';
 import { SettlementCard } from './SettlementCard';
 import { ShareLinkCard } from './ShareLinkCard';
@@ -51,6 +52,8 @@ export function BookingDetails({ booking }: BookingDetailsProps): ReactElement {
       <PendingPaymentsCard booking={booking} />
 
       <SettlementCard booking={booking} />
+
+      <GalleryCard booking={booking} />
 
       <BookingActions booking={booking} />
 

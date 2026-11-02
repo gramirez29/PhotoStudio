@@ -289,3 +289,24 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Pendiente:** hacer la miniatura desde el celular al subir finales (PR 9). La app del celular usa esta misma cuadrícula (PR 8c).
 
 **Pruebas:** backend dominio +2, aplicación +6 y la de API de punta a punta (sube final y miniatura a R2, el cliente descarga la miniatura y mira el final real sin que cuente, una extra sin liberar se rechaza); portal 11 nuevas (renderer de miniaturas, visor, cuadrículas, mirar el final real).
+
+## 24. La galería en la app del celular (PR 8c)
+
+**Criterio acordado (2026-11-04):** el trabajo pesado se hace en la computadora, pero todo lo que se puede hacer en la web de `/studio` debe poder hacerse también en el celular, para no depender de tener la computadora a mano. Subir archivos (pruebas, finales, ZIP) es lo único que queda para el PR 9, porque el teléfono tiene que preparar las fotos.
+
+**Dónde está:** en el detalle de una reserva **completada**, la tarjeta **"Galería de fotos"** (estado en una píldora, qué sigue, fotos incluidas y precio de la extra, cuántas fotos eligió el cliente) con **"Abrir la galería"**, que lleva a la pantalla de la galería (`galleries/[id]`).
+
+**La pantalla de la galería** (con las rutas `/api/galleries/{id}/…` y el token de la app, las mismas reglas que la web)
+- **Acciones** (solo las que dice `allowedActions`; las que cambian algo piden confirmar con un texto que explica qué pasa): publicar las pruebas, publicar los finales del paquete, entregar las adicionales ("¿el cliente ya pagó?"), **reabrir la selección** (pantalla aparte que pide el motivo, obligatorio, que el cliente no ve) y **fotos incluidas, de regalo y precio de la extra** (pantalla aparte; es la forma de regalar fotos).
+- **Pruebas:** se cargan solo al pedirlas ("Ver las pruebas"), porque son muchas imágenes y el teléfono puede estar con datos; mantener presionada una prueba la quita (con confirmación) mientras se pueda.
+- **Selección del cliente** en dos bloques, **paquete** y **adicionales**: cuadrícula de fotos de 2 columnas (la miniatura del final o, si aún no lo tiene, la prueba), con la etiqueta "Final / Sin final", el nombre, la ficha (`final subido · 1250 × 3000 px · 4,2 MB · tomada el … · descargada 2 veces`) y **⬇ Descargar**, que abre la dirección del final en el navegador del teléfono. **Copiar o compartir los nombres** de cada bloque abre el menú de compartir del sistema (copiar, o mandarlos a otra app), uno por línea.
+- **Foto real:** al tocar una foto se abre a pantalla completa **el final tal cual se editó** (con anterior y siguiente), de a una por vez; mientras llega se ve la miniatura, y si no se puede cargar lo dice y deja la miniatura.
+- **ZIP:** su peso y si el cliente lo descargó (cuántas veces y cuándo), y **Borrar el ZIP**.
+
+**Enlace del cliente:** la tarjeta de la reserva ahora ofrece, además de WhatsApp, **"Copiar o enviar por otra app"**, que crea el enlace y abre el menú de compartir del sistema (misma confirmación: el enlace anterior deja de funcionar).
+
+**Sin módulos nativos nuevos:** compartir usa `Share` de React Native y las descargas `Linking`, así que llega por actualización de JavaScript, sin un build nuevo de EAS.
+
+**Pruebas:** app 43 nuevas (921 en total): lectura de las respuestas, rutas llamadas, textos de estado, ficha y validaciones, las acciones con su confirmación, las pantallas (tarjeta, selección en dos bloques, visor de la foto real, cuadrícula de pruebas, ZIP) y las dos opciones del enlace. El paquete de Android se exporta sin errores.
+
+**Pendiente (PR 9):** subir pruebas, finales (con su miniatura) y ZIP desde el celular.
