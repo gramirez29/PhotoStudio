@@ -373,7 +373,7 @@ describe('the gallery of the client', () => {
       expect(await screen.findByRole('heading', { name: 'Tus fotos están listas' })).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Fotos de tu paquete' })).toHaveTextContent('Fotos de tu paquete (2)');
       expect(screen.getByText('IMG_0004.jpg')).toBeInTheDocument();
-      expect(screen.getAllByText('4,2 MB')).toHaveLength(2);
+      expect(screen.getAllByText('Tamaño: 4.2 MB')).toHaveLength(2);
       expect(screen.getByRole('checkbox', { name: 'Seleccionar IMG_0004.jpg' })).not.toBeChecked();
       expect(screen.queryByRole('group', { name: 'Fotos adicionales' })).not.toBeInTheDocument();
       expect(screen.getByText(/Elegiste 1 foto adicional .*3.*000.*PhotoSense Studio te contactará/)).toBeInTheDocument();

@@ -5,7 +5,7 @@ import type { PortalFinal } from '../types/api/portal';
 import type { GalleryDownloadsProps } from '../types/components/GalleryComponents.types';
 import { describeDownloadError } from '../utils/apiErrors';
 import { downloadInSequence, toDownloads, totalBytes } from '../utils/downloads';
-import { formatBytes, formatMoney } from '../utils/format';
+import { formatBytes, formatMegabytes, formatMoney } from '../utils/format';
 import { CheckboxField } from './CheckboxField';
 import { PhotoCard } from './PhotoCard';
 import { PhotoViewer } from './PhotoViewer';
@@ -222,7 +222,7 @@ function DownloadGroup({ title, proofs, finals, marked, disabled, onToggle, onDo
             key={final.id}
             image={final.thumbUrl ?? proofs.get(final.id) ?? null}
             name={final.fileName}
-            details={[formatBytes(final.bytes)]}
+            details={[`Tamaño: ${formatMegabytes(final.bytes)}`]}
             openLabel={`Ver ${final.fileName}`}
             onOpen={() => onView(final)}
             select={{ checked: marked.has(final.id), onChange: () => onToggle(final.id), label: `Seleccionar ${final.fileName}`, disabled }}

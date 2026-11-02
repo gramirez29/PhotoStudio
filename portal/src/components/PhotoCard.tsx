@@ -39,8 +39,8 @@ export function PhotoCard({ image, name, details, openLabel, onOpen, badge, sele
           <span className="photo-card__name" title={name}>
             {name}
           </span>
-          {details.map((line) => (
-            <span key={line} className="photo-card__details">
+          {details.map((line, position) => (
+            <span key={position} className="photo-card__details">
               {line}
             </span>
           ))}

@@ -36,9 +36,12 @@ describe('describeFinal', () => {
 
 describe('describeFinalLines', () => {
   it('splits what is known about a final in short lines for its card', () => {
-    expect(describeFinalLines(selection.photos[0]!)).toEqual(['1250 × 3000 px · 4,2 MB', expect.stringMatching(/^Tomada el .*17 de octubre de 2026$/), 'Descargada 2 veces']);
-    expect(describeFinalLines({ ...selection.photos[0]!, finalWidth: null, finalCapturedAt: null, finalDownloads: 0 })).toEqual(['4,2 MB', 'Sin descargas']);
-    expect(describeFinalLines(selection.photos[1]!)).toEqual(['Todavía sin final']);
+    expect(describeFinalLines(selection.photos[0]!)).toEqual(['1250 x 3000 px', 'Tamaño: 4.2 MB', 'Tomada: 17/10/2026', 'Descargas hechas: 2']);
+  });
+
+  it('replaces every value that is not known by a dash, keeping the four lines', () => {
+    expect(describeFinalLines({ ...selection.photos[0]!, finalWidth: null, finalCapturedAt: null, finalDownloads: 0 })).toEqual(['-', 'Tamaño: 4.2 MB', 'Tomada: -', 'Descargas hechas: 0']);
+    expect(describeFinalLines(selection.photos[1]!)).toEqual(['-', 'Tamaño: -', 'Tomada: -', 'Descargas hechas: -']);
   });
 });
 

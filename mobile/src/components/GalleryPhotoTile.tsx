@@ -42,8 +42,8 @@ export function GalleryPhotoTile({ photo, onOpen, onDownload, downloading }: Gal
           <Text style={styles.name} numberOfLines={2}>
             {photo.name}
           </Text>
-          {describeFinalLines(photo).map((line) => (
-            <Text key={line} style={styles.info}>
+          {describeFinalLines(photo).map((line, position) => (
+            <Text key={position} style={styles.info}>
               {line}
             </Text>
           ))}
@@ -121,7 +121,7 @@ const useStyles = makeStyles((palette) => ({
   },
   name: {
     color: palette.onSurface,
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: FONT_FAMILIES.bodyBold,
   },
   info: {

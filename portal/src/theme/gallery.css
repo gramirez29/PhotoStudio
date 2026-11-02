@@ -206,6 +206,7 @@
   -webkit-line-clamp: 2;
   color: var(--color-text);
   display: -webkit-box;
+  font-size: 0.85rem;
   font-weight: 700;
   line-height: 1.3;
   overflow: hidden;

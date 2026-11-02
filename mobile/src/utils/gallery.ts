@@ -1,6 +1,6 @@
 import type { GalleryResponse, GalleryStatus, SelectedPhoto, SelectionResponse } from '../types/api/gallery';
 import type { GalleryStatusView } from '../types/utils/gallery.types';
-import { formatBytes, formatDate, formatDateTime, formatMoney } from './format';
+import { formatBytes, formatDate, formatDateTime, formatMegabytes, formatMoney, formatShortDate } from './format';
 
 /** What each state of a gallery says to the photographer, and the color it takes. */
 const STATUS_VIEWS: Readonly<Record<GalleryStatus, GalleryStatusView>> = {
@@ -58,26 +58,20 @@ export function describeFinal(photo: SelectedPhoto): string {
 }
 
 /**
- * Describes the final of a photo in short lines for its card: the size in pixels and in megabytes, when it was taken and how many
- * times the client asked to download it; or that it has none yet.
+ * Describes the final of a photo in four short lines for its card, each with its own value: the size in pixels, the weight, the date
+ * it was taken and how many times the client downloaded it. A value that is not known is shown as a dash, so the four lines are
+ * always there and the cards line up.
  * @param photo The photo.
- * @returns The lines, one under the other.
+ * @returns The four lines, one under the other.
  */
 export function describeFinalLines(photo: SelectedPhoto): readonly string[] {
-  if (photo.finalBytes === null) {
-    return ['Todavía sin final'];
-  }
-
-  const size = [photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} × ${photo.finalHeight} px` : null, formatBytes(photo.finalBytes)]
-    .filter((part): part is string => part !== null)
-    .join(' · ');
-  const lines = [size];
-  if (photo.finalCapturedAt !== null) {
-    lines.push(`Tomada el ${formatDate(new Date(photo.finalCapturedAt))}`);
-  }
-
-  lines.push(photo.finalDownloads === 0 ? 'Sin descargas' : `Descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
-  return lines;
+  const hasFinal = photo.finalBytes !== null;
+  return [
+    photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} x ${photo.finalHeight} px` : '-',
+    `Tamaño: ${photo.finalBytes === null ? '-' : formatMegabytes(photo.finalBytes)}`,
+    `Tomada: ${photo.finalCapturedAt === null ? '-' : formatShortDate(photo.finalCapturedAt)}`,
+    `Descargas hechas: ${hasFinal ? photo.finalDownloads : '-'}`,
+  ];
 }
 
 /**

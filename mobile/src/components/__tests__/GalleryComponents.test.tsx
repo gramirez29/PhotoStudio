@@ -120,9 +120,11 @@ describe('GallerySelection', () => {
     expect(screen.getByText('Fotos del paquete (2)')).toBeTruthy();
     expect(screen.getByText('Fotos adicionales (1)')).toBeTruthy();
     expect(screen.getByText('1 de 2 con su final')).toBeTruthy();
-    expect(screen.getByText('1250 × 3000 px · 4,2 MB')).toBeTruthy();
-    expect(screen.getByText('Descargada 2 veces')).toBeTruthy();
-    expect(screen.getAllByText('Todavía sin final')).toHaveLength(2);
+    expect(screen.getByText('1250 x 3000 px')).toBeTruthy();
+    expect(screen.getByText('Tamaño: 4.2 MB')).toBeTruthy();
+    expect(screen.getByText('Tomada: 17/10/2026')).toBeTruthy();
+    expect(screen.getByText('Descargas hechas: 2')).toBeTruthy();
+    expect(screen.getAllByText('Descargas hechas: -')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Ver IMG_0001.CR2' })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Descargar/ })).toHaveLength(1);
   });

@@ -3,7 +3,7 @@ import { studioApi } from '../api/client';
 import { useDownloadFinal, useStudioSelection } from '../hooks/useStudioGallery';
 import type { StudioSelectedPhoto } from '../types/api/studio';
 import type { StudioSelectionProps } from '../types/components/ProofComponents.types';
-import { formatBytes, formatDateTime, formatDay, formatMoney } from '../utils/format';
+import { formatBytes, formatDateTime, formatDay, formatMegabytes, formatMoney, formatShortDate } from '../utils/format';
 import { describeProofRequestError } from '../utils/proofMessages';
 import { PhotoCard } from './PhotoCard';
 import { PhotoViewer } from './PhotoViewer';
@@ -180,26 +180,20 @@ function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: S
 }
 
 /**
- * Describes the final of a photo in short lines for its card: the size in pixels and in megabytes, when it was taken and how many
- * times the client asked to download it; or that it has none yet.
+ * Describes the final of a photo in four short lines for its card, each with its own value: the size in pixels, the weight, the date
+ * it was taken and how many times the client downloaded it. A value that is not known is shown as a dash, so the four lines are
+ * always there and the cards line up.
  * @param photo The photo.
- * @returns The lines, one under the other.
+ * @returns The four lines, one under the other.
  */
 export function describeFinalLines(photo: StudioSelectedPhoto): readonly string[] {
-  if (photo.finalBytes === null) {
-    return ['Todavía sin final'];
-  }
-
-  const size = [photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} × ${photo.finalHeight} px` : null, formatBytes(photo.finalBytes)]
-    .filter((part): part is string => part !== null)
-    .join(' · ');
-  const lines = [size];
-  if (photo.finalCapturedAt !== null) {
-    lines.push(`Tomada el ${formatDay(photo.finalCapturedAt)}`);
-  }
-
-  lines.push(photo.finalDownloads === 0 ? 'Sin descargas' : `Descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
-  return lines;
+  const hasFinal = photo.finalBytes !== null;
+  return [
+    photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} x ${photo.finalHeight} px` : '-',
+    `Tamaño: ${photo.finalBytes === null ? '-' : formatMegabytes(photo.finalBytes)}`,
+    `Tomada: ${photo.finalCapturedAt === null ? '-' : formatShortDate(photo.finalCapturedAt)}`,
+    `Descargas hechas: ${hasFinal ? photo.finalDownloads : '-'}`,
+  ];
 }
 
 /**
