@@ -28,7 +28,7 @@ export class ProofUploadError extends Error {
  * @throws NetworkError When the storage could not be reached.
  * @throws ProofUploadError When the storage answered with an error.
  */
-export async function putProof(slot: ProofUploadSlot, proof: Blob, signal?: AbortSignal, fetchFn: typeof fetch = (input, init) => fetch(input, init)): Promise<void> {
+export async function putProof(slot: Pick<ProofUploadSlot, 'url' | 'headers'>, proof: Blob, signal?: AbortSignal, fetchFn: typeof fetch = (input, init) => fetch(input, init)): Promise<void> {
   let response: Response;
   try {
     response = await fetchFn(slot.url, {

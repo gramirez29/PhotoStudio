@@ -73,6 +73,7 @@ export const galleryPayload = {
   finalsPublishedAt: null,
   deliveredAt: null,
   extrasReleasedAt: null,
+  zip: null,
 } as const;
 
 /** The photographer of a web session as the API sends them. */

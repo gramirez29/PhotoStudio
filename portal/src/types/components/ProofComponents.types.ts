@@ -28,6 +28,12 @@ export interface StudioFinalsProps {
   readonly gallery: StudioGallery;
 }
 
+/** Props of the `StudioZip` component. */
+export interface StudioZipProps {
+  /** The gallery whose ZIP is shown. */
+  readonly gallery: StudioGallery;
+}
+
 /** Props of the `FinalsPicker` component. */
 export interface FinalsPickerProps {
   /** True while an upload is running: nothing more can be chosen. */

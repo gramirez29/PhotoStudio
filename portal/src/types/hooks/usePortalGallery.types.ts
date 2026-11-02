@@ -1,3 +1,11 @@
+/** What the mutation that asks for the addresses to download some photos needs. */
+export interface RequestDownloadsVariables {
+  /** Token of the session obtained by verifying a code. */
+  readonly accessToken: string;
+  /** Identifiers of the photos the client wants. */
+  readonly photoIds: readonly string[];
+}
+
 /** What the mutation that sends the selection needs. */
 export interface SubmitSelectionVariables {
   /** Token of the session obtained by verifying a code. */

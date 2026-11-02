@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 import { studioApi } from '../api/client';
 import { PROOF_LIST_STALE_MS } from '../constants/proof';
+import { triggerDownload } from '../media/browserDownload';
 import type { StudioProof } from '../types/api/proofs';
 import type { StudioGallery, StudioSelection } from '../types/api/studio';
 import { STUDIO_DATA_PREFIX } from './useStudioSession';
@@ -105,6 +106,38 @@ export function usePublishFinals(galleryId: string): UseMutationResult<StudioGal
       queryClient.setQueryData(galleryKey(galleryId), gallery);
       void queryClient.invalidateQueries({ queryKey: selectionKey(galleryId) });
       void queryClient.invalidateQueries({ queryKey: STUDIO_DATA_PREFIX, exact: true });
+    },
+  });
+}
+
+/**
+ * Mutation that deletes the ZIP. The gallery it answers with replaces the cached one. It is never retried on its own.
+ * @param galleryId Gallery identifier.
+ * @returns The TanStack Query mutation.
+ */
+export function useRemoveZip(galleryId: string): UseMutationResult<StudioGallery, Error, void> {
+  const queryClient = useQueryClient();
+  const guard = useSessionGuard();
+
+  return useMutation({
+    mutationFn: () => guard(() => studioApi.removeZip(galleryId)),
+    onSuccess: (gallery) => queryClient.setQueryData(galleryKey(galleryId), gallery),
+  });
+}
+
+/**
+ * Mutation that asks for the address of one final photo and starts its download in the browser, for the photographer. It is not
+ * counted as a download of the client.
+ * @param galleryId Gallery identifier.
+ * @returns The TanStack Query mutation; its variable is the identifier of the photo.
+ */
+export function useDownloadFinal(galleryId: string): UseMutationResult<void, Error, string> {
+  const guard = useSessionGuard();
+
+  return useMutation({
+    mutationFn: async (photoId: string) => {
+      const link = await guard(() => studioApi.getFinalDownload(galleryId, photoId));
+      triggerDownload(link);
     },
   });
 }

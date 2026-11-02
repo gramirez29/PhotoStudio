@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react';
-import { useGallery } from '../hooks/usePortalGallery';
+import { useGallery, useRequestDownloads, useRequestZip } from '../hooks/usePortalGallery';
 import type { GalleryChooserProps } from '../types/components/GalleryComponents.types';
 import { describeGalleryLoadError } from '../utils/apiErrors';
 import { GalleryDownloads } from './GalleryDownloads';
@@ -16,6 +16,8 @@ import { StepHeading } from './StepHeading';
  */
 export function GalleryChooser({ token, session, onSessionExpired, onClose }: GalleryChooserProps): ReactElement | null {
   const gallery = useGallery(token, session.accessToken);
+  const downloads = useRequestDownloads(token);
+  const zip = useRequestZip(token);
   const [justSent, setJustSent] = useState(false);
   const failure = gallery.isError ? describeGalleryLoadError(gallery.error) : null;
   const expired = failure?.sessionExpired === true;
@@ -63,10 +65,9 @@ export function GalleryChooser({ token, session, onSessionExpired, onClose }: Ga
     return (
       <GalleryDownloads
         gallery={gallery.data}
-        refresh={async () => {
-          const result = await gallery.refetch();
-          return result.data ?? null;
-        }}
+        requestDownloads={(photoIds) => downloads.mutateAsync({ accessToken: session.accessToken, photoIds })}
+        requestZip={() => zip.mutateAsync(session.accessToken)}
+        onSessionExpired={onSessionExpired}
         onClose={onClose}
       />
     );

@@ -68,7 +68,13 @@ export function createFinalUploader(deps: FinalUploaderDeps): FinalUploader {
         }
 
         try {
-          const result = await deps.api.registerFinals(galleryId, sent.map((item) => item.photoId), signal);
+          const details = await Promise.all(
+            sent.map(async (item) => {
+              const info = await deps.readInfo(item.file);
+              return { photoId: item.photoId, width: info.width, height: info.height, capturedAt: info.capturedAt };
+            }),
+          );
+          const result = await deps.api.registerFinals(galleryId, sent.map((item) => item.photoId), details, signal);
           const rejected = new Map(result.rejected.map((rejection) => [rejection.photoId, rejection.reason]));
           for (const item of sent) {
             const reason = rejected.get(item.photoId);

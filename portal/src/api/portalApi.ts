@@ -7,6 +7,7 @@ import type {
   PortalCodeSent,
   PortalContract,
   PortalExtra,
+  PortalDownload,
   PortalFinal,
   PortalGallery,
   PortalGallerySummary,
@@ -14,6 +15,7 @@ import type {
   PortalProof,
   PortalSelection,
   PortalSession,
+  PortalZipDownload,
 } from '../types/api/portal';
 import type { PortalApi } from '../types/api/portalApi';
 import { expectRecord, readArray, readBoolean, readLiteral, readNullableString, readNumber, readString } from './guards';
@@ -186,13 +188,47 @@ export function parsePortalGallery(value: unknown): PortalGallery {
             return {
               id: readString(final, 'id', itemPath),
               fileName: readString(final, 'fileName', itemPath),
-              url: readString(final, 'url', itemPath),
-              expiresAt: readString(final, 'expiresAt', itemPath),
               bytes: readNumber(final, 'bytes', itemPath),
               isExtra: readBoolean(final, 'isExtra', itemPath),
             };
           }),
     extrasReleased: record.extrasReleased === true,
+    zip: record.zip === null || record.zip === undefined ? null : { bytes: readNumber(expectRecord(record.zip, `${path}.zip`), 'bytes', `${path}.zip`) },
+  };
+}
+
+/**
+ * Parses the addresses to download the photos the client asked for.
+ * @param value Unknown response body.
+ * @returns One address per photo.
+ */
+export function parseDownloads(value: unknown): readonly PortalDownload[] {
+  const path = 'downloads';
+  return readArray(expectRecord(value, path), 'items', path).map((item, index): PortalDownload => {
+    const itemPath = `${path}.items[${index}]`;
+    const download = expectRecord(item, itemPath);
+    return {
+      id: readString(download, 'id', itemPath),
+      fileName: readString(download, 'fileName', itemPath),
+      url: readString(download, 'url', itemPath),
+      expiresAt: readString(download, 'expiresAt', itemPath),
+    };
+  });
+}
+
+/**
+ * Parses the address to download the ZIP.
+ * @param value Unknown response body.
+ * @returns The address and what the client needs to know about the file.
+ */
+export function parseZipDownload(value: unknown): PortalZipDownload {
+  const path = 'zipDownload';
+  const record = expectRecord(value, path);
+  return {
+    fileName: readString(record, 'fileName', path),
+    url: readString(record, 'url', path),
+    expiresAt: readString(record, 'expiresAt', path),
+    bytes: readNumber(record, 'bytes', path),
   };
 }
 
@@ -221,6 +257,9 @@ export function createPortalApi(client: HttpClient): PortalApi {
       client.post(pathOf(token, '/contract'), request, parsePortalBooking, { accessToken, signal }),
     getGallerySummary: (token, signal) => client.get(pathOf(token, '/gallery/summary'), parseGallerySummary, { signal }),
     getGallery: (token, accessToken, signal) => client.get(pathOf(token, '/gallery'), parsePortalGallery, { accessToken, signal }),
+    requestDownloads: (token, accessToken, photoIds, signal) =>
+      client.post(pathOf(token, '/gallery/downloads'), { photoIds }, parseDownloads, { accessToken, signal }),
+    requestZipDownload: (token, accessToken, signal) => client.post(pathOf(token, '/gallery/zip/download'), {}, parseZipDownload, { accessToken, signal }),
     submitSelection: (token, accessToken, photoIds, acceptExtras, signal) =>
       client.post(pathOf(token, '/gallery/selection'), { photoIds, acceptExtras }, parsePortalGallery, { accessToken, signal }),
   };

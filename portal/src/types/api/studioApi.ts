@@ -1,4 +1,4 @@
-import type { FinalFileInfo } from './finals';
+import type { FinalDetailsInfo, FinalDownloadLink, FinalFileInfo, ZipUploadSlot } from './finals';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from './proofs';
 import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from './studio';
 
@@ -118,10 +118,44 @@ export interface StudioApi {
    * Registers the finals that were uploaded; the API looks at what is really in the storage first.
    * @param galleryId Gallery identifier.
    * @param photoIds The photos of the selection whose finals were uploaded, 1 to 50.
+   * @param details What the browser read from each file (size in pixels, date taken); may be empty.
    * @param signal Optional signal to cancel the request.
    * @returns The gallery and the finals that were not accepted.
    */
-  registerFinals(galleryId: string, photoIds: readonly string[], signal?: AbortSignal): Promise<RegisterProofsResult>;
+  registerFinals(galleryId: string, photoIds: readonly string[], details: readonly FinalDetailsInfo[], signal?: AbortSignal): Promise<RegisterProofsResult>;
+
+  /**
+   * Asks for the place to upload the ZIP with the photos, which the photographer made by hand. The bytes go straight to the storage.
+   * @param galleryId Gallery identifier.
+   * @param bytes Size of the file.
+   * @param signal Optional signal to cancel the request.
+   * @returns The place to upload to.
+   */
+  requestZipUpload(galleryId: string, bytes: number, signal?: AbortSignal): Promise<ZipUploadSlot>;
+
+  /**
+   * Registers the ZIP that was uploaded; the API looks at what is really in the storage first.
+   * @param galleryId Gallery identifier.
+   * @param signal Optional signal to cancel the request.
+   * @returns The gallery with its ZIP.
+   */
+  registerZip(galleryId: string, signal?: AbortSignal): Promise<StudioGallery>;
+
+  /**
+   * Deletes the ZIP, from the gallery and from the storage.
+   * @param galleryId Gallery identifier.
+   * @returns The gallery without its ZIP.
+   */
+  removeZip(galleryId: string): Promise<StudioGallery>;
+
+  /**
+   * Asks for the address to download one final photo. It is not counted as a download of the client.
+   * @param galleryId Gallery identifier.
+   * @param photoId Identifier of the chosen photo.
+   * @param signal Optional signal to cancel the request.
+   * @returns The address and the name to save the file with.
+   */
+  getFinalDownload(galleryId: string, photoId: string, signal?: AbortSignal): Promise<FinalDownloadLink>;
 
   /**
    * Publishes the final photos of the package; the client downloads them as soon as the balance is zero.

@@ -81,6 +81,12 @@
   text-underline-offset: 3px;
 }
 
+.downloads__zip {
+  border: 1px solid var(--color-silver);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
 .downloads__list {
   display: flex;
   flex-direction: column;

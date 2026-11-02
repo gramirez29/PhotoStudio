@@ -1,8 +1,8 @@
 import { GALLERIES_PAGE_SIZE, GALLERY_ACTIONS, GALLERY_STATUSES } from '../constants/gallery';
 import type { HttpClient } from '../types/api/http';
-import type { FinalFileInfo } from '../types/api/finals';
+import type { FinalDetailsInfo, FinalDownloadLink, FinalFileInfo, ZipUploadSlot } from '../types/api/finals';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from '../types/api/proofs';
-import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from '../types/api/studio';
+import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser, StudioZip } from '../types/api/studio';
 import type { StudioApi } from '../types/api/studioApi';
 import { expectRecord, readArray, readLiteral, readNullableString, readNumber, readString } from './guards';
 import { parseMoney } from './portalApi';
@@ -89,7 +89,51 @@ export function parseStudioGallery(value: unknown, path: string): StudioGallery 
     finalsPublishedAt: readNullableString(record, 'finalsPublishedAt', path),
     deliveredAt: readNullableString(record, 'deliveredAt', path),
     extrasReleasedAt: readNullableString(record, 'extrasReleasedAt', path),
+    zip: record.zip === null || record.zip === undefined ? null : parseStudioZip(record.zip, `${path}.zip`),
   };
+}
+
+/**
+ * Parses the ZIP of a gallery.
+ * @param value Unknown value from the response.
+ * @param path Location of the value, for error messages.
+ * @returns The typed ZIP.
+ */
+export function parseStudioZip(value: unknown, path: string): StudioZip {
+  const record = expectRecord(value, path);
+  return {
+    bytes: readNumber(record, 'bytes', path),
+    uploadedAt: readString(record, 'uploadedAt', path),
+    downloads: readCount(record, 'downloads', path),
+    lastDownloadedAt: readNullableString(record, 'lastDownloadedAt', path),
+  };
+}
+
+/**
+ * Parses the place to upload the ZIP.
+ * @param value Unknown response body.
+ * @returns The place.
+ */
+export function parseZipSlot(value: unknown): ZipUploadSlot {
+  const path = 'zipUpload';
+  const record = expectRecord(value, path);
+  const headers = expectRecord(record.headers, `${path}.headers`);
+  return {
+    url: readString(record, 'url', path),
+    headers: Object.fromEntries(Object.keys(headers).map((name) => [name, readString(headers, name, `${path}.headers`)])),
+    expiresAt: readString(record, 'expiresAt', path),
+  };
+}
+
+/**
+ * Parses the address to download a final.
+ * @param value Unknown response body.
+ * @returns The address and the name to save the file with.
+ */
+export function parseFinalDownload(value: unknown): FinalDownloadLink {
+  const path = 'finalDownload';
+  const record = expectRecord(value, path);
+  return { fileName: readString(record, 'fileName', path), url: readString(record, 'url', path) };
 }
 
 /**
@@ -184,6 +228,10 @@ export function parseStudioSelection(value: unknown): StudioSelection {
         name: readString(photo, 'name', itemPath),
         isExtra: photo.isExtra === true,
         finalBytes: photo.finalBytes === null || photo.finalBytes === undefined ? null : readNumber(photo, 'finalBytes', itemPath),
+        finalWidth: photo.finalWidth === null || photo.finalWidth === undefined ? null : readNumber(photo, 'finalWidth', itemPath),
+        finalHeight: photo.finalHeight === null || photo.finalHeight === undefined ? null : readNumber(photo, 'finalHeight', itemPath),
+        finalCapturedAt: readNullableString(photo, 'finalCapturedAt', itemPath),
+        finalDownloads: photo.finalDownloads === null || photo.finalDownloads === undefined ? 0 : readNumber(photo, 'finalDownloads', itemPath),
       };
     }),
   };
@@ -254,8 +302,12 @@ export function createStudioApi(client: HttpClient): StudioApi {
     openSelection: (galleryId) => client.post(`/api/web/galleries/${galleryId}/selection/open`, {}, parseStudioGalleryBody),
     requestFinalUploads: (galleryId, files: readonly FinalFileInfo[], signal) =>
       client.post(`/api/web/galleries/${galleryId}/finals/uploads`, { files }, parseProofSlots, { signal }),
-    registerFinals: (galleryId, photoIds: readonly string[], signal) =>
-      client.post(`/api/web/galleries/${galleryId}/finals`, { photoIds }, parseRegisterProofs, { signal }),
+    registerFinals: (galleryId, photoIds: readonly string[], details: readonly FinalDetailsInfo[], signal) =>
+      client.post(`/api/web/galleries/${galleryId}/finals`, { photoIds, details }, parseRegisterProofs, { signal }),
+    requestZipUpload: (galleryId, bytes, signal) => client.post(`/api/web/galleries/${galleryId}/zip/upload`, { bytes }, parseZipSlot, { signal }),
+    registerZip: (galleryId, signal) => client.post(`/api/web/galleries/${galleryId}/zip`, {}, parseStudioGalleryBody, { signal }),
+    removeZip: (galleryId) => client.post(`/api/web/galleries/${galleryId}/zip/remove`, {}, parseStudioGalleryBody),
+    getFinalDownload: (galleryId, photoId, signal) => client.get(`/api/web/galleries/${galleryId}/finals/${photoId}/download`, parseFinalDownload, { signal }),
     publishFinals: (galleryId) => client.post(`/api/web/galleries/${galleryId}/finals/publish`, {}, parseStudioGalleryBody),
     releaseExtras: (galleryId) => client.post(`/api/web/galleries/${galleryId}/extras/release`, {}, parseStudioGalleryBody),
   };

@@ -232,6 +232,23 @@ export function describeGalleryLoadError(error: unknown): ActionErrorView {
 }
 
 /**
+ * Explains why a download could not be prepared.
+ * @param error Error of the request.
+ * @returns The message, and whether the verification expired.
+ */
+export function describeDownloadError(error: unknown): ActionErrorView {
+  if (error instanceof ApiError && error.status === 401) {
+    return { message: GALLERY_SESSION_EXPIRED, retryAfterSeconds: null, sessionExpired: true };
+  }
+
+  if (error instanceof ApiError && (error.code === 'gallery.invalid_state' || error.code === 'gallery.invalid_photo')) {
+    return { message: 'Estas fotos ya no están disponibles para descargar. Cierra y vuelve a abrir tus fotos.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  return commonActionError(error, 'No pudimos preparar la descarga. Revisa tu conexión e inténtalo de nuevo.');
+}
+
+/**
  * Explains why the selection was not sent.
  * @param error Error of the request.
  * @returns The message, and whether the verification expired.

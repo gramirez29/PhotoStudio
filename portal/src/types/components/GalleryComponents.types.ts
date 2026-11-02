@@ -1,4 +1,4 @@
-import type { PortalGallery, PortalProof, PortalSession } from '../api/portal';
+import type { PortalDownload, PortalGallery, PortalProof, PortalSession, PortalZipDownload } from '../api/portal';
 
 /** Props of the `GalleryFlow` component. */
 export interface GalleryFlowProps {
@@ -53,10 +53,18 @@ export interface GalleryDownloadsProps {
   /** The gallery, delivered: its finals can be downloaded. */
   readonly gallery: PortalGallery;
   /**
-   * Loads the gallery again, so the signed addresses are fresh right before a download.
-   * @returns The gallery, or null when it could not be loaded.
+   * Asks for the addresses to download some photos. Asking counts as a download. It rejects when the request fails.
+   * @param photoIds The photos the client wants.
+   * @returns One address per photo.
    */
-  readonly refresh: () => Promise<PortalGallery | null>;
+  readonly requestDownloads: (photoIds: readonly string[]) => Promise<readonly PortalDownload[]>;
+  /**
+   * Asks for the address to download the ZIP. Asking counts as a download. It rejects when the request fails.
+   * @returns The address of the ZIP.
+   */
+  readonly requestZip: () => Promise<PortalZipDownload>;
+  /** Called when the server refuses the session, so the client is sent back to confirm a code. */
+  readonly onSessionExpired: () => void;
   /** Called when the client closes the gallery. */
   readonly onClose: () => void;
 }

@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
 import { portalApi } from '../api/client';
 import { ApiError } from '../api/httpClient';
-import type { PortalGallery, PortalGallerySummary } from '../types/api/portal';
-import type { SubmitSelectionVariables } from '../types/hooks/usePortalGallery.types';
+import type { PortalDownload, PortalGallery, PortalGallerySummary, PortalZipDownload } from '../types/api/portal';
+import type { RequestDownloadsVariables, SubmitSelectionVariables } from '../types/hooks/usePortalGallery.types';
 
 /**
  * Key of the cached gallery of a link.
@@ -52,6 +52,25 @@ export function useGallery(token: string, accessToken: string): UseQueryResult<P
     retry: false,
     refetchOnWindowFocus: false,
   });
+}
+
+/**
+ * Mutation that asks for the addresses to download some photos. Asking counts as a download, so it is made when the client
+ * downloads and never in advance; it is never retried on its own.
+ * @param token Secret token taken from the URL.
+ * @returns The TanStack Query mutation.
+ */
+export function useRequestDownloads(token: string): UseMutationResult<readonly PortalDownload[], Error, RequestDownloadsVariables> {
+  return useMutation({ mutationFn: ({ accessToken, photoIds }) => portalApi.requestDownloads(token, accessToken, photoIds) });
+}
+
+/**
+ * Mutation that asks for the address to download the ZIP. Asking counts as a download; it is never retried on its own.
+ * @param token Secret token taken from the URL.
+ * @returns The TanStack Query mutation; its variable is the token of the session.
+ */
+export function useRequestZip(token: string): UseMutationResult<PortalZipDownload, Error, string> {
+  return useMutation({ mutationFn: (accessToken: string) => portalApi.requestZipDownload(token, accessToken) });
 }
 
 /**

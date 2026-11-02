@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { galleryPayload, jsonResponse, studioUserPayload } from '../test/fixtures';
@@ -148,7 +148,13 @@ describe('the final photos on the page of a gallery', () => {
 
     await waitFor(() => expect(requests()).toEqual(expect.arrayContaining([`POST ${GALLERY_PATH}/finals/uploads`, 'PUT /f1?sig=secret', 'PUT /f2?sig=secret', `POST ${GALLERY_PATH}/finals`])));
     const registered = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith('/finals') && init?.method === 'POST');
-    expect(JSON.parse(String(registered?.[1]?.body))).toEqual({ photoIds: ['p1', 'p2'] });
+    expect(JSON.parse(String(registered?.[1]?.body))).toEqual({
+      photoIds: ['p1', 'p2'],
+      details: [
+        { photoId: 'p1', width: null, height: null, capturedAt: null },
+        { photoId: 'p2', width: null, height: null, capturedAt: null },
+      ],
+    });
     expect(await screen.findByRole('button', { name: 'Publicar finales' })).toBeInTheDocument();
   });
 
@@ -226,6 +232,108 @@ describe('the final photos on the page of a gallery', () => {
 
     expect(await screen.findByText('Las fotos adicionales ya están disponibles para el cliente.')).toBeInTheDocument();
     expect(within(screen.getByRole('group', { name: 'Fotos adicionales (1)' })).getByText(/final subido/)).toBeInTheDocument();
+  });
+
+  describe('the ZIP', () => {
+    const DELIVERED = { status: 'Delivered', deliveredAt: '2026-11-03T13:00:00+00:00', finalsPublishedAt: '2026-11-03T13:00:00+00:00' };
+
+    it('says there is none yet and offers to choose one, once the finals are published', async () => {
+      answer(
+        base({
+          [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ ...DELIVERED, allowedActions: ['UploadFinals', 'UploadZip'] }))],
+          [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+        }),
+      );
+      renderPage();
+
+      expect(await screen.findByRole('heading', { name: 'ZIP con las fotos (opcional)' })).toBeInTheDocument();
+      expect(screen.getByText('Todavía no hay un ZIP.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Elegir el ZIP')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Borrar el ZIP' })).not.toBeInTheDocument();
+    });
+
+    it('uploads the ZIP straight to the storage and shows its size and that the client has not downloaded it', async () => {
+      const withZip = { bytes: 220_000_000, uploadedAt: '2026-11-03T14:00:00+00:00', downloads: 0, lastDownloadedAt: null };
+      answer(
+        base({
+          [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ ...DELIVERED, allowedActions: ['UploadFinals', 'UploadZip'] }))],
+          [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+          [`POST ${GALLERY_PATH}/zip/upload`]: [jsonResponse(200, { url: 'https://account.r2.cloudflarestorage.com/zip?sig=secret', headers: { 'Content-Type': 'application/zip' }, expiresAt: '2026-11-03T14:15:00+00:00' })],
+          'PUT /zip?sig=secret': [new Response(null, { status: 200 })],
+          [`POST ${GALLERY_PATH}/zip`]: [jsonResponse(200, gallery({ ...DELIVERED, allowedActions: ['UploadFinals', 'UploadZip', 'RemoveZip'], zip: withZip }))],
+        }),
+      );
+      const user = renderPage();
+
+      await user.upload(await screen.findByLabelText('Elegir el ZIP'), new File([new Uint8Array(8)], 'Fotos.zip', { type: 'application/zip' }));
+
+      expect(await screen.findByText('El cliente todavía no lo ha descargado.')).toBeInTheDocument();
+      expect(screen.getByText(/209,8 MB/)).toBeInTheDocument();
+      expect(requests()).toEqual(expect.arrayContaining([`POST ${GALLERY_PATH}/zip/upload`, 'PUT /zip?sig=secret', `POST ${GALLERY_PATH}/zip`]));
+      const asked = fetchMock.mock.calls.find(([input]) => String(input).endsWith('/zip/upload'));
+      expect(JSON.parse(String(asked?.[1]?.body))).toEqual({ bytes: 8 });
+      expect(screen.getByRole('button', { name: 'Borrar el ZIP' })).toBeInTheDocument();
+    });
+
+    it('refuses a file that is not a ZIP or weighs more than 500 MB, without asking the API', async () => {
+      answer(
+        base({
+          [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ ...DELIVERED, allowedActions: ['UploadFinals', 'UploadZip'] }))],
+          [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+        }),
+      );
+      renderPage();
+      const input = await screen.findByLabelText('Elegir el ZIP');
+
+      fireEvent.change(input, { target: { files: [new File([new Uint8Array(8)], 'fotos.rar', { type: 'application/x-rar' })] } });
+      expect(await screen.findByText('El archivo no es un ZIP.')).toBeInTheDocument();
+
+      const big = new File([new Uint8Array(8)], 'big.zip', { type: 'application/zip' });
+      Object.defineProperty(big, 'size', { value: 524_288_001 });
+      fireEvent.change(input, { target: { files: [big] } });
+      expect(await screen.findByText(/pesa más de 500 MB/)).toBeInTheDocument();
+      expect(requests().some((request) => request.includes('/zip'))).toBe(false);
+    });
+
+    it('shows how many times and when the client downloaded the ZIP, and deletes it after confirming', async () => {
+      const withZip = { bytes: 220_000_000, uploadedAt: '2026-11-03T14:00:00+00:00', downloads: 2, lastDownloadedAt: '2026-11-04T15:00:00+00:00' };
+      answer(
+        base({
+          [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery({ ...DELIVERED, allowedActions: ['UploadFinals', 'UploadZip', 'RemoveZip'], zip: withZip }))],
+          [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 5, p2: 5 }))],
+          [`POST ${GALLERY_PATH}/zip/remove`]: [jsonResponse(200, gallery({ ...DELIVERED, allowedActions: ['UploadFinals', 'UploadZip'], zip: null }))],
+        }),
+      );
+      const user = renderPage();
+
+      expect(await screen.findByText(/El cliente lo ha descargado 2 veces \(la última, el /)).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Borrar el ZIP' }));
+      expect(requests().some((request) => request.endsWith('/zip/remove'))).toBe(false);
+      await user.click(screen.getByRole('button', { name: 'Sí, borrar el ZIP' }));
+
+      expect(await screen.findByText('Todavía no hay un ZIP.')).toBeInTheDocument();
+    });
+  });
+
+  it('downloads the final of a photo for the photographer, with a short-lived address that is not counted', async () => {
+    const started: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      started.push(`${this.download}|${this.getAttribute('href')}`);
+    });
+    answer(
+      base({
+        [`GET ${GALLERY_PATH}`]: [jsonResponse(200, gallery())],
+        [`GET ${GALLERY_PATH}/selection`]: [jsonResponse(200, selection({ p1: 4_000_000 }))],
+        [`GET ${GALLERY_PATH}/finals/p1/download`]: [jsonResponse(200, { fileName: 'IMG_0001.jpg', url: 'https://account.r2.cloudflarestorage.com/f1?sig=secret', expiresAt: '2026-11-03T12:05:00+00:00' })],
+      }),
+    );
+    const user = renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Descargar el final de IMG_0001.CR2' }));
+
+    await waitFor(() => expect(started).toEqual(['IMG_0001.jpg|https://account.r2.cloudflarestorage.com/f1?sig=secret']));
+    expect(screen.queryByRole('button', { name: 'Descargar el final de IMG_0002.CR2' })).not.toBeInTheDocument();
+    click.mockRestore();
   });
 
   it('shows nothing to do with finals before the client sends the selection', async () => {

@@ -223,7 +223,7 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 
 **Pruebas del portal (396, 23 nuevas):** emparejamiento de archivos, descargas en secuencia, parsers, el flujo completo de subir finales (pares, subida real simulada, rechazo, publicar con confirmación, error por faltantes, liberar extras) y las descargas del cliente (grupos, extras ocultas, "seleccionar todas", direcciones frescas, una por una).
 
-## 19. PR 7c, lo que falta (definido el 2026-11-03)
+## 19. PR 7c, lo que se pidió (definido el 2026-11-03; hecho, secciones 20 y 21)
 
 - **ZIP manual:** desde la web del fotógrafo, subir un ZIP de **hasta 500 MB** (lo arma él; el servidor no crea ZIP, ni en el worker ni en el navegador). Una sola subida firmada a R2; solo se valida tipo y tamaño.
 - **Botón del ZIP en la web del cliente** (solo si la galería tiene ZIP y está entregada), **con confirmación**: "Se va a descargar un paquete de X MB. Según tu conexión a internet puede tomar tiempo." Mismas reglas que los finales: saldo cero y dirección de 5 minutos.
@@ -244,3 +244,16 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Descargar un final como fotógrafo:** `GET /api/web/galleries/{id}/finals/{photoId}/download` (dirección de 5 minutos; no cuenta como descarga del cliente).
 
 **Pruebas:** dominio 11 nuevas, aplicación 12 nuevas y la de API de punta a punta ahora cubre: ficha de la foto, descarga contada del cliente (y rechazo de una extra sin liberar), descarga del fotógrafo sin contar, ZIP (límite, subida a R2, ver su peso, descargar, contador con fecha, borrar).
+
+## 21. Las páginas del ZIP, las descargas contadas y la ficha de cada foto (PR 7c, portal)
+
+**Web del fotógrafo (`/studio/galleries/{id}`)**
+- **Ficha de cada foto elegida** (en los dos bloques, paquete y adicionales): `final subido · 1250 × 3000 px · 4,2 MB · tomada el 17 de octubre de 2026 · descargada 2 veces`, o `sin final`. Cada foto con final tiene un botón **⬇ Descargar** que baja ese final con una dirección de 5 minutos (no cuenta como descarga del cliente).
+- **De dónde salen los datos:** el peso lo mide R2; el **tamaño en píxeles y la fecha en que se tomó los lee el navegador del fotógrafo** de los primeros 1 MB del archivo (cabecera del JPEG y bloque Exif; no se decodifica la foto ni se carga entera). Si la cámara giró la foto, se cambian los lados para dar el tamaño con que se ve. La cámara escribe la fecha sin zona horaria: se usa la que da el archivo si la trae, y si no **la de Costa Rica (UTC−6)**. Lo que no se pueda leer queda vacío y no impide subir la foto.
+- **ZIP con las fotos (opcional)**, al final de "Fotos finales" cuando los finales están publicados: **Elegir el ZIP** (hasta 500 MB; si no es .zip o pesa más, lo dice sin llamar a la API), se sube directo a R2 en una sola petición (no hay barra de avance: la página avisa que puede tardar varios minutos y que no cierre la página), y se muestra su peso, cuándo se subió y **si el cliente lo descargó** ("todavía no lo ha descargado" o "N veces, la última el …"). **Borrar el ZIP** (con confirmación) lo quita de la galería y de R2 para subir otro cuando el cliente lo pida de nuevo; subir otro de distinto peso lo reemplaza y reinicia la cuenta. La página recuerda no incluir las adicionales si no las pagó.
+
+**Web del cliente (`/b/{token}`, "Tus fotos")**
+- **Las direcciones se piden al descargar.** Marcar casillas no pide nada; "Descargar" (una foto) o "Descargar seleccionadas" piden las direcciones de esas fotos en ese momento, y eso es lo que cuenta como descarga para el fotógrafo. Si algo falla, la página lo dice con palabras y no descarga nada; si la verificación venció, vuelve al código.
+- **ZIP:** si el fotógrafo subió uno, aparece "Todas en un solo archivo" con el botón **Descargar todo en un ZIP (X MB)**. Al pulsarlo pide confirmar: *Se va a descargar un paquete de X MB. Según tu conexión a internet puede tomar tiempo.* con "Sí, descargar el ZIP" y "Cancelar". Sin ZIP no se menciona.
+
+**Pruebas del portal (415):** lector de JPEG con archivos sintéticos (orden de bytes de las dos formas, fecha con y sin zona, giro de la cámara, archivo sin metadatos o cortado), validación del ZIP, parsers nuevos, subir el ZIP de punta a punta (con rechazo de lo que no es ZIP o pesa de más), mostrar y borrar el ZIP, la ficha de cada foto con su botón de descarga, y las descargas del cliente (direcciones pedidas solo al descargar, una por una, marcadas, error, ZIP con confirmación y sin ZIP).

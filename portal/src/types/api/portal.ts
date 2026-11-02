@@ -172,14 +172,40 @@ export interface PortalFinal {
   readonly id: string;
   /** Name to save the file with. */
   readonly fileName: string;
-  /** Signed address to download it; lasts a few minutes. It is a secret: it is never logged. */
-  readonly url: string;
-  /** Instant the address stops working (ISO 8601). */
-  readonly expiresAt: string;
   /** Size of the file in bytes. */
   readonly bytes: number;
   /** Whether it is one of the extra photos. */
   readonly isExtra: boolean;
+}
+
+/** The ZIP with the photos, as the client sees it before asking for it (backend `PortalZipResponse`). */
+export interface PortalZip {
+  /** Size in bytes, so the client knows what they are about to download. */
+  readonly bytes: number;
+}
+
+/** An address to download one final photo, given when the client asks for it (backend `PortalDownloadResponse`). */
+export interface PortalDownload {
+  /** Photo identifier. */
+  readonly id: string;
+  /** Name to save the file with. */
+  readonly fileName: string;
+  /** Signed address; lasts a few minutes. It is a secret: it is never logged. */
+  readonly url: string;
+  /** Instant the address stops working (ISO 8601). */
+  readonly expiresAt: string;
+}
+
+/** The address to download the ZIP (backend `PortalZipDownloadResponse`). */
+export interface PortalZipDownload {
+  /** Name to save the file with. */
+  readonly fileName: string;
+  /** Signed address; lasts a few minutes. It is a secret: it is never logged. */
+  readonly url: string;
+  /** Instant the address stops working (ISO 8601). */
+  readonly expiresAt: string;
+  /** Size in bytes. */
+  readonly bytes: number;
 }
 
 /** The gallery as its client sees it (backend `PortalGalleryResponse`). */
@@ -198,4 +224,6 @@ export interface PortalGallery {
   readonly finals: readonly PortalFinal[];
   /** Whether the photographer released the extra photos. */
   readonly extrasReleased: boolean;
+  /** The ZIP with the photos, when the gallery is delivered and has one; otherwise null. */
+  readonly zip: PortalZip | null;
 }

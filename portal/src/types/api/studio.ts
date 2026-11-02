@@ -90,9 +90,23 @@ export interface StudioGallery {
   readonly deliveredAt: string | null;
   /** Instant the extra photos were released to the client (ISO 8601), or null while they were not. */
   readonly extrasReleasedAt: string | null;
+  /** The ZIP with the photos, made and uploaded by the photographer, or null while there is none. */
+  readonly zip: StudioZip | null;
 }
 
 /** One page of galleries, the most recently created first. */
+/** The ZIP with the photos of a gallery and what the client did with it. */
+export interface StudioZip {
+  /** Size in bytes. */
+  readonly bytes: number;
+  /** Instant it was registered (ISO 8601). */
+  readonly uploadedAt: string;
+  /** How many times the client asked to download it. */
+  readonly downloads: number;
+  /** Last instant the client asked to download it (ISO 8601), or null if they never did. */
+  readonly lastDownloadedAt: string | null;
+}
+
 export interface StudioGalleryPage {
   /** The galleries of this page. */
   readonly items: readonly StudioGallery[];
@@ -110,6 +124,14 @@ export interface StudioSelectedPhoto {
   readonly isExtra: boolean;
   /** Size of its final photo in bytes, or null while the photographer has not uploaded it. */
   readonly finalBytes: number | null;
+  /** Width of the final in pixels, or null when unknown. */
+  readonly finalWidth: number | null;
+  /** Height of the final in pixels, or null when unknown. */
+  readonly finalHeight: number | null;
+  /** Instant the final was taken (ISO 8601), or null when its metadata did not say. */
+  readonly finalCapturedAt: string | null;
+  /** How many times the client asked to download the final. */
+  readonly finalDownloads: number;
 }
 
 /** What the client chose in a gallery. */
