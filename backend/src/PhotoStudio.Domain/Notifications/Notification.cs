@@ -156,6 +156,14 @@ public sealed class Notification : AggregateRoot<Guid>
     public static string PaymentProofKey(Guid paymentId) => $"{NotificationType.PaymentProofSubmitted}:{paymentId:N}";
 
     /// <summary>
+    /// Builds the key that identifies the notice that a gallery can be released: one per gallery for good, so the photographer is
+    /// told once and the maintenance pass that finds it again every time adds nothing.
+    /// </summary>
+    /// <param name="galleryId">Gallery that can be released.</param>
+    /// <returns>The key.</returns>
+    public static string GalleryArchiveDueKey(Guid galleryId) => $"{NotificationType.GalleryArchiveDue}:{galleryId:N}";
+
+    /// <summary>
     /// Builds the key that identifies the notice of a selection: one per selection sent, so the same selection delivered twice by
     /// the outbox is one notice, and a selection sent again after the photographer reopened it is another. The instant is taken in
     /// milliseconds, which is what the database keeps, so the key built from the stored gallery matches the one built from the event.

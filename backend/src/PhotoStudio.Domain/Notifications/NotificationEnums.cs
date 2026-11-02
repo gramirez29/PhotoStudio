@@ -16,6 +16,9 @@ public enum NotificationType
 
     /// <summary>A client sent the photos they chose from their gallery: time to edit them.</summary>
     SelectionSubmitted,
+
+    /// <summary>A gallery was delivered long enough ago to free its space: the photographer decides whether to release it.</summary>
+    GalleryArchiveDue,
 }
 
 /// <summary>

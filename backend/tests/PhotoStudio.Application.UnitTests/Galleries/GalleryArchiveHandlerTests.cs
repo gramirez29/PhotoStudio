@@ -5,6 +5,7 @@ using PhotoStudio.Application.Galleries.Archive;
 using PhotoStudio.Application.UnitTests.Support;
 using PhotoStudio.Domain.Common;
 using PhotoStudio.Domain.Galleries;
+using PhotoStudio.Domain.Notifications;
 
 namespace PhotoStudio.Application.UnitTests.Galleries;
 
@@ -18,6 +19,7 @@ public sealed class GalleryArchiveHandlerTests
 
     private readonly IGalleryRepository _galleries = Substitute.For<IGalleryRepository>();
     private readonly IObjectStorage _storage = Substitute.For<IObjectStorage>();
+    private readonly INotificationRepository _notifications = Substitute.For<INotificationRepository>();
     private readonly FixedTimeProvider _clock = new(Now);
 
     /// <summary>
@@ -72,12 +74,35 @@ public sealed class GalleryArchiveHandlerTests
         _storage.DeleteManyAsync(Arg.Is<IReadOnlyCollection<string>>(keys => keys.Contains(GalleryKeys.Zip(due.Id))), Arg.Any<CancellationToken>())
             .Returns(Task.FromException(new StorageUnavailableException("down")));
 
-        var result = await new ArchiveExpiredGalleriesHandler(_galleries, new GalleryArchiver(_galleries, _storage), _clock)
+        var result = await new ArchiveExpiredGalleriesHandler(_galleries, _notifications, new GalleryArchiver(_galleries, _storage), _clock)
             .HandleAsync(new ArchiveExpiredGalleriesCommand(20), TestContext.Current.CancellationToken);
 
         result.ShouldBe(new ArchiveExpiredGalleriesResult(1, 1));
         await _galleries.DidNotReceive().UpdateAsync(due, Arg.Any<CancellationToken>());
         await _galleries.Received(1).UpdateAsync(ok, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A gallery delivered 90 days ago makes the photographer get one notice, and the next pass finds it again and adds nothing;
+    /// one the system is about to archive is not announced.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task TheNotice_IsSentOnce_AndNotForWhatIsAboutToBeArchived()
+    {
+        var old = Make(GalleryStatus.Delivered, deliveredAt: Now.AddDays(-Gallery.ArchiveNoticeDays - 5));
+        var veryOld = Make(GalleryStatus.Delivered, deliveredAt: Now.AddDays(-Gallery.RetentionDays - 5));
+        _galleries.ListDeliveredBeforeAsync(Now.AddDays(-Gallery.ArchiveNoticeDays), ArchiveExpiredGalleriesHandler.NoticeBatchSize, Arg.Any<CancellationToken>()).Returns([veryOld, old]);
+        _galleries.ListDeliveredBeforeAsync(Now.AddDays(-Gallery.RetentionDays), 20, Arg.Any<CancellationToken>()).Returns([]);
+        _notifications.TryAddAsync(Arg.Any<Notification>(), Arg.Any<CancellationToken>()).Returns(true, false);
+        var handler = new ArchiveExpiredGalleriesHandler(_galleries, _notifications, new GalleryArchiver(_galleries, _storage), _clock);
+
+        (await handler.HandleAsync(new ArchiveExpiredGalleriesCommand(20), TestContext.Current.CancellationToken)).Notified.ShouldBe(1);
+        (await handler.HandleAsync(new ArchiveExpiredGalleriesCommand(20), TestContext.Current.CancellationToken)).Notified.ShouldBe(0);
+
+        await _notifications.Received(2).TryAddAsync(
+            Arg.Is<Notification>(notice => notice.Type == NotificationType.GalleryArchiveDue && notice.DedupKey == Notification.GalleryArchiveDueKey(old.Id) && notice.PhotographerId == old.PhotographerId),
+            Arg.Any<CancellationToken>());
     }
 
     /// <summary>

@@ -18,7 +18,7 @@ export function ReleaseGalleryPanel({ gallery, disabled }: ReleaseGalleryPanelPr
       <h3 id="release-title">Liberar espacio</h3>
       <p className="muted">
         Cuando ya tengas las fotos en tu computadora, puedes borrarlas de aquí. Se borran las pruebas, los finales y el ZIP, y la galería
-        queda archivada: el cliente ya no podrá descargar. Si no lo haces, se archiva sola 90 días después de la entrega.
+        queda archivada: el cliente ya no podrá descargar. Si no lo haces, se archiva sola 180 días después de la entrega (a los 90 te avisamos).
       </p>
       {release.isError && (
         <p className="field__error" role="alert">

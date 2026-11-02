@@ -4,6 +4,7 @@ using PhotoStudio.Application.Galleries.Proofs;
 using PhotoStudio.Application.Storage;
 using PhotoStudio.Domain.Common;
 using PhotoStudio.Domain.Galleries;
+using PhotoStudio.Domain.Notifications;
 
 namespace PhotoStudio.Application.Galleries.Archive;
 
@@ -25,7 +26,8 @@ public sealed record ArchiveExpiredGalleriesCommand(int BatchSize);
 /// </summary>
 /// <param name="Archived">Galleries archived.</param>
 /// <param name="Skipped">Galleries that could not be archived now (the storage failed or another request changed them); the next pass tries again.</param>
-public sealed record ArchiveExpiredGalleriesResult(int Archived, int Skipped);
+/// <param name="Notified">Galleries whose photographer was told, for the first time, that they can be released.</param>
+public sealed record ArchiveExpiredGalleriesResult(int Archived, int Skipped, int Notified = 0);
 
 /// <summary>
 /// Deletes the files of a gallery and archives it. The files go first and the record after: if the storage fails nothing changes and
@@ -94,17 +96,24 @@ public sealed class ReleaseGalleryHandler(IGalleryRepository galleries, GalleryA
 }
 
 /// <summary>
-/// Archives the galleries whose retention ended (G8). It runs in the maintenance pass; a gallery that fails is skipped and tried
-/// again in the next pass.
+/// Looks after the galleries that were delivered long ago (G8), in the maintenance pass. After <see cref="Gallery.ArchiveNoticeDays"/>
+/// days the photographer is told, once, that the gallery can be released and decides; after <see cref="Gallery.RetentionDays"/> days
+/// the system archives it as a last resort. A gallery that fails is skipped and tried again in the next pass.
 /// </summary>
 /// <param name="galleries">Gallery repository.</param>
+/// <param name="notifications">Notification repository.</param>
 /// <param name="archiver">Deletes the files and archives.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
-public sealed class ArchiveExpiredGalleriesHandler(IGalleryRepository galleries, GalleryArchiver archiver, TimeProvider timeProvider)
+public sealed class ArchiveExpiredGalleriesHandler(IGalleryRepository galleries, INotificationRepository notifications, GalleryArchiver archiver, TimeProvider timeProvider)
     : ICommandHandler<ArchiveExpiredGalleriesCommand, ArchiveExpiredGalleriesResult>
 {
     /// <summary>
-    /// Archives a batch.
+    /// Most galleries looked at for notices in a pass.
+    /// </summary>
+    public const int NoticeBatchSize = 200;
+
+    /// <summary>
+    /// Notifies and archives a batch.
     /// </summary>
     /// <param name="command">The batch size.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -114,6 +123,7 @@ public sealed class ArchiveExpiredGalleriesHandler(IGalleryRepository galleries,
         ArgumentNullException.ThrowIfNull(command);
 
         var now = timeProvider.GetUtcNow();
+        var notified = await NotifyAsync(now, cancellationToken);
         var due = await galleries.ListDeliveredBeforeAsync(now.AddDays(-Gallery.RetentionDays), command.BatchSize, cancellationToken);
         var archived = 0;
         var skipped = 0;
@@ -130,6 +140,31 @@ public sealed class ArchiveExpiredGalleriesHandler(IGalleryRepository galleries,
             }
         }
 
-        return new ArchiveExpiredGalleriesResult(archived, skipped);
+        return new ArchiveExpiredGalleriesResult(archived, skipped, notified);
+    }
+
+    /// <summary>
+    /// Tells the photographers about the galleries that can be released. The notice is deduplicated by gallery, so a gallery the
+    /// photographer leaves alone is not announced again in the next pass. The galleries the system is about to archive are not announced.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>How many notices were created now.</returns>
+    private async Task<int> NotifyAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var candidates = await galleries.ListDeliveredBeforeAsync(now.AddDays(-Gallery.ArchiveNoticeDays), NoticeBatchSize, cancellationToken);
+        var notified = 0;
+        foreach (var gallery in candidates.Where(gallery => !gallery.IsRetentionOver(now)))
+        {
+            var added = await notifications.TryAddAsync(
+                Notification.Schedule(gallery.PhotographerId, gallery.BookingId, NotificationType.GalleryArchiveDue, Notification.GalleryArchiveDueKey(gallery.Id), now, now),
+                cancellationToken);
+            if (added)
+            {
+                notified++;
+            }
+        }
+
+        return notified;
     }
 }

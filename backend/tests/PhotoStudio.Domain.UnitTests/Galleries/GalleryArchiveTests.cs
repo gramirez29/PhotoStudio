@@ -44,13 +44,16 @@ public sealed class GalleryArchiveTests
     }
 
     /// <summary>
-    /// The retention ends exactly 90 days after the delivery, and only for a delivered gallery.
+    /// The notice term (90 days) and the retention (180 days) are counted from the delivery, and only for a delivered gallery.
     /// </summary>
     [Fact]
     public void IsRetentionOver_CountsFromTheDelivery()
     {
         var delivered = Make(GalleryStatus.Delivered);
 
+        delivered.IsArchiveNoticeDue(Now.AddDays(Gallery.ArchiveNoticeDays).AddSeconds(-1)).ShouldBeFalse();
+        delivered.IsArchiveNoticeDue(Now.AddDays(Gallery.ArchiveNoticeDays)).ShouldBeTrue();
+        Make(GalleryStatus.Ready).IsArchiveNoticeDue(Now.AddDays(365)).ShouldBeFalse();
         delivered.IsRetentionOver(Now.AddDays(Gallery.RetentionDays).AddSeconds(-1)).ShouldBeFalse();
         delivered.IsRetentionOver(Now.AddDays(Gallery.RetentionDays)).ShouldBeTrue();
         Make(GalleryStatus.Ready).IsRetentionOver(Now.AddDays(365)).ShouldBeFalse();

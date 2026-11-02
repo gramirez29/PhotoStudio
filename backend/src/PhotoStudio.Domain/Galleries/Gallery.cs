@@ -26,9 +26,16 @@ public sealed class Gallery : AggregateRoot<Guid>
     public const int MaxReasonLength = 500;
 
     /// <summary>
-    /// Days after delivery when the system archives the gallery by itself (G8): the photos and the ZIP are deleted from the storage.
+    /// Days after delivery when the photographer is told that the gallery can be released. The system does not delete anything then:
+    /// the photographer decides.
     /// </summary>
-    public const int RetentionDays = 90;
+    public const int ArchiveNoticeDays = 90;
+
+    /// <summary>
+    /// Days after delivery when the system archives the gallery by itself (G8), as a last resort for the ones the photographer never
+    /// released: the photos and the ZIP are deleted from the storage.
+    /// </summary>
+    public const int RetentionDays = 180;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Gallery"/> class. Use <see cref="Create"/> or <see cref="Restore"/>.
@@ -724,6 +731,13 @@ public sealed class Gallery : AggregateRoot<Guid>
         UpdatedAt = now;
         return true;
     }
+
+    /// <summary>
+    /// Tells whether a delivered gallery has been so long that the photographer should be told it can be released.
+    /// </summary>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when the gallery is delivered and the notice term is over.</returns>
+    public bool IsArchiveNoticeDue(DateTimeOffset now) => Status == GalleryStatus.Delivered && DeliveredAt is { } at && at.AddDays(ArchiveNoticeDays) <= now;
 
     /// <summary>
     /// Tells whether the retention of a delivered gallery has ended.
