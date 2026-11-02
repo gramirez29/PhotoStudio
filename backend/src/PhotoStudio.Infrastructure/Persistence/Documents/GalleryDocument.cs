@@ -178,6 +178,10 @@ public sealed class GalleryPhotoDocument
     /// <summary>Gets or sets how many times the client asked to download the final.</summary>
     [BsonElement("finalDownloads")]
     public int FinalDownloads { get; set; }
+
+    /// <summary>Gets or sets the size of the thumbnail of the final, if it has one.</summary>
+    [BsonElement("finalThumbBytes")]
+    public long? FinalThumbBytes { get; set; }
 }
 
 /// <summary>
@@ -221,6 +225,7 @@ public static class GalleryDocumentMappings
                 FinalHeight = photo.FinalHeight,
                 FinalCapturedAt = photo.FinalCapturedAt?.UtcDateTime,
                 FinalDownloads = photo.FinalDownloads,
+                FinalThumbBytes = photo.FinalThumbBytes,
             })],
             SelectionNotifiedAt = gallery.SelectionNotifiedAt?.UtcDateTime,
             SelectedPhotoIds = [.. gallery.SelectedPhotoIds],
@@ -262,7 +267,7 @@ public static class GalleryDocumentMappings
             Money.Restore(document.ExtraPhotoPrice, document.Currency),
             ToOffset(document.CreatedAt),
             ToOffset(document.UpdatedAt),
-            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt), photo.FinalBytes, photo.FinalUploadedAt is null ? null : ToOffset(photo.FinalUploadedAt.Value), photo.FinalWidth, photo.FinalHeight, photo.FinalCapturedAt is null ? null : ToOffset(photo.FinalCapturedAt.Value), photo.FinalDownloads)),
+            document.Photos.Select(photo => new GalleryPhoto(photo.Id, photo.Name, photo.ProofBytes, ToOffset(photo.UploadedAt), photo.FinalBytes, photo.FinalUploadedAt is null ? null : ToOffset(photo.FinalUploadedAt.Value), photo.FinalWidth, photo.FinalHeight, photo.FinalCapturedAt is null ? null : ToOffset(photo.FinalCapturedAt.Value), photo.FinalDownloads, photo.FinalThumbBytes)),
             document.SelectionNotifiedAt is null ? null : ToOffset(document.SelectionNotifiedAt.Value),
             document.SelectedPhotoIds,
             document.SelectionSubmittedAt is null ? null : ToOffset(document.SelectionSubmittedAt.Value),

@@ -70,6 +70,41 @@ public sealed class GalleryZipTests
     }
 
     /// <summary>
+    /// The thumbnail of a final is registered with its size, once; it needs the final, a size within 400 KB, and a final that can still
+    /// change; a final of another size starts without a thumbnail.
+    /// </summary>
+    [Fact]
+    public void RegisterFinalThumb_FollowsTheFinal()
+    {
+        var gallery = Make(GalleryStatus.InEditing);
+        var photoId = gallery.PackagePhotoIds[0];
+        var withoutFinal = gallery.ExtraPhotoIds[0];
+
+        gallery.RegisterFinalThumb(photoId, 90_000, Now).ShouldBeTrue();
+        gallery.RegisterFinalThumb(photoId, 90_000, Now).ShouldBeFalse();
+        gallery.Photos.Single(photo => photo.Id == photoId).FinalThumbBytes.ShouldBe(90_000);
+        Should.Throw<DomainException>(() => gallery.RegisterFinalThumb(photoId, 0, Now)).Code.ShouldBe(DomainErrorCodes.GalleryInvalidPhoto);
+        Should.Throw<DomainException>(() => gallery.RegisterFinalThumb(photoId, GalleryPhoto.MaxThumbBytes + 1, Now)).Code.ShouldBe(DomainErrorCodes.GalleryInvalidPhoto);
+        Should.Throw<DomainException>(() => gallery.RegisterFinalThumb(withoutFinal, 100, Now)).Code.ShouldBe(DomainErrorCodes.GalleryInvalidPhoto);
+
+        gallery.RegisterFinal(photoId, 777, Now);
+        gallery.Photos.Single(photo => photo.Id == photoId).FinalThumbBytes.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// After publishing, the thumbnail of a final of the package is frozen like the final, and the one of an extra can still change.
+    /// </summary>
+    [Fact]
+    public void RegisterFinalThumb_AfterPublishing_OnlyForTheExtras()
+    {
+        var gallery = Make(GalleryStatus.Delivered);
+        gallery.RegisterFinal(gallery.ExtraPhotoIds[0], 100, Now);
+
+        Should.Throw<DomainException>(() => gallery.RegisterFinalThumb(gallery.PackagePhotoIds[0], 100, Now)).Code.ShouldBe(DomainErrorCodes.GalleryInvalidState);
+        gallery.RegisterFinalThumb(gallery.ExtraPhotoIds[0], 100, Now).ShouldBeTrue();
+    }
+
+    /// <summary>
     /// Asking for the photos counts one download each, once per request even if a photo is repeated, and only when the gallery is
     /// delivered.
     /// </summary>

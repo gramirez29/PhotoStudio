@@ -154,6 +154,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetFinalDownloadQuery, FinalDownloadResponse>, GetFinalDownloadHandler>();
         services.AddScoped<ICommandHandler<RequestPortalDownloadsCommand, PortalDownloadsResponse>, RequestPortalDownloadsHandler>();
         services.AddScoped<ICommandHandler<RequestPortalZipDownloadCommand, PortalZipDownloadResponse>, RequestPortalZipDownloadHandler>();
+        services.AddScoped<IQueryHandler<GetPortalFinalViewQuery, PortalFinalViewResponse>, GetPortalFinalViewHandler>();
         services.AddScoped<GalleryDelivery>();
         services.AddScoped<IDomainEventHandler<FinalPhotosReady>, FinalPhotosReadyDeliveryHandler>();
         services.AddScoped<IDomainEventHandler<PaymentVerified>, PaymentVerifiedDeliveryHandler>();

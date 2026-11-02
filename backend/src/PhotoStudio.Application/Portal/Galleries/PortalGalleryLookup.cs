@@ -63,7 +63,7 @@ internal static class PortalGalleryLookup
             gallery.ExtraPhotoPrice.ToResponse(),
             photos,
             selection,
-            DownloadableFinals(gallery),
+            await DownloadableFinalsAsync(gallery, storage, cancellationToken),
             gallery.ExtrasReleasedAt is not null,
             gallery.Status == GalleryStatus.Delivered && gallery.ZipBytes is { } zipBytes ? new PortalZipResponse(zipBytes) : null);
     }
@@ -74,18 +74,28 @@ internal static class PortalGalleryLookup
     /// when they download, so every download is counted and no address is waiting somewhere for someone to find.
     /// </summary>
     /// <param name="gallery">The gallery.</param>
+    /// <param name="storage">Object storage that signs the addresses of the small images.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The downloadable finals, in the order the client chose them.</returns>
-    public static IReadOnlyList<PortalFinalResponse> DownloadableFinals(Gallery gallery)
+    public static async Task<IReadOnlyList<PortalFinalResponse>> DownloadableFinalsAsync(Gallery gallery, IObjectStorage storage, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(gallery);
 
-        return [.. gallery.SelectedPhotoIds
-            .Where(gallery.IsDownloadable)
-            .Select(photoId =>
+        var finals = new List<PortalFinalResponse>();
+        foreach (var photoId in gallery.SelectedPhotoIds.Where(gallery.IsDownloadable))
+        {
+            var photo = gallery.Photos.First(candidate => candidate.Id == photoId);
+            Uri? thumb = null;
+            if (photo.FinalThumbBytes is not null)
             {
-                var photo = gallery.Photos.First(candidate => candidate.Id == photoId);
-                return new PortalFinalResponse(photoId, FinalFileName(photo), photo.FinalBytes ?? 0, gallery.IsExtra(photoId));
-            })];
+                // A small image to look at: not a download, so asking for it is not counted.
+                thumb = (await storage.CreateDownloadUrlAsync(PhotoStudio.Application.Galleries.GalleryKeys.Thumb(gallery.Id, photoId), UrlLifetime, null, cancellationToken)).Url;
+            }
+
+            finals.Add(new PortalFinalResponse(photoId, FinalFileName(photo), photo.FinalBytes ?? 0, gallery.IsExtra(photoId), thumb));
+        }
+
+        return finals;
     }
 
     /// <summary>

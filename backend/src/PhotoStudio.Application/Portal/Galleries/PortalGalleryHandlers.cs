@@ -278,3 +278,56 @@ public sealed class RequestPortalZipDownloadHandler(
         }
     }
 }
+
+/// <summary>
+/// Gives the client the address to look at a final photo in its real quality, as the photographer edited it. Looking is not
+/// downloading and is not counted, but it only works for what the client may download: the gallery is delivered, so the balance is
+/// zero, and an extra only once the photographer released it.
+/// </summary>
+/// <param name="galleries">Gallery repository.</param>
+/// <param name="links">Link repository.</param>
+/// <param name="tokens">Hashes the token taken from the URL.</param>
+/// <param name="storage">Object storage that signs the address.</param>
+/// <param name="timeProvider">Clock abstraction.</param>
+public sealed class GetPortalFinalViewHandler(
+    IGalleryRepository galleries,
+    IBookingLinkRepository links,
+    IRefreshTokenGenerator tokens,
+    IObjectStorage storage,
+    TimeProvider timeProvider) : IQueryHandler<GetPortalFinalViewQuery, PortalFinalViewResponse>
+{
+    /// <summary>
+    /// Signs the address.
+    /// </summary>
+    /// <param name="query">Token of the link, the booking of the session and the photo.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The address.</returns>
+    /// <exception cref="NotFoundException">When the token does not open the booking the session was issued for, or there is no gallery.</exception>
+    /// <exception cref="DomainException">When the gallery is not delivered or the photo is not one the client may take.</exception>
+    public async Task<PortalFinalViewResponse> HandleAsync(GetPortalFinalViewQuery query, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var now = timeProvider.GetUtcNow();
+        var link = await links.ResolveAsync(tokens, query.Token, now, cancellationToken);
+        if (link.BookingId != query.AuthorizedBookingId)
+        {
+            throw new NotFoundException(nameof(Gallery), Guid.Empty);
+        }
+
+        var gallery = await galleries.GetVisibleAsync(link, cancellationToken);
+        if (gallery.Status != GalleryStatus.Delivered)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"A gallery in state {gallery.Status} cannot be looked at in its final quality.");
+        }
+
+        if (!gallery.IsDownloadable(query.PhotoId))
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidPhoto, "Only the final photos that were delivered can be looked at.");
+        }
+
+        // No file name: the address answers to be shown, not saved, so an image tag or a viewer can use it.
+        var url = await storage.CreateDownloadUrlAsync(PhotoStudio.Application.Galleries.GalleryKeys.Final(gallery.Id, query.PhotoId), PortalGalleryLookup.FinalUrlLifetime, null, cancellationToken);
+        return new PortalFinalViewResponse(url.Url, url.ExpiresAt);
+    }
+}

@@ -34,7 +34,23 @@ public sealed record PortalSelectionResponse(IReadOnlyList<Guid> PhotoIds, DateT
 /// <param name="FileName">Name to save the file with.</param>
 /// <param name="Bytes">Size of the file in bytes.</param>
 /// <param name="IsExtra">Whether it is one of the extra photos.</param>
-public sealed record PortalFinalResponse(Guid Id, string FileName, long Bytes, bool IsExtra);
+/// <param name="ThumbUrl">Signed address of a small image of the photo, to look at before downloading it; <see langword="null"/> when it has none. It is not a download and is not counted.</param>
+public sealed record PortalFinalResponse(Guid Id, string FileName, long Bytes, bool IsExtra, Uri? ThumbUrl = null);
+
+/// <summary>
+/// An address to look at one final photo in its real quality, before or without downloading it.
+/// </summary>
+/// <param name="Url">Signed address of the photo, to show it; lasts a few minutes. It is not a download and is not counted.</param>
+/// <param name="ExpiresAt">Instant the address stops working (UTC).</param>
+public sealed record PortalFinalViewResponse(Uri Url, DateTimeOffset ExpiresAt);
+
+/// <summary>
+/// Query for the client to look at one final photo in its real quality.
+/// </summary>
+/// <param name="Token">Secret token taken from the URL.</param>
+/// <param name="AuthorizedBookingId">Booking the portal session is valid for.</param>
+/// <param name="PhotoId">The photo.</param>
+public sealed record GetPortalFinalViewQuery(string Token, Guid AuthorizedBookingId, Guid PhotoId);
 
 /// <summary>
 /// The ZIP with the photos, as the client sees it before asking for it.

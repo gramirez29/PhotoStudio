@@ -21,7 +21,15 @@ public sealed record FinalFile(Guid PhotoId, long Bytes);
 /// <param name="Url">Signed address to send the file to with a PUT.</param>
 /// <param name="Headers">Headers that must go with the request.</param>
 /// <param name="ExpiresAt">Instant the address stops working (UTC).</param>
-public sealed record FinalUploadSlot(Guid PhotoId, Uri Url, IReadOnlyDictionary<string, string> Headers, DateTimeOffset ExpiresAt);
+/// <param name="ThumbUrl">Signed address to send the thumbnail of the final to with a PUT; it is optional to use.</param>
+/// <param name="ThumbHeaders">Headers that must go with the request of the thumbnail.</param>
+public sealed record FinalUploadSlot(
+    Guid PhotoId,
+    Uri Url,
+    IReadOnlyDictionary<string, string> Headers,
+    DateTimeOffset ExpiresAt,
+    Uri? ThumbUrl = null,
+    IReadOnlyDictionary<string, string>? ThumbHeaders = null);
 
 /// <summary>
 /// The places to upload a batch of final photos, in the order they were asked.
@@ -135,7 +143,12 @@ public sealed class RequestFinalUploadsHandler(IGalleryRepository galleries, IOb
                 GalleryKeys.ProofContentType,
                 ObjectStorageLimits.MaxUploadLifetime,
                 cancellationToken);
-            slots.Add(new FinalUploadSlot(file.PhotoId, url.Url, url.RequiredHeaders, url.ExpiresAt));
+            var thumb = await storage.CreateUploadUrlAsync(
+                GalleryKeys.Thumb(gallery.Id, file.PhotoId),
+                GalleryKeys.ProofContentType,
+                ObjectStorageLimits.MaxUploadLifetime,
+                cancellationToken);
+            slots.Add(new FinalUploadSlot(file.PhotoId, url.Url, url.RequiredHeaders, url.ExpiresAt, thumb.Url, thumb.RequiredHeaders));
         }
 
         return new FinalUploadSlotsResponse(slots);
@@ -176,9 +189,15 @@ public sealed class RegisterFinalsHandler(IGalleryRepository galleries, IObjectS
         }
 
         var inspected = new List<(Guid PhotoId, string? Reason, long Bytes)>(command.PhotoIds.Count);
+        var thumbs = new Dictionary<Guid, long>();
         foreach (var photoId in command.PhotoIds.Distinct())
         {
-            inspected.Add(await InspectAsync(command.GalleryId, photoId, cancellationToken));
+            var result = await InspectAsync(command.GalleryId, photoId, cancellationToken);
+            inspected.Add(result);
+            if (result.Reason is null && await InspectThumbAsync(command.GalleryId, photoId, cancellationToken) is { } thumbBytes)
+            {
+                thumbs[photoId] = thumbBytes;
+            }
         }
 
         for (var attempt = 1; ; attempt++)
@@ -196,6 +215,10 @@ public sealed class RegisterFinalsHandler(IGalleryRepository galleries, IObjectS
                     {
                         var entry = command.Details?.FirstOrDefault(candidate => candidate.PhotoId == photoId);
                         changed |= gallery.RegisterFinal(photoId, bytes, now, entry is null ? null : new FinalDetails(entry.Width, entry.Height, entry.CapturedAt));
+                        if (thumbs.TryGetValue(photoId, out var thumbBytes))
+                        {
+                            changed |= gallery.RegisterFinalThumb(photoId, thumbBytes, now);
+                        }
                     }
                     else
                     {
@@ -234,6 +257,32 @@ public sealed class RegisterFinalsHandler(IGalleryRepository galleries, IObjectS
 
             return new RegisterFinalsResponse(gallery.ToResponse(), rejected);
         }
+    }
+
+    /// <summary>
+    /// Looks at the thumbnail of a final in the storage. It is optional: one that is missing is simply not there, and one that is not
+    /// a JPEG or weighs too much is deleted and ignored, without refusing the final it belongs to.
+    /// </summary>
+    /// <param name="galleryId">Gallery the photo belongs to.</param>
+    /// <param name="photoId">Identifier of the chosen photo.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The size of the thumbnail, or <see langword="null"/> when there is none that can be kept.</returns>
+    private async Task<long?> InspectThumbAsync(Guid galleryId, Guid photoId, CancellationToken cancellationToken)
+    {
+        var key = GalleryKeys.Thumb(galleryId, photoId);
+        var info = await storage.GetInfoAsync(key, cancellationToken);
+        if (info is null)
+        {
+            return null;
+        }
+
+        if (!string.Equals(info.ContentType, GalleryKeys.ProofContentType, StringComparison.OrdinalIgnoreCase) || info.Size is < 1 or > GalleryPhoto.MaxThumbBytes)
+        {
+            await storage.DeleteAsync(key, cancellationToken);
+            return null;
+        }
+
+        return info.Size;
     }
 
     /// <summary>
