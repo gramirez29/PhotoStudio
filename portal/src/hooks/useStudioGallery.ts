@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from '@tanstack/react-query';
+import { ARCHIVABLE_KEY } from './useArchivableGalleries';
 import { studioApi } from '../api/client';
 import { PROOF_LIST_STALE_MS } from '../constants/proof';
 import { triggerDownload } from '../media/browserDownload';
@@ -160,6 +161,7 @@ export function useReleaseGallery(galleryId: string): UseMutationResult<StudioGa
     onSuccess: async (gallery) => {
       queryClient.setQueryData(galleryKey(galleryId), gallery);
       await queryClient.invalidateQueries({ queryKey: proofsKey(galleryId) });
+      await queryClient.invalidateQueries({ queryKey: ARCHIVABLE_KEY });
     },
   });
 }

@@ -4,6 +4,7 @@ import type { PendingCode } from '../types/utils/studio.types';
 import { readPendingCode } from '../utils/pendingCode';
 import { LoadErrorScreen } from './LoadErrorScreen';
 import { LoadingScreen } from './LoadingScreen';
+import { StudioArchive } from './StudioArchive';
 import { StudioCodeForm } from './StudioCodeForm';
 import { StudioGalleries } from './StudioGalleries';
 import { StudioGalleryDetail } from './StudioGalleryDetail';
@@ -21,7 +22,7 @@ const TITLE = 'Tu estudio · PhotoSense Studio';
  * @param props Component props.
  * @returns The page.
  */
-export function StudioPage({ galleryId }: StudioPageProps): ReactElement {
+export function StudioPage({ galleryId, archive = false }: StudioPageProps): ReactElement {
   const session = useStudioSession();
   const [pending, setPending] = useState<PendingCode | null>(() => readPendingCode());
 
@@ -48,6 +49,10 @@ export function StudioPage({ galleryId }: StudioPageProps): ReactElement {
   }
 
   if (session.data !== null) {
+    if (archive) {
+      return <StudioArchive />;
+    }
+
     return galleryId === undefined ? <StudioGalleries user={session.data} /> : <StudioGalleryDetail galleryId={galleryId} user={session.data} />;
   }
 

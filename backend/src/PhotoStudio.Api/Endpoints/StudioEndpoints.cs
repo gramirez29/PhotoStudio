@@ -145,6 +145,7 @@ public static class StudioEndpoints
 
         var galleries = endpoints.MapGroup("/api/web/galleries").WithTags("Web area").RequireCors(StudioWebSettings.CorsPolicyName).RequireAuthorization(StudioWebSettings.Policy);
         galleries.MapGet("/", ListGalleriesAsync).WithName("StudioListGalleries");
+        galleries.MapGet("/archivable", GalleryEndpoints.ListArchivableAsync).WithName("StudioListArchivableGalleries");
         galleries.MapGet("/{id:guid}", GetGalleryAsync).WithName("StudioGetGallery");
         galleries.MapGet("/{id:guid}/proofs", ListProofsAsync).WithName("StudioListProofs");
         galleries.MapGet("/{id:guid}/selection", GetSelectionAsync).WithName("StudioGetSelection");

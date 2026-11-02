@@ -315,6 +315,7 @@ export function createStudioApi(client: HttpClient): StudioApi {
         { signal },
       ),
     getGallery: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}`, parseStudioGalleryBody, { signal }),
+    listArchivable: (signal) => client.get('/api/web/galleries/archivable', (body) => parseStudioGalleryPage(body).items, { signal }),
     getSelection: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}/selection`, parseStudioSelection, { signal }),
     listProofs: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}/proofs`, parseProofList, { signal }),
     requestProofUploads: (galleryId, files: readonly ProofFileInfo[], signal) =>

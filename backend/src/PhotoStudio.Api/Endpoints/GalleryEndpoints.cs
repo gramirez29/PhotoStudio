@@ -105,7 +105,7 @@ public static class GalleryEndpoints
     /// <param name="handler">Query handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>200 with up to 100 galleries; there is no next page.</returns>
-    private static async Task<Ok<GalleryListResponse>> ListArchivableAsync(
+    internal static async Task<Ok<GalleryListResponse>> ListArchivableAsync(
         ClaimsPrincipal user,
         IQueryHandler<ListArchivableGalleriesQuery, GalleryListResponse> handler,
         CancellationToken cancellationToken) =>

@@ -26,6 +26,9 @@ export default function App(): ReactElement {
     case 'studio':
       content = <StudioPage />;
       break;
+    case 'studioArchive':
+      content = <StudioPage archive />;
+      break;
     case 'studioGallery':
       content = <StudioPage galleryId={route.galleryId} />;
       break;

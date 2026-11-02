@@ -5,6 +5,8 @@ import type { PendingCode } from '../utils/studio.types';
 export interface StudioPageProps {
   /** Identifier of the gallery named by the address, or nothing for the list of galleries. */
   readonly galleryId?: string;
+  /** Whether the address is the list of the galleries to archive. */
+  readonly archive?: boolean;
 }
 
 /** Props of the `StudioLoginForm` component. */
@@ -30,5 +32,11 @@ export interface StudioGalleriesProps {
 /** Props of the `StudioGalleryCard` component. */
 export interface StudioGalleryCardProps {
   /** The gallery to show. */
+  readonly gallery: StudioGallery;
+}
+
+/** Props of the `ArchiveGalleryCard` component. */
+export interface ArchiveGalleryCardProps {
+  /** The delivered gallery. */
   readonly gallery: StudioGallery;
 }

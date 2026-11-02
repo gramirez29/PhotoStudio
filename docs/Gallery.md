@@ -358,3 +358,19 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Pendiente:** limpiar objetos huérfanos en R2 (subidas interrumpidas antes de registrarse): hace falta listar el bucket por prefijo (`galleries/{id}/`) y compararlo con lo registrado; queda para un PR aparte porque el puerto de almacenamiento no lista objetos. Los plazos (90 y 180 días) aún no son configurables por galería ni por entorno. La pantalla **"Galerías por archivar"** (menú lateral de la app, `app/archivable.tsx`) lista las galerías entregadas, la más antigua primero, con cuántos días llevan; cada una trae "Abrir la galería" y "Liberar espacio" (con la misma confirmación), así puedes liberar antes de tiempo con tu respaldo en la computadora. La alimenta `GET /api/galleries/archivable` (hasta 100, sin paginar).
 
 **Pruebas:** dominio 6 nuevas (archivar una vez, estados que no se pueden archivar, cuenta de los 90 días), aplicación 3 nuevas (borra todo y luego archiva, rechaza lo no entregado y lo ajeno, un fallo del almacenamiento no archiva) y la pasada de mantenimiento sigue verde. Suite completa del backend en contenedor: 1 186 pruebas.
+
+## 28. Galerías por archivar en la web, con descarga a una carpeta (PR 11)
+
+**Dónde:** `/studio/archive` (enlace "Galerías por archivar" en `/studio`). Lista las galerías entregadas, la más antigua primero (`GET /api/web/galleries/archivable`, el mismo manejador que la app). Cada tarjeta trae "Descargar", "Abrir la galería" y, cuando corresponde, el panel "Liberar espacio".
+
+**Descargar a una carpeta (`media/folderDownload.ts`, `media/browserFolder.ts`):**
+- **Chrome y Edge:** el navegador deja elegir una carpeta (File System Access API, con el permiso de escritura que pide el propio navegador). Se bajan **solo los finales**, de uno en uno (nunca más de una foto en memoria), cada uno desde su dirección firmada de 5 minutos (`GET .../finals/{id}/download`, que no cuenta como descarga del cliente), y se compara el **tamaño recibido con el que registró la API al subirlo**. Una foto que llega con otro tamaño, o que no se pudo recibir o escribir, se reporta y no se da por buena; las demás siguen. Dos finales con el mismo nombre no se pisan (`foto.jpg`, `foto-2.jpg`).
+- **Firefox y Safari:** no existe ese selector; las descargas se inician una por una (con pausa), y la página avisa que **no puede comprobar** que quedaron completas.
+
+**Cuándo se ofrece "Liberar espacio"** (el panel de siempre, con su confirmación): solo cuando la descarga a la carpeta terminó **sin ningún fallo**, cuando se iniciaron las descargas en un navegador sin carpeta, o cuando el fotógrafo marca "Ya tengo estas fotos respaldadas en mi computadora". Nunca antes. La página no puede saber si los archivos quedaron bien en el disco, solo que llegaron completos al navegador: por eso la confirmación final sigue siendo del fotógrafo.
+
+**Costo:** la salida de datos de R2 es gratis. Una galería Premium son ~300 MB de finales; una de 150 finales de 50 MB serían ~7 GB (se baja de a una foto y se puede repetir lo que falló).
+
+**Pendiente:** el CORS del bucket de R2 debe permitir `GET` desde el origen del sitio (ya lo permite para develop y `localhost:5173`; en producción, al configurarla). No hay descarga en bloque en la app del celular.
+
+**Pruebas:** backend, una de API (la lista solo para el navegador con sesión); portal 10 nuevas (guardado correcto, tamaño distinto, fallo de recepción, nombres repetidos, cancelación, la ruta, y la tarjeta en sus cinco estados).
