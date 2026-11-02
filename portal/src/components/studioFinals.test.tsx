@@ -262,7 +262,7 @@ describe('the final photos on the page of a gallery', () => {
     await user.click(screen.getByRole('button', { name: 'Sí, el cliente ya pagó' }));
 
     expect(await screen.findByText('Las fotos adicionales ya están disponibles para el cliente.')).toBeInTheDocument();
-    expect(within(screen.getByRole('group', { name: 'Fotos adicionales (1)' })).getByText(/final subido/)).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Fotos adicionales (1)' })).getByText('Sin descargas')).toBeInTheDocument();
   });
 
   it('reopens the selection only after asking for the reason and confirming, and the page goes back to the client choosing', async () => {

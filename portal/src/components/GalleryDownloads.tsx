@@ -7,6 +7,7 @@ import { describeDownloadError } from '../utils/apiErrors';
 import { downloadInSequence, toDownloads, totalBytes } from '../utils/downloads';
 import { formatBytes, formatMoney } from '../utils/format';
 import { CheckboxField } from './CheckboxField';
+import { PhotoCard } from './PhotoCard';
 import { PhotoViewer } from './PhotoViewer';
 import { StepHeading } from './StepHeading';
 
@@ -25,6 +26,8 @@ export function GalleryDownloads({ gallery, requestDownloads, requestView, reque
   const [confirmingZip, setConfirmingZip] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
   const [zipBusy, setZipBusy] = useState(false);
+  // While a photo has no thumbnail of its own, its proof (which every photo has) is what the card shows, so the grid is never empty.
+  const proofs = new Map(gallery.photos.map((photo) => [photo.id, photo.url]));
   const packageFinals = gallery.finals.filter((final) => !final.isExtra);
   const extraFinals = gallery.finals.filter((final) => final.isExtra);
   const extraChosen = gallery.selection?.extraPhotos ?? 0;
@@ -150,7 +153,7 @@ export function GalleryDownloads({ gallery, requestDownloads, requestView, reque
         </p>
       )}
 
-      <DownloadGroup title="Fotos de tu paquete" finals={packageFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} onView={(final) => setViewing(final.id)} />
+      <DownloadGroup title="Fotos de tu paquete" proofs={proofs} finals={packageFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} onView={(final) => setViewing(final.id)} />
 
       {extraChosen > 0 && extraFinals.length === 0 && (
         <p className="notice" role="status">
@@ -158,10 +161,10 @@ export function GalleryDownloads({ gallery, requestDownloads, requestView, reque
           PhotoSense Studio te contactará para coordinar el pago y entregártelas.
         </p>
       )}
-      <DownloadGroup title="Fotos adicionales" finals={extraFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} onView={(final) => setViewing(final.id)} />
+      <DownloadGroup title="Fotos adicionales" proofs={proofs} finals={extraFinals} marked={marked} disabled={busy} onToggle={toggle} onDownload={(final) => void download([final])} onView={(final) => setViewing(final.id)} />
       {viewing !== null && (
         <PhotoViewer
-          photos={gallery.finals.map((final) => ({ id: final.id, name: final.fileName, caption: formatBytes(final.bytes), placeholder: final.thumbUrl }))}
+          photos={gallery.finals.map((final) => ({ id: final.id, name: final.fileName, caption: formatBytes(final.bytes), placeholder: final.thumbUrl ?? proofs.get(final.id) ?? null }))}
           index={Math.max(0, gallery.finals.findIndex((final) => final.id === viewing))}
           loadSource={requestView}
           onMove={(position) => setViewing(gallery.finals[position]?.id ?? null)}
@@ -180,6 +183,8 @@ export function GalleryDownloads({ gallery, requestDownloads, requestView, reque
 
 /** Props of one group of downloadable photos. */
 interface DownloadGroupProps {
+  /** Address of the proof of each photo, by photo, to show while a photo has no thumbnail. */
+  readonly proofs: ReadonlyMap<string, string>;
   /** Heading of the group. */
   readonly title: string;
   /** The finals of the group. */
@@ -201,7 +206,7 @@ interface DownloadGroupProps {
  * @param props Component props.
  * @returns The group, or nothing when it has no photos.
  */
-function DownloadGroup({ title, finals, marked, disabled, onToggle, onDownload, onView }: DownloadGroupProps): ReactElement | null {
+function DownloadGroup({ title, proofs, finals, marked, disabled, onToggle, onDownload, onView }: DownloadGroupProps): ReactElement | null {
   if (finals.length === 0) {
     return null;
   }
@@ -211,19 +216,18 @@ function DownloadGroup({ title, finals, marked, disabled, onToggle, onDownload, 
       <h3>
         {title} ({finals.length})
       </h3>
-      <ul className="final-grid">
+      <ul className="photo-grid">
         {finals.map((final) => (
-          <li key={final.id} className="final-tile">
-            <button type="button" className="final-tile__photo" aria-label={`Ver ${final.fileName}`} onClick={() => onView(final)}>
-              {final.thumbUrl !== null && <img src={final.thumbUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
-            </button>
-            <CheckboxField id={`download-${final.id}`} checked={marked.has(final.id)} disabled={disabled} onChange={() => onToggle(final.id)}>
-              {final.fileName} ({formatBytes(final.bytes)})
-            </CheckboxField>
-            <button type="button" className="button button--secondary final-tile__action" disabled={disabled} aria-label={`Descargar ${final.fileName}`} onClick={() => onDownload(final)}>
-              Descargar
-            </button>
-          </li>
+          <PhotoCard
+            key={final.id}
+            image={final.thumbUrl ?? proofs.get(final.id) ?? null}
+            name={final.fileName}
+            details={[formatBytes(final.bytes)]}
+            openLabel={`Ver ${final.fileName}`}
+            onOpen={() => onView(final)}
+            select={{ checked: marked.has(final.id), onChange: () => onToggle(final.id), label: `Seleccionar ${final.fileName}`, disabled }}
+            action={{ label: `Descargar ${final.fileName}`, onClick: () => onDownload(final), disabled }}
+          />
         ))}
       </ul>
     </div>

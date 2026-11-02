@@ -58,6 +58,29 @@ export function describeFinal(photo: SelectedPhoto): string {
 }
 
 /**
+ * Describes the final of a photo in short lines for its card: the size in pixels and in megabytes, when it was taken and how many
+ * times the client asked to download it; or that it has none yet.
+ * @param photo The photo.
+ * @returns The lines, one under the other.
+ */
+export function describeFinalLines(photo: SelectedPhoto): readonly string[] {
+  if (photo.finalBytes === null) {
+    return ['Todavía sin final'];
+  }
+
+  const size = [photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} × ${photo.finalHeight} px` : null, formatBytes(photo.finalBytes)]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
+  const lines = [size];
+  if (photo.finalCapturedAt !== null) {
+    lines.push(`Tomada el ${formatDate(new Date(photo.finalCapturedAt))}`);
+  }
+
+  lines.push(photo.finalDownloads === 0 ? 'Sin descargas' : `Descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
+  return lines;
+}
+
+/**
  * Splits what the client chose in the photos the package covers and the extra ones.
  * @param selection What the client chose.
  * @returns The two groups.

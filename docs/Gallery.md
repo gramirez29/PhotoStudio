@@ -310,3 +310,16 @@ Todo con la paleta de la marca (claro crema y terracota, oscuro azul noche y cob
 **Pruebas:** app 43 nuevas (921 en total): lectura de las respuestas, rutas llamadas, textos de estado, ficha y validaciones, las acciones con su confirmación, las pantallas (tarjeta, selección en dos bloques, visor de la foto real, cuadrícula de pruebas, ZIP) y las dos opciones del enlace. El paquete de Android se exporta sin errores.
 
 **Pendiente (PR 9):** subir pruebas, finales (con su miniatura) y ZIP desde el celular.
+
+## 25. Las fotos como tarjetas (2026-11-04)
+
+**Qué pasaba:** las fotos de la galería (descargas del cliente y selección del fotógrafo) eran un cuadro sin imagen con una casilla y un botón ancho, y se veían desordenadas. Un final subido **antes** de que existieran las miniaturas no tiene ninguna, y la tarjeta dejaba un hueco vacío. La app del celular tenía lo mismo.
+
+**Ahora, igual en la web del cliente, la del fotógrafo y la app:** cada foto es una **tarjeta**: la imagen arriba (tocarla abre la foto real), el nombre y la ficha **debajo de la imagen**, y el **ícono de descarga dentro de la misma tarjeta** (círculo en el azul de la marca). En la web del cliente la casilla para elegir va sobre la esquina de la imagen; en la del fotógrafo y en la app, la etiqueta "Final / Sin final".
+- **Ficha en líneas cortas**, una debajo de otra: `1250 × 3000 px · 4,2 MB`, `Tomada el 17 de octubre de 2026`, `Descargada 2 veces` (o `Todavía sin final`). Antes era una sola línea larga que se partía en cinco.
+- **Nunca un hueco:** si una foto no tiene miniatura, la tarjeta muestra la **prueba** (con marca de agua; el cliente la tiene de todas sus fotos) mientras tanto; si no hay ninguna imagen, o falla al cargar, muestra un **ícono de foto** y la tarjeta conserva su tamaño, así la cuadrícula no salta. Las miniaturas reales aparecen en los finales que se suban desde ahora.
+- El nombre ocupa hasta dos líneas (no se corta con "…" a media palabra) y el ícono queda arriba junto a él.
+- Colores solo de los tokens de la página (fondo de página sobre la superficie de la sección, texto y marca); sin romper la apariencia actual.
+- Una sola pieza compartida en la web (`PhotoCard`) para las dos páginas; en la app, `GalleryPhotoTile`.
+
+**Pendiente:** los finales ya publicados antes de las miniaturas siguen sin la suya (se ven con la prueba). Una opción es una acción "generar miniaturas faltantes" desde la web del fotógrafo, para que el cliente vea la foto final y no la de prueba.

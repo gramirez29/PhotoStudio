@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Image } from 'react-native';
 import { parseBooking } from '../../api/bookingsApi';
 import { parseGallery, parseSelection } from '../../api/galleryApi';
 import { bookingPayload } from '../../api/__fixtures__/testResponses';
@@ -10,6 +11,7 @@ import { shareText } from '../../navigation/externalLinks';
 import type { GalleryActionHandlers } from '../../types/hooks/useGalleryActions.types';
 import { GalleryActions } from '../GalleryActions';
 import { GalleryCard } from '../GalleryCard';
+import { GalleryPhotoTile } from '../GalleryPhotoTile';
 import { GalleryPhotoViewer } from '../GalleryPhotoViewer';
 import { GalleryProofGrid } from '../GalleryProofGrid';
 import { GallerySelection } from '../GallerySelection';
@@ -118,8 +120,9 @@ describe('GallerySelection', () => {
     expect(screen.getByText('Fotos del paquete (2)')).toBeTruthy();
     expect(screen.getByText('Fotos adicionales (1)')).toBeTruthy();
     expect(screen.getByText('1 de 2 con su final')).toBeTruthy();
-    expect(screen.getByText(/final subido · 1250 × 3000 px · 4,2 MB/)).toBeTruthy();
-    expect(screen.getAllByText('sin final')).toHaveLength(2);
+    expect(screen.getByText('1250 × 3000 px · 4,2 MB')).toBeTruthy();
+    expect(screen.getByText('Descargada 2 veces')).toBeTruthy();
+    expect(screen.getAllByText('Todavía sin final')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Ver IMG_0001.CR2' })).toBeTruthy();
     expect(screen.getAllByRole('button', { name: /Descargar/ })).toHaveLength(1);
   });
@@ -146,6 +149,47 @@ describe('GallerySelection', () => {
     expect(useFinalView).toHaveBeenLastCalledWith(gallery.id, 'p2', false);
     fireEvent.press(screen.getByRole('button', { name: 'Cerrar' }));
     expect(screen.queryByRole('button', { name: 'Siguiente' })).toBeNull();
+  });
+});
+
+describe('GalleryPhotoTile', () => {
+  const photo = selection.photos[0]!;
+
+  it('has the download icon inside the card, named by what it does, and runs it', () => {
+    const onDownload = jest.fn();
+    render(<GalleryPhotoTile photo={photo} onOpen={jest.fn()} onDownload={onDownload} downloading={false} />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Descargar el final de IMG_0001.CR2' }));
+
+    expect(onDownload).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Final')).toBeTruthy();
+    expect(screen.getByText('IMG_0001.CR2')).toBeTruthy();
+  });
+
+  it('does not offer to download a photo that has no final, and says so on the card', () => {
+    render(<GalleryPhotoTile photo={selection.photos[1]!} onOpen={jest.fn()} onDownload={jest.fn()} downloading={false} />);
+
+    expect(screen.queryByRole('button', { name: /Descargar/ })).toBeNull();
+    expect(screen.getByText('Sin final')).toBeTruthy();
+  });
+
+  it('cannot be pressed again while the download is being prepared', () => {
+    const onDownload = jest.fn();
+    render(<GalleryPhotoTile photo={photo} onOpen={jest.fn()} onDownload={onDownload} downloading />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Descargar el final de IMG_0001.CR2' }));
+
+    expect(onDownload).not.toHaveBeenCalled();
+  });
+
+  it('shows an icon, not an empty gap, when the photo has no image or its image cannot be loaded', () => {
+    const { rerender } = render(<GalleryPhotoTile photo={{ ...photo, thumbUrl: null }} onOpen={jest.fn()} onDownload={jest.fn()} downloading={false} />);
+    expect(screen.UNSAFE_queryByType(Image)).toBeNull();
+
+    rerender(<GalleryPhotoTile photo={photo} onOpen={jest.fn()} onDownload={jest.fn()} downloading={false} />);
+    fireEvent(screen.UNSAFE_getByType(Image), 'error');
+
+    expect(screen.UNSAFE_queryByType(Image)).toBeNull();
   });
 });
 

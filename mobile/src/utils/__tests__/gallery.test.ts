@@ -1,6 +1,6 @@
 import { parseGallery, parseSelection } from '../../api/galleryApi';
 import { galleryPayload, selectionPayload } from '../../api/__fixtures__/galleryPayloads';
-import { describeFinal, describeGalleryStatus, describeTerms, describeZip, namesOf, splitSelection, validateReopenReason, validateTerms } from '../gallery';
+import { describeFinal, describeFinalLines, describeGalleryStatus, describeTerms, describeZip, namesOf, splitSelection, validateReopenReason, validateTerms } from '../gallery';
 
 const gallery = parseGallery(galleryPayload);
 const selection = parseSelection(selectionPayload);
@@ -31,6 +31,14 @@ describe('describeFinal', () => {
 
   it('says there is no final yet', () => {
     expect(describeFinal(selection.photos[1]!)).toBe('sin final');
+  });
+});
+
+describe('describeFinalLines', () => {
+  it('splits what is known about a final in short lines for its card', () => {
+    expect(describeFinalLines(selection.photos[0]!)).toEqual(['1250 × 3000 px · 4,2 MB', expect.stringMatching(/^Tomada el .*17 de octubre de 2026$/), 'Descargada 2 veces']);
+    expect(describeFinalLines({ ...selection.photos[0]!, finalWidth: null, finalCapturedAt: null, finalDownloads: 0 })).toEqual(['4,2 MB', 'Sin descargas']);
+    expect(describeFinalLines(selection.photos[1]!)).toEqual(['Todavía sin final']);
   });
 });
 

@@ -5,6 +5,7 @@ import type { StudioSelectedPhoto } from '../types/api/studio';
 import type { StudioSelectionProps } from '../types/components/ProofComponents.types';
 import { formatBytes, formatDateTime, formatDay, formatMoney } from '../utils/format';
 import { describeProofRequestError } from '../utils/proofMessages';
+import { PhotoCard } from './PhotoCard';
 import { PhotoViewer } from './PhotoViewer';
 
 /**
@@ -141,29 +142,18 @@ function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: S
           Tu navegador no permitió copiar. Selecciona la lista y cópiala a mano.
         </p>
       )}
-      <ul className="final-grid" aria-label={title}>
+      <ul className="photo-grid" aria-label={title}>
         {photos.map((photo, position) => (
-          <li key={photo.id} className="final-tile">
-            <button type="button" className="final-tile__photo" aria-label={`Ver ${photo.name}`} onClick={() => setOpen(position)}>
-              {photo.thumbUrl !== null && <img src={photo.thumbUrl} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
-              <span className={photo.finalBytes === null ? 'final-tile__badge final-tile__badge--missing' : 'final-tile__badge'}>
-                {photo.finalBytes === null ? 'Sin final' : 'Final'}
-              </span>
-            </button>
-            <span className="final-tile__name">{photo.name}</span>
-            <span className="muted final-tile__info">{describeFinal(photo)}</span>
-            {photo.finalBytes !== null && (
-              <button
-                type="button"
-                className="button button--secondary final-tile__action"
-                disabled={download.isPending}
-                aria-label={`Descargar el final de ${photo.name}`}
-                onClick={() => download.mutate(photo.id)}
-              >
-                ⬇ Descargar
-              </button>
-            )}
-          </li>
+          <PhotoCard
+            key={photo.id}
+            image={photo.thumbUrl}
+            name={photo.name}
+            details={describeFinalLines(photo)}
+            openLabel={`Ver ${photo.name}`}
+            onOpen={() => setOpen(position)}
+            badge={photo.finalBytes === null ? { label: 'Sin final', warning: true } : { label: 'Final' }}
+            action={photo.finalBytes === null ? undefined : { label: `Descargar el final de ${photo.name}`, onClick: () => download.mutate(photo.id), disabled: download.isPending }}
+          />
         ))}
       </ul>
       {download.isError && (
@@ -187,6 +177,29 @@ function SelectionBlock({ title, id, galleryId, photos, hint, extra = false }: S
       )}
     </div>
   );
+}
+
+/**
+ * Describes the final of a photo in short lines for its card: the size in pixels and in megabytes, when it was taken and how many
+ * times the client asked to download it; or that it has none yet.
+ * @param photo The photo.
+ * @returns The lines, one under the other.
+ */
+export function describeFinalLines(photo: StudioSelectedPhoto): readonly string[] {
+  if (photo.finalBytes === null) {
+    return ['Todavía sin final'];
+  }
+
+  const size = [photo.finalWidth !== null && photo.finalHeight !== null ? `${photo.finalWidth} × ${photo.finalHeight} px` : null, formatBytes(photo.finalBytes)]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
+  const lines = [size];
+  if (photo.finalCapturedAt !== null) {
+    lines.push(`Tomada el ${formatDay(photo.finalCapturedAt)}`);
+  }
+
+  lines.push(photo.finalDownloads === 0 ? 'Sin descargas' : `Descargada ${photo.finalDownloads} ${photo.finalDownloads === 1 ? 'vez' : 'veces'}`);
+  return lines;
 }
 
 /**
