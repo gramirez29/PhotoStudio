@@ -50,7 +50,8 @@ public static class ClientPortalExtensions
         var options = JwtOptions.FromEnvironment(isDevelopment);
         services.AddSingleton(new PortalSettings(ReadPortalBaseUrl(isDevelopment)));
         services.AddSingleton<IOtpCodeService, OtpCodeService>();
-        services.AddSingleton<IPortalSessionIssuer, PortalSessionTokenIssuer>();
+        var sessionLifetime = PortalSessionLifetime.FromEnvironment(Environment.GetEnvironmentVariable(PortalSessionLifetime.Variable));
+        services.AddSingleton<IPortalSessionIssuer>(_ => new PortalSessionTokenIssuer(options, sessionLifetime));
         AddEmailSender(services, isDevelopment);
 
         services
