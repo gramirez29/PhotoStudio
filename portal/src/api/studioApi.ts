@@ -1,7 +1,7 @@
 import { GALLERIES_PAGE_SIZE, GALLERY_ACTIONS, GALLERY_STATUSES } from '../constants/gallery';
 import type { HttpClient } from '../types/api/http';
 import type { ProofFileInfo, ProofRegistration, ProofUploadSlot, RegisterProofsResult, StudioProof } from '../types/api/proofs';
-import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioUser } from '../types/api/studio';
+import type { StudioCodeSent, StudioGallery, StudioGalleryPage, StudioLoginResult, StudioSelection, StudioUser } from '../types/api/studio';
 import type { StudioApi } from '../types/api/studioApi';
 import { expectRecord, readArray, readLiteral, readNullableString, readNumber, readString } from './guards';
 import { parseMoney } from './portalApi';
@@ -80,6 +80,9 @@ export function parseStudioGallery(value: unknown, path: string): StudioGallery 
     extraPhotoPrice: parseMoney(record.extraPhotoPrice, `${path}.extraPhotoPrice`),
     maxPhotos: readCount(record, 'maxPhotos', path),
     photoCount: readCount(record, 'photoCount', path),
+    selectedPhotoCount: readCount(record, 'selectedPhotoCount', path),
+    extraPhotoCount: readCount(record, 'extraPhotoCount', path),
+    selectionSubmittedAt: readNullableString(record, 'selectionSubmittedAt', path),
     createdAt: readString(record, 'createdAt', path),
     allowedActions: readArray(record, 'allowedActions', path).flatMap(knownAction),
   };
@@ -158,6 +161,26 @@ export function parseProofList(value: unknown): readonly StudioProof[] {
 }
 
 /**
+ * Parses what the client chose.
+ * @param value Unknown response body.
+ * @returns The typed selection.
+ */
+export function parseStudioSelection(value: unknown): StudioSelection {
+  const path = 'selection';
+  const record = expectRecord(value, path);
+  return {
+    submittedAt: readNullableString(record, 'submittedAt', path),
+    extraPhotos: readCount(record, 'extraPhotos', path),
+    extraTotal: parseMoney(record.extraTotal, `${path}.extraTotal`),
+    photos: readArray(record, 'photos', path).map((item, index) => {
+      const itemPath = `${path}.photos[${index}]`;
+      const photo = expectRecord(item, itemPath);
+      return { id: readString(photo, 'id', itemPath), name: readString(photo, 'name', itemPath) };
+    }),
+  };
+}
+
+/**
  * Parses a single gallery answer.
  * @param value Unknown response body.
  * @returns The typed gallery.
@@ -212,6 +235,7 @@ export function createStudioApi(client: HttpClient): StudioApi {
         { signal },
       ),
     getGallery: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}`, parseStudioGalleryBody, { signal }),
+    getSelection: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}/selection`, parseStudioSelection, { signal }),
     listProofs: (galleryId, signal) => client.get(`/api/web/galleries/${galleryId}/proofs`, parseProofList, { signal }),
     requestProofUploads: (galleryId, files: readonly ProofFileInfo[], signal) =>
       client.post(`/api/web/galleries/${galleryId}/proofs/uploads`, { files }, parseProofSlots, { signal }),

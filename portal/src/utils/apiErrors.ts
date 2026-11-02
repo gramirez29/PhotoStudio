@@ -158,6 +158,9 @@ export function describeSubmitError(error: unknown): ActionErrorView {
   return commonActionError(error, 'No pudimos registrar tu comprobante. Inténtalo de nuevo.');
 }
 
+/** Message for a verification that expired while the client was choosing photos. What they chose is kept. */
+const GALLERY_SESSION_EXPIRED = 'Tu verificación venció. Confirma tu correo otra vez; las fotos que elegiste se conservan.';
+
 /** Message for a verification that expired while the client was on the contract. */
 const CONTRACT_SESSION_EXPIRED = 'Tu verificación venció. Confirma tu correo otra vez; lo que escribiste se conserva.';
 
@@ -213,4 +216,42 @@ export function describeSignContractError(error: unknown): ActionErrorView {
   }
 
   return commonActionError(error, 'No pudimos registrar tu firma. Inténtalo de nuevo.');
+}
+
+/**
+ * Explains why the gallery could not be loaded.
+ * @param error Error of the request.
+ * @returns The message, and whether the verification expired.
+ */
+export function describeGalleryLoadError(error: unknown): ActionErrorView {
+  if (error instanceof ApiError && error.status === 401) {
+    return { message: GALLERY_SESSION_EXPIRED, retryAfterSeconds: null, sessionExpired: true };
+  }
+
+  return commonActionError(error, 'No pudimos cargar tus fotos. Inténtalo de nuevo.');
+}
+
+/**
+ * Explains why the selection was not sent.
+ * @param error Error of the request.
+ * @returns The message, and whether the verification expired.
+ */
+export function describeSelectionError(error: unknown): ActionErrorView {
+  if (error instanceof ApiError && error.status === 401) {
+    return { message: GALLERY_SESSION_EXPIRED, retryAfterSeconds: null, sessionExpired: true };
+  }
+
+  if (error instanceof ApiError && error.code === 'gallery.invalid_state') {
+    return { message: 'Tu selección ya se había enviado, o la galería ya no está abierta. Cierra y vuelve a abrir tus fotos.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  if (error instanceof ApiError && error.code === 'gallery.invalid_selection') {
+    return { message: 'Alguna de las fotos que elegiste ya no está disponible. Cierra y vuelve a abrir tus fotos.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  if (error instanceof ApiError && error.code === 'concurrency.conflict') {
+    return { message: 'La galería cambió mientras elegías. Inténtalo de nuevo.', retryAfterSeconds: null, sessionExpired: false };
+  }
+
+  return commonActionError(error, 'No pudimos enviar tu selección. Inténtalo de nuevo.');
 }

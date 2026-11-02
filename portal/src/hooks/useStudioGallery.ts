@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseMutationResult, type Use
 import { studioApi } from '../api/client';
 import { PROOF_LIST_STALE_MS } from '../constants/proof';
 import type { StudioProof } from '../types/api/proofs';
-import type { StudioGallery } from '../types/api/studio';
+import type { StudioGallery, StudioSelection } from '../types/api/studio';
 import { STUDIO_DATA_PREFIX } from './useStudioSession';
 import { useSessionGuard } from './useSessionGuard';
 
@@ -48,6 +48,26 @@ export function useStudioProofs(galleryId: string): UseQueryResult<readonly Stud
     queryFn: ({ signal }) => guard(() => studioApi.listProofs(galleryId, signal)),
     staleTime: PROOF_LIST_STALE_MS,
   });
+}
+
+/**
+ * Key of the selection of one gallery in the cache.
+ * @param galleryId Gallery identifier.
+ * @returns The key.
+ */
+export function selectionKey(galleryId: string): readonly unknown[] {
+  return [...STUDIO_DATA_PREFIX, 'selection', galleryId];
+}
+
+/**
+ * Loads what the client chose in a gallery, with the names of the original files.
+ * @param galleryId Gallery identifier.
+ * @param enabled Whether to ask: only a gallery whose client sent the selection has one.
+ * @returns The TanStack Query result.
+ */
+export function useStudioSelection(galleryId: string, enabled: boolean): UseQueryResult<StudioSelection, Error> {
+  const guard = useSessionGuard();
+  return useQuery({ queryKey: selectionKey(galleryId), queryFn: ({ signal }) => guard(() => studioApi.getSelection(galleryId, signal)), enabled });
 }
 
 /**

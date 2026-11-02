@@ -74,6 +74,12 @@ export interface StudioGallery {
   readonly maxPhotos: number;
   /** Proofs registered so far. */
   readonly photoCount: number;
+  /** How many photos the client chose; 0 until they send the selection. */
+  readonly selectedPhotoCount: number;
+  /** How many of the chosen photos go beyond what the package includes. */
+  readonly extraPhotoCount: number;
+  /** Instant the client sent the selection, ISO 8601, or null while they did not. */
+  readonly selectionSubmittedAt: string | null;
   /** Instant it was created, ISO 8601. */
   readonly createdAt: string;
   /** What the photographer can do with it now. */
@@ -86,4 +92,24 @@ export interface StudioGalleryPage {
   readonly items: readonly StudioGallery[];
   /** What to send back to get the next page, or null when this is the last one. */
   readonly nextCursor: string | null;
+}
+
+/** A photo the client chose, with the name of the file it came from: what to look for in the editing software. */
+export interface StudioSelectedPhoto {
+  /** Photo identifier. */
+  readonly id: string;
+  /** Name of the original file. */
+  readonly name: string;
+}
+
+/** What the client chose in a gallery. */
+export interface StudioSelection {
+  /** Instant the client sent it, ISO 8601, or null while they did not. */
+  readonly submittedAt: string | null;
+  /** How many of the photos go beyond what the package includes. */
+  readonly extraPhotos: number;
+  /** What those extra photos cost. */
+  readonly extraTotal: Money;
+  /** The photos chosen, in the order they were chosen. */
+  readonly photos: readonly StudioSelectedPhoto[];
 }

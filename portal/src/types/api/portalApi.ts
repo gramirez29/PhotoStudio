@@ -1,4 +1,4 @@
-import type { PortalBooking, PortalCodeSent, PortalContract, PortalSession, SignContractRequest, SubmitProofRequest } from './portal';
+import type { PortalBooking, PortalCodeSent, PortalContract, PortalGallery, PortalGallerySummary, PortalSession, SignContractRequest, SubmitProofRequest } from './portal';
 
 /** Portal endpoints the page calls. */
 export interface PortalApi {
@@ -55,4 +55,31 @@ export interface PortalApi {
    * @returns The booking after signing.
    */
   signContract(token: string, accessToken: string, request: SignContractRequest, signal?: AbortSignal): Promise<PortalBooking>;
+
+  /**
+   * Asks where the gallery of the booking is. It needs only the link.
+   * @param token Secret token taken from the URL.
+   * @param signal Optional signal to cancel the request.
+   * @returns The summary; the request fails with a 404 when there is no gallery for the client to see yet.
+   */
+  getGallerySummary(token: string, signal?: AbortSignal): Promise<PortalGallerySummary>;
+
+  /**
+   * Reads the gallery: the proofs and the terms to choose them. It needs the session, because the photos are not paid yet.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param signal Optional signal to cancel the request.
+   * @returns The gallery.
+   */
+  getGallery(token: string, accessToken: string, signal?: AbortSignal): Promise<PortalGallery>;
+
+  /**
+   * Sends the photos the client chose. From then on the selection is locked.
+   * @param token Secret token taken from the URL.
+   * @param accessToken Token of the session obtained by verifying a code.
+   * @param photoIds Identifiers of the photos chosen.
+   * @param signal Optional signal to cancel the request.
+   * @returns The gallery after the selection.
+   */
+  submitSelection(token: string, accessToken: string, photoIds: readonly string[], signal?: AbortSignal): Promise<PortalGallery>;
 }

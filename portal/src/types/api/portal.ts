@@ -3,6 +3,7 @@
  * travel as strings and dates as ISO 8601. Keep in sync with the backend, or replace with types generated from /openapi/v1.json.
  */
 import type { BOOKING_STATUSES, IMAGE_USES, PAYMENT_STATUSES } from '../../constants/booking';
+import type { GalleryStatus } from './studio';
 
 /** Lifecycle status of a booking. */
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
@@ -135,4 +136,46 @@ export interface SignContractRequest {
   readonly imageUse: ImageUse;
   /** Whether the client ticked the box that says they read and accept the contract. */
   readonly acceptsTerms: boolean;
+}
+
+/** What the link alone says about the gallery of a booking (backend `PortalGallerySummaryResponse`). */
+export interface PortalGallerySummary {
+  /** Where the gallery is. A gallery still waiting for its proofs is not reported at all (the API answers 404). */
+  readonly status: GalleryStatus;
+}
+
+/** A proof the client can look at (backend `PortalProofResponse`). */
+export interface PortalProof {
+  /** Photo identifier, sent back to choose it. */
+  readonly id: string;
+  /** Signed address to show the proof. It is a secret that expires: it is never logged. */
+  readonly url: string;
+  /** Instant the address stops working (ISO 8601). */
+  readonly expiresAt: string;
+}
+
+/** The selection a client already sent (backend `PortalSelectionResponse`). */
+export interface PortalSelection {
+  /** The photos chosen, in the order they were chosen. */
+  readonly photoIds: readonly string[];
+  /** Instant it was sent (ISO 8601). */
+  readonly submittedAt: string;
+  /** How many of the photos go beyond what the package includes. */
+  readonly extraPhotos: number;
+  /** What those extra photos cost. */
+  readonly extraTotal: Money;
+}
+
+/** The gallery as its client sees it (backend `PortalGalleryResponse`). */
+export interface PortalGallery {
+  /** Where the gallery is: choosing, or already sent. */
+  readonly status: GalleryStatus;
+  /** Photos the client can choose without paying more. */
+  readonly selectablePhotos: number;
+  /** Price of each photo beyond those. */
+  readonly extraPhotoPrice: Money;
+  /** The proofs. */
+  readonly photos: readonly PortalProof[];
+  /** The selection that was sent, or null while the client has not sent one. */
+  readonly selection: PortalSelection | null;
 }

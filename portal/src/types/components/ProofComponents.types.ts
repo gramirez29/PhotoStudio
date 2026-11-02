@@ -15,6 +15,12 @@ export interface StudioProofsProps {
   readonly gallery: StudioGallery;
 }
 
+/** Props of the `StudioSelection` component. */
+export interface StudioSelectionProps {
+  /** The gallery whose client sent the selection. */
+  readonly gallery: StudioGallery;
+}
+
 /** Props of the `ProofPicker` component. */
 export interface ProofPickerProps {
   /** How many more proofs the gallery can hold. */

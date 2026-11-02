@@ -5,6 +5,7 @@ import type { BookingPageProps } from '../types/components/BookingPage.types';
 import { describeLoadError } from '../utils/apiErrors';
 import { BookingView } from './BookingView';
 import { ContractFlow } from './ContractFlow';
+import { GalleryFlow } from './GalleryFlow';
 import { LoadErrorScreen } from './LoadErrorScreen';
 import { LoadingScreen } from './LoadingScreen';
 import { ProofFlow } from './ProofFlow';
@@ -34,6 +35,7 @@ export function BookingPage({ token }: BookingPageProps): ReactElement {
         <>
           <ContractFlow token={token} booking={query.data} session={session} onSessionChange={setSession} />
           <ProofFlow token={token} booking={query.data} session={session} onSessionChange={setSession} />
+          <GalleryFlow token={token} session={session} onSessionChange={setSession} />
         </>
       }
     />
