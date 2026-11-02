@@ -90,6 +90,8 @@ export function parseStudioGallery(value: unknown, path: string): StudioGallery 
     deliveredAt: readNullableString(record, 'deliveredAt', path),
     extrasReleasedAt: readNullableString(record, 'extrasReleasedAt', path),
     zip: record.zip === null || record.zip === undefined ? null : parseStudioZip(record.zip, `${path}.zip`),
+    selectionReopenedAt: readNullableString(record, 'selectionReopenedAt', path),
+    selectionReopenReason: readNullableString(record, 'selectionReopenReason', path),
   };
 }
 
@@ -299,6 +301,7 @@ export function createStudioApi(client: HttpClient): StudioApi {
     registerProofs: (galleryId, photos: readonly ProofRegistration[], signal) =>
       client.post(`/api/web/galleries/${galleryId}/proofs`, { photos }, parseRegisterProofs, { signal }),
     removeProof: (galleryId, photoId) => client.post(`/api/web/galleries/${galleryId}/proofs/${photoId}/remove`, {}, parseStudioGalleryBody),
+    reopenSelection: (galleryId, reason) => client.post(`/api/web/galleries/${galleryId}/selection/reopen`, { reason }, parseStudioGalleryBody),
     openSelection: (galleryId) => client.post(`/api/web/galleries/${galleryId}/selection/open`, {}, parseStudioGalleryBody),
     requestFinalUploads: (galleryId, files: readonly FinalFileInfo[], signal) =>
       client.post(`/api/web/galleries/${galleryId}/finals/uploads`, { files }, parseProofSlots, { signal }),

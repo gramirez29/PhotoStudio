@@ -112,6 +112,18 @@ public sealed class GalleryDocument
     [BsonElement("zipLastDownloadedAt")]
     public DateTime? ZipLastDownloadedAt { get; set; }
 
+    /// <summary>Gets or sets the last instant the selection was reopened (UTC), if it was.</summary>
+    [BsonElement("selectionReopenedAt")]
+    public DateTime? SelectionReopenedAt { get; set; }
+
+    /// <summary>Gets or sets why the selection was last reopened, if it was.</summary>
+    [BsonElement("selectionReopenReason")]
+    public string? SelectionReopenReason { get; set; }
+
+    /// <summary>Gets or sets the last instant the client was told about a reopening (UTC), if they were.</summary>
+    [BsonElement("reopenNotifiedAt")]
+    public DateTime? ReopenNotifiedAt { get; set; }
+
     /// <summary>Gets or sets the instant the gallery was created (UTC).</summary>
     [BsonElement("createdAt")]
     public DateTime CreatedAt { get; set; }
@@ -221,6 +233,9 @@ public static class GalleryDocumentMappings
             ZipUploadedAt = gallery.ZipUploadedAt?.UtcDateTime,
             ZipDownloads = gallery.ZipDownloads,
             ZipLastDownloadedAt = gallery.ZipLastDownloadedAt?.UtcDateTime,
+            SelectionReopenedAt = gallery.SelectionReopenedAt?.UtcDateTime,
+            SelectionReopenReason = gallery.SelectionReopenReason,
+            ReopenNotifiedAt = gallery.ReopenNotifiedAt?.UtcDateTime,
             CreatedAt = gallery.CreatedAt.UtcDateTime,
             UpdatedAt = gallery.UpdatedAt.UtcDateTime,
         };
@@ -258,7 +273,10 @@ public static class GalleryDocumentMappings
             document.ZipBytes,
             document.ZipUploadedAt is null ? null : ToOffset(document.ZipUploadedAt.Value),
             document.ZipDownloads,
-            document.ZipLastDownloadedAt is null ? null : ToOffset(document.ZipLastDownloadedAt.Value));
+            document.ZipLastDownloadedAt is null ? null : ToOffset(document.ZipLastDownloadedAt.Value),
+            document.SelectionReopenedAt is null ? null : ToOffset(document.SelectionReopenedAt.Value),
+            document.SelectionReopenReason,
+            document.ReopenNotifiedAt is null ? null : ToOffset(document.ReopenNotifiedAt.Value));
     }
 
     /// <summary>

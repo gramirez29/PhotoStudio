@@ -149,7 +149,7 @@ public sealed class GallerySelectionTests
         var gallery = OpenGallery(photos: 3, included: 2);
         gallery.SubmitSelection([gallery.Photos[0].Id], Now);
 
-        gallery.GetAllowedActions().ShouldBe([GalleryAction.UploadFinals]);
+        gallery.GetAllowedActions().ShouldBe([GalleryAction.UploadFinals, GalleryAction.ReopenSelection]);
         Should.Throw<DomainException>(() => gallery.EditTerms(5, 0, Money.Create(3_000m, "CRC"), Now))
             .Code.ShouldBe(DomainErrorCodes.GalleryInvalidState);
     }

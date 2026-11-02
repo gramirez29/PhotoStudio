@@ -6,8 +6,9 @@ namespace PhotoStudio.Application.Notifications;
 
 /// <summary>
 /// Tells the photographer that a client sent the photos they chose. The notice is scheduled for the current instant and reaches the
-/// inbox, and the phone, in the delivery step of the same maintenance run that dispatched the event. The key holds the gallery, so
-/// an event delivered twice by the outbox is one notice.
+/// inbox, and the phone, in the delivery step of the same maintenance run that dispatched the event. The key holds the gallery and the
+/// instant of the selection, so an event delivered twice by the outbox is one notice, and a selection sent again after the
+/// photographer reopened it is another.
 /// </summary>
 /// <param name="notifications">Notification repository.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
@@ -30,7 +31,7 @@ public sealed class SelectionNotificationsHandler(INotificationRepository notifi
                 domainEvent.PhotographerId,
                 domainEvent.BookingId,
                 NotificationType.SelectionSubmitted,
-                Notification.SelectionSubmittedKey(domainEvent.GalleryId),
+                Notification.SelectionSubmittedKey(domainEvent.GalleryId, domainEvent.OccurredAt),
                 now,
                 now),
             cancellationToken);

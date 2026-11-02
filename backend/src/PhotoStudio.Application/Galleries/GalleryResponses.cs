@@ -27,6 +27,8 @@ namespace PhotoStudio.Application.Galleries;
 /// <param name="DeliveredAt">Instant the gallery was delivered (UTC), or <see langword="null"/> while it was not.</param>
 /// <param name="ExtrasReleasedAt">Instant the extra photos were released to the client (UTC), or <see langword="null"/> while they were not.</param>
 /// <param name="Zip">The ZIP with the photos, or <see langword="null"/> while there is none.</param>
+/// <param name="SelectionReopenedAt">Last instant the selection was reopened (UTC), or <see langword="null"/> if it never was.</param>
+/// <param name="SelectionReopenReason">Why the selection was last reopened, or <see langword="null"/> if it never was.</param>
 public sealed record GalleryResponse(
     Guid Id,
     Guid BookingId,
@@ -48,7 +50,9 @@ public sealed record GalleryResponse(
     DateTimeOffset? FinalsPublishedAt = null,
     DateTimeOffset? DeliveredAt = null,
     DateTimeOffset? ExtrasReleasedAt = null,
-    GalleryZipResponse? Zip = null);
+    GalleryZipResponse? Zip = null,
+    DateTimeOffset? SelectionReopenedAt = null,
+    string? SelectionReopenReason = null);
 
 /// <summary>
 /// The ZIP with the photos that the photographer made and uploaded, and what the client did with it.
@@ -103,6 +107,8 @@ public static class GalleryResponseMappings
             gallery.ExtrasReleasedAt,
             gallery.ZipBytes is { } zipBytes && gallery.ZipUploadedAt is { } zipUploadedAt
                 ? new GalleryZipResponse(zipBytes, zipUploadedAt, gallery.ZipDownloads, gallery.ZipLastDownloadedAt)
-                : null);
+                : null,
+            gallery.SelectionReopenedAt,
+            gallery.SelectionReopenReason);
     }
 }

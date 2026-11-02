@@ -21,6 +21,11 @@ public sealed class Gallery : AggregateRoot<Guid>
     public const long MaxZipBytes = 524_288_000;
 
     /// <summary>
+    /// Longest reason accepted when the selection is reopened.
+    /// </summary>
+    public const int MaxReasonLength = 500;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Gallery"/> class. Use <see cref="Create"/> or <see cref="Restore"/>.
     /// </summary>
     private readonly List<GalleryPhoto> _photos;
@@ -51,7 +56,10 @@ public sealed class Gallery : AggregateRoot<Guid>
         long? zipBytes,
         DateTimeOffset? zipUploadedAt,
         int zipDownloads,
-        DateTimeOffset? zipLastDownloadedAt)
+        DateTimeOffset? zipLastDownloadedAt,
+        DateTimeOffset? selectionReopenedAt,
+        string? selectionReopenReason,
+        DateTimeOffset? reopenNotifiedAt)
         : base(id, version)
     {
         PhotographerId = photographerId;
@@ -75,6 +83,9 @@ public sealed class Gallery : AggregateRoot<Guid>
         ZipUploadedAt = zipUploadedAt;
         ZipDownloads = zipDownloads;
         ZipLastDownloadedAt = zipLastDownloadedAt;
+        SelectionReopenedAt = selectionReopenedAt;
+        SelectionReopenReason = selectionReopenReason;
+        ReopenNotifiedAt = reopenNotifiedAt;
     }
 
     /// <summary>
@@ -182,6 +193,23 @@ public sealed class Gallery : AggregateRoot<Guid>
     public DateTimeOffset? ZipLastDownloadedAt { get; private set; }
 
     /// <summary>
+    /// Gets the last instant the photographer reopened the selection (UTC), or <see langword="null"/> if they never did.
+    /// </summary>
+    public DateTimeOffset? SelectionReopenedAt { get; private set; }
+
+    /// <summary>
+    /// Gets why the photographer last reopened the selection, or <see langword="null"/> if they never did. It is for the
+    /// photographer's own record and is not sent to the client.
+    /// </summary>
+    public string? SelectionReopenReason { get; private set; }
+
+    /// <summary>
+    /// Gets the last instant the client was told that the selection was reopened (UTC), or <see langword="null"/> if they never were.
+    /// It makes the email idempotent: a reopening is told once, and a later one is told again.
+    /// </summary>
+    public DateTimeOffset? ReopenNotifiedAt { get; private set; }
+
+    /// <summary>
     /// Gets a value indicating whether the gallery has a ZIP.
     /// </summary>
     public bool HasZip => ZipBytes is not null;
@@ -268,6 +296,9 @@ public sealed class Gallery : AggregateRoot<Guid>
             null,
             null,
             0,
+            null,
+            null,
+            null,
             null);
     }
 
@@ -297,6 +328,9 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <param name="zipUploadedAt">Instant the ZIP was registered, if there is one.</param>
     /// <param name="zipDownloads">How many times the client asked for the ZIP.</param>
     /// <param name="zipLastDownloadedAt">Last instant the client asked for the ZIP, if they did.</param>
+    /// <param name="selectionReopenedAt">Last instant the selection was reopened, if it was.</param>
+    /// <param name="selectionReopenReason">Why the selection was last reopened, if it was.</param>
+    /// <param name="reopenNotifiedAt">Last instant the client was told about a reopening, if they were.</param>
     /// <returns>The restored gallery.</returns>
     public static Gallery Restore(
         Guid id,
@@ -321,8 +355,11 @@ public sealed class Gallery : AggregateRoot<Guid>
         long? zipBytes = null,
         DateTimeOffset? zipUploadedAt = null,
         int zipDownloads = 0,
-        DateTimeOffset? zipLastDownloadedAt = null) =>
-        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt, finalsPublishedAt, deliveredAt, deliveryNotifiedAt, extrasReleasedAt, zipBytes, zipUploadedAt, zipDownloads, zipLastDownloadedAt);
+        DateTimeOffset? zipLastDownloadedAt = null,
+        DateTimeOffset? selectionReopenedAt = null,
+        string? selectionReopenReason = null,
+        DateTimeOffset? reopenNotifiedAt = null) =>
+        new(id, version, photographerId, bookingId, snapshot, status, includedPhotos, bonusPhotos, extraPhotoPrice, createdAt, updatedAt, photos ?? [], selectionNotifiedAt, selectedPhotoIds ?? [], selectionSubmittedAt, finalsPublishedAt, deliveredAt, deliveryNotifiedAt, extrasReleasedAt, zipBytes, zipUploadedAt, zipDownloads, zipLastDownloadedAt, selectionReopenedAt, selectionReopenReason, reopenNotifiedAt);
 
     /// <summary>
     /// Changes the terms of the gallery: how many photos the package includes (for a custom package the photographer sets it
@@ -788,6 +825,59 @@ public sealed class Gallery : AggregateRoot<Guid>
     private bool HasAllPackageFinals() => PackagePhotoIds.All(HasFinal);
 
     /// <summary>
+    /// Reopens the selection (G5): the photographer lets the client choose again, for example because they asked to change their
+    /// photos. What the client chose is discarded and the package and the extras are worked out again with the new choice. The final
+    /// photos already uploaded are kept, tied to their photo, so choosing the same photo again finds its final waiting. Only possible
+    /// before the final photos are published, because after that the client may already be downloading.
+    /// </summary>
+    /// <param name="reason">Why it is reopened; required and kept for the photographer's record.</param>
+    /// <param name="now">Current instant.</param>
+    /// <exception cref="DomainException">When the gallery is not in editing, or the reason is missing or too long.</exception>
+    public void ReopenSelection(string? reason, DateTimeOffset now)
+    {
+        if (Status != GalleryStatus.InEditing)
+        {
+            throw new DomainException(DomainErrorCodes.GalleryInvalidState, $"The selection of a gallery in state {Status} cannot be reopened.");
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new DomainException(DomainErrorCodes.ReasonRequired, "A reason is required to reopen the selection.");
+        }
+
+        if (reason.Trim().Length > MaxReasonLength)
+        {
+            throw new DomainException(DomainErrorCodes.ReasonRequired, $"The reason cannot be longer than {MaxReasonLength} characters.");
+        }
+
+        _selectedPhotoIds.Clear();
+        SelectionSubmittedAt = null;
+        SelectionReopenedAt = now;
+        SelectionReopenReason = reason.Trim();
+        Status = GalleryStatus.InSelection;
+        UpdatedAt = now;
+        Raise(new SelectionReopened(Id, BookingId, PhotographerId, now));
+    }
+
+    /// <summary>
+    /// Records that the client was told that the selection was reopened. A reopening is told once; the next one is told again.
+    /// </summary>
+    /// <param name="reopenedAt">The instant of the reopening the client was told about.</param>
+    /// <param name="now">Current instant.</param>
+    /// <returns><see langword="true"/> when it was recorded now; <see langword="false"/> when that reopening was already told.</returns>
+    public bool MarkReopenNotified(DateTimeOffset reopenedAt, DateTimeOffset now)
+    {
+        if (ReopenNotifiedAt is { } told && told >= reopenedAt)
+        {
+            return false;
+        }
+
+        ReopenNotifiedAt = now > reopenedAt ? now : reopenedAt;
+        UpdatedAt = now;
+        return true;
+    }
+
+    /// <summary>
     /// Records that the client was told that the proofs are ready.
     /// </summary>
     /// <param name="now">Current instant.</param>
@@ -823,7 +913,7 @@ public sealed class Gallery : AggregateRoot<Guid>
     /// <returns>The allowed actions.</returns>
     private List<GalleryAction> EditingActions()
     {
-        var actions = new List<GalleryAction> { GalleryAction.UploadFinals };
+        var actions = new List<GalleryAction> { GalleryAction.UploadFinals, GalleryAction.ReopenSelection };
         if (HasAllPackageFinals())
         {
             actions.Add(GalleryAction.PublishFinals);

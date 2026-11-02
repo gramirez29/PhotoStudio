@@ -131,7 +131,7 @@ public sealed class DeliverDueNotificationsHandler(
 
             case NotificationType.SelectionSubmitted:
                 // Relevant while the client's selection stands; if the photographer reopened it, the notice is stale.
-                return gallery is { SelectionSubmittedAt: not null } && Notification.SelectionSubmittedKey(gallery.Id) == notification.DedupKey
+                return gallery is { SelectionSubmittedAt: { } submittedAt } && Notification.SelectionSubmittedKey(gallery.Id, submittedAt) == notification.DedupKey
                     ? Snapshot(booking, balance: null) with { SelectedPhotos = gallery.SelectedPhotoIds.Count, ExtraPhotos = gallery.ExtraPhotoCount }
                     : null;
 

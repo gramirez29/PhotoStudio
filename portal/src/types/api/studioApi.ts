@@ -106,6 +106,15 @@ export interface StudioApi {
   openSelection(galleryId: string): Promise<StudioGallery>;
 
   /**
+   * Reopens the selection of the client so they can choose again. The client is told by email. What they chose is discarded; the
+   * finals already uploaded stay tied to their photo.
+   * @param galleryId Gallery identifier.
+   * @param reason Why it is reopened; required, kept for the photographer's record.
+   * @returns The gallery, in selection again.
+   */
+  reopenSelection(galleryId: string, reason: string): Promise<StudioGallery>;
+
+  /**
    * Asks for the places to upload final photos, one per photo of the selection. The bytes go straight to the storage.
    * @param galleryId Gallery identifier.
    * @param files The finals about to be uploaded, 1 to 50.

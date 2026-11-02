@@ -142,6 +142,8 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetPortalGalleryQuery, PortalGalleryResponse>, GetPortalGalleryHandler>();
         services.AddScoped<ICommandHandler<SubmitPortalSelectionCommand, PortalGalleryResponse>, SubmitPortalSelectionHandler>();
         services.AddScoped<IDomainEventHandler<SelectionOpened>, SelectionOpenedEmailHandler>();
+        services.AddScoped<ICommandHandler<ReopenSelectionCommand, GalleryResponse>, ReopenSelectionHandler>();
+        services.AddScoped<IDomainEventHandler<SelectionReopened>, SelectionReopenedEmailHandler>();
         services.AddScoped<ICommandHandler<RequestFinalUploadsCommand, FinalUploadSlotsResponse>, RequestFinalUploadsHandler>();
         services.AddScoped<ICommandHandler<RegisterFinalsCommand, RegisterFinalsResponse>, RegisterFinalsHandler>();
         services.AddScoped<ICommandHandler<PublishFinalsCommand, GalleryResponse>, PublishFinalsHandler>();

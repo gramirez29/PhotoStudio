@@ -156,12 +156,15 @@ public sealed class Notification : AggregateRoot<Guid>
     public static string PaymentProofKey(Guid paymentId) => $"{NotificationType.PaymentProofSubmitted}:{paymentId:N}";
 
     /// <summary>
-    /// Builds the key that identifies the notice of a selection: there is one per gallery, so the same selection delivered twice by
-    /// the outbox is one notice.
+    /// Builds the key that identifies the notice of a selection: one per selection sent, so the same selection delivered twice by
+    /// the outbox is one notice, and a selection sent again after the photographer reopened it is another. The instant is taken in
+    /// milliseconds, which is what the database keeps, so the key built from the stored gallery matches the one built from the event.
     /// </summary>
     /// <param name="galleryId">Gallery whose selection was sent.</param>
+    /// <param name="submittedAt">Instant the client sent the selection.</param>
     /// <returns>The key.</returns>
-    public static string SelectionSubmittedKey(Guid galleryId) => $"{NotificationType.SelectionSubmitted}:{galleryId:N}";
+    public static string SelectionSubmittedKey(Guid galleryId, DateTimeOffset submittedAt) =>
+        $"{NotificationType.SelectionSubmitted}:{galleryId:N}:{submittedAt.ToUnixTimeMilliseconds()}";
 
     /// <summary>
     /// Reads the payment a proof notice is about from its key, the same way a reminder key holds the session start it was

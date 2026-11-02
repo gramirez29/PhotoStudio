@@ -92,6 +92,10 @@ export interface StudioGallery {
   readonly extrasReleasedAt: string | null;
   /** The ZIP with the photos, made and uploaded by the photographer, or null while there is none. */
   readonly zip: StudioZip | null;
+  /** Last instant the photographer reopened the selection (ISO 8601), or null if they never did. */
+  readonly selectionReopenedAt: string | null;
+  /** Why the photographer last reopened the selection, or null if they never did. It is for their own record. */
+  readonly selectionReopenReason: string | null;
 }
 
 /** One page of galleries, the most recently created first. */

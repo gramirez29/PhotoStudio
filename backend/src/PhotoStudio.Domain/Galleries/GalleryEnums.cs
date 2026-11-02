@@ -42,6 +42,9 @@ public enum GalleryAction
     /// <summary>Publish the proofs so the client can choose.</summary>
     OpenSelection,
 
+    /// <summary>Let the client choose again: the photographer reopens the selection they sent, with a reason.</summary>
+    ReopenSelection,
+
     /// <summary>Upload the final photos of the selection (after publishing, only those of the extra photos).</summary>
     UploadFinals,
 
