@@ -1,5 +1,5 @@
-using System.Net;
 using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Application.Emails;
 
 namespace PhotoStudio.Application.Contracts;
 
@@ -17,20 +17,12 @@ internal static class ContractEmails
     /// <returns>The email.</returns>
     public static EmailMessage SignedCopy(string to, string clientName, string signedText)
     {
-        var text =
-            $"Hola {clientName},\n\n" +
-            "Gracias por firmar tu contrato. Esta es tu copia, tal como la firmaste. Guárdala para consultarla cuando quieras.\n\n" +
-            "------------------------------\n" +
-            $"{signedText}\n" +
-            "------------------------------\n\n" +
-            "PhotoSense Studio";
+        var content = new EmailContent(
+            "Esta es tu copia del contrato que firmaste.",
+            "Tu contrato firmado",
+            [$"Hola {clientName}, gracias por firmar tu contrato. Esta es tu copia, tal como la firmaste. Guárdala para consultarla cuando quieras."],
+            Document: signedText);
 
-        var html =
-            $"<p>Hola {WebUtility.HtmlEncode(clientName)},</p>" +
-            "<p>Gracias por firmar tu contrato. Esta es tu copia, tal como la firmaste. Guárdala para consultarla cuando quieras.</p>" +
-            $"<div style=\"white-space:pre-wrap;border:1px solid #cccccc;padding:12px;line-height:1.5\">{WebUtility.HtmlEncode(signedText)}</div>" +
-            "<p>PhotoSense Studio</p>";
-
-        return new EmailMessage(to, "Tu contrato firmado con PhotoSense Studio", text, html);
+        return BrandedEmail.Message(to, "Tu contrato firmado con PhotoSense Studio", content);
     }
 }

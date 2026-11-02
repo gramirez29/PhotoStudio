@@ -1,6 +1,5 @@
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Exceptions;
-using PhotoStudio.Application.Portal;
 using PhotoStudio.Domain.Galleries.Events;
 
 namespace PhotoStudio.Application.Galleries;
@@ -13,13 +12,11 @@ namespace PhotoStudio.Application.Galleries;
 /// <param name="galleries">Gallery repository.</param>
 /// <param name="bookings">Booking repository, for the email of the client.</param>
 /// <param name="email">Sends the email.</param>
-/// <param name="portal">Public address of the site, where the logo is.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class SelectionReopenedEmailHandler(
     IGalleryRepository galleries,
     IBookingRepository bookings,
     IEmailSender email,
-    PortalSettings portal,
     TimeProvider timeProvider) : IDomainEventHandler<SelectionReopened>
 {
     private const int Attempts = 3;
@@ -47,7 +44,7 @@ public sealed class SelectionReopenedEmailHandler(
             return;
         }
 
-        await email.SendAsync(GalleryEmails.SelectionReopened(address, gallery, $"{portal.BaseUrl}/icon-192.png"), cancellationToken);
+        await email.SendAsync(GalleryEmails.SelectionReopened(address, gallery), cancellationToken);
 
         // Recorded after sending: if this fails the event is delivered again and the client may get a second email, which is better
         // than none. The gallery is reloaded on a collision, because only this field changes.

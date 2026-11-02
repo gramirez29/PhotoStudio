@@ -18,9 +18,8 @@ internal static class GalleryEmails
     /// </summary>
     /// <param name="to">The client's email.</param>
     /// <param name="gallery">The gallery whose selection was reopened.</param>
-    /// <param name="logoUrl">Public address of the logo, or <see langword="null"/>.</param>
     /// <returns>The email.</returns>
-    public static EmailMessage SelectionReopened(string to, Gallery gallery, string? logoUrl)
+    public static EmailMessage SelectionReopened(string to, Gallery gallery)
     {
         ArgumentNullException.ThrowIfNull(gallery);
 
@@ -41,11 +40,7 @@ internal static class GalleryEmails
             "La selección anterior ya no cuenta: al enviar la nueva, esa es la que se edita.",
             "Si no encuentras tu enlace, escríbele a tu fotógrafo y te lo enviamos de nuevo.");
 
-        return new EmailMessage(
-            to,
-            "Tu selección está abierta otra vez",
-            BrandedEmail.RenderText(StudioBrand.Name, content),
-            BrandedEmail.RenderHtml(StudioBrand.Name, logoUrl, content));
+        return BrandedEmail.Message(to, "Tu selección está abierta otra vez", content);
     }
 
     /// <summary>
@@ -53,9 +48,8 @@ internal static class GalleryEmails
     /// </summary>
     /// <param name="to">The client's email.</param>
     /// <param name="gallery">The gallery that was delivered.</param>
-    /// <param name="logoUrl">Public address of the logo, or <see langword="null"/>.</param>
     /// <returns>The email.</returns>
-    public static EmailMessage Delivered(string to, Gallery gallery, string? logoUrl)
+    public static EmailMessage Delivered(string to, Gallery gallery)
     {
         ArgumentNullException.ThrowIfNull(gallery);
 
@@ -75,11 +69,7 @@ internal static class GalleryEmails
             "Guarda tus fotos en un lugar seguro: la galería no se conserva para siempre.",
             "Si no encuentras tu enlace, escríbele a tu fotógrafo y te lo enviamos de nuevo.");
 
-        return new EmailMessage(
-            to,
-            "Tus fotos ya están listas",
-            BrandedEmail.RenderText(StudioBrand.Name, content),
-            BrandedEmail.RenderHtml(StudioBrand.Name, logoUrl, content));
+        return BrandedEmail.Message(to, "Tus fotos ya están listas", content);
     }
 
     /// <summary>
@@ -88,9 +78,8 @@ internal static class GalleryEmails
     /// </summary>
     /// <param name="to">The client's email.</param>
     /// <param name="gallery">The gallery whose proofs are ready.</param>
-    /// <param name="logoUrl">Public address of the logo, or <see langword="null"/>.</param>
     /// <returns>The email.</returns>
-    public static EmailMessage SelectionOpened(string to, Gallery gallery, string? logoUrl)
+    public static EmailMessage SelectionOpened(string to, Gallery gallery)
     {
         ArgumentNullException.ThrowIfNull(gallery);
 
@@ -118,10 +107,6 @@ internal static class GalleryEmails
             "Estas fotos son de prueba: van en calidad baja y con marca de agua. Nuestro compromiso es entregarte fotografías de excelente calidad.",
             "Si no encuentras tu enlace, escríbele a tu fotógrafo y te lo enviamos de nuevo.");
 
-        return new EmailMessage(
-            to,
-            "Tus fotos de prueba ya están listas",
-            BrandedEmail.RenderText(StudioBrand.Name, content),
-            BrandedEmail.RenderHtml(StudioBrand.Name, logoUrl, content));
+        return BrandedEmail.Message(to, "Tus fotos de prueba ya están listas", content);
     }
 }
