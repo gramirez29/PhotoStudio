@@ -69,6 +69,16 @@ npx expo start --dev-client      # misma red Wi-Fi, o --tunnel
 
 El build de desarrollo **no trae el JavaScript**: lo sirve `expo start`. Hace falta un build nuevo cada vez que cambia una dependencia nativa, el ícono, el splash o `app.json`; un cambio solo de JavaScript no lo necesita. El ícono, el ícono adaptable, el splash (fondo `#020D2C`) y el nombre vienen de `app.json` y `assets/`.
 
+### APK independiente (sin Expo), contra develop
+El perfil `preview` de `eas.json` genera un **APK normal**: el JavaScript va dentro del paquete, no hace falta computadora ni `expo start`, y habla con la API de develop (`https://develop-api.photosensestudio.com`, fijada en el perfil). Se instala igual que cualquier APK y funciona con datos móviles o Wi-Fi.
+
+```
+cd mobile
+npm run build:apk          # = npx eas-cli build --platform android --profile preview
+```
+
+Al terminar, EAS entrega un enlace y un código QR para descargar el APK (también en expo.dev → el proyecto → Builds). En el teléfono: abrir el enlace, permitir "instalar apps de fuentes desconocidas" para el navegador y abrir el archivo. El perfil usa las variables del entorno `development` de EAS (ahí vive `GOOGLE_SERVICES_JSON`, necesario para el push) y sube el número de versión solo (`autoIncrement`). Cualquier cambio de JavaScript exige hacer otro build; no hay actualizaciones por aire configuradas.
+
 Variables y credenciales: `google-services.json` no se versiona (EAS lo recibe como variable de archivo `GOOGLE_SERVICES_JSON`); la clave FCM V1 vive solo en EAS Credentials.
 
 En un teléfono físico durante el desarrollo, `EXPO_PUBLIC_API_URL` usa la IP de la computadora en la red local, y hace falta una regla de firewall de entrada para TCP 8080 limitada a la subred local.
