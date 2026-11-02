@@ -1,5 +1,17 @@
 import { GALLERY_ACTIONS, GALLERY_STATUSES } from '../constants/gallery';
-import type { FinalDownloadResponse, GalleryAction, GalleryResponse, GalleryZip, ProofResponse, SelectedPhoto, SelectionResponse } from '../types/api/gallery';
+import type {
+  FinalDownloadResponse,
+  FinalUploadSlot,
+  GalleryAction,
+  GalleryResponse,
+  GalleryZip,
+  ProofResponse,
+  ProofUploadSlot,
+  RegisterUploadsResult,
+  SelectedPhoto,
+  SelectionResponse,
+  ZipUploadSlot,
+} from '../types/api/gallery';
 import type { GalleryApi } from '../types/api/galleryApi';
 import type { HttpClient } from '../types/api/http';
 import { parseMoney } from './bookingsApi';
@@ -145,6 +157,88 @@ export function parseFinalDownload(value: unknown): FinalDownloadResponse {
 }
 
 /**
+ * Reads the headers a signed address must be used with.
+ * @param value Unknown value from the response.
+ * @param path Location of the value, for error messages.
+ * @returns The headers, by name.
+ */
+function parseHeaders(value: unknown, path: string): Readonly<Record<string, string>> {
+  const headers = expectRecord(value, path);
+  return Object.fromEntries(Object.keys(headers).map((name) => [name, readString(headers, name, path)]));
+}
+
+/**
+ * Parses the places to upload some proofs.
+ * @param value Unknown response body.
+ * @returns One slot per file, in the order of the request.
+ */
+export function parseProofSlots(value: unknown): readonly ProofUploadSlot[] {
+  const path = 'proofUploads';
+  return readArray(expectRecord(value, path), 'slots', path).map((item, index): ProofUploadSlot => {
+    const slotPath = `${path}.slots[${index}]`;
+    const slot = expectRecord(item, slotPath);
+    return {
+      photoId: readString(slot, 'photoId', slotPath),
+      url: readString(slot, 'url', slotPath),
+      headers: parseHeaders(slot.headers, `${slotPath}.headers`),
+      expiresAt: readString(slot, 'expiresAt', slotPath),
+    };
+  });
+}
+
+/**
+ * Parses the places to upload some finals, each with the place for its thumbnail.
+ * @param value Unknown response body.
+ * @returns One slot per file, in the order of the request.
+ */
+export function parseFinalSlots(value: unknown): readonly FinalUploadSlot[] {
+  const path = 'finalUploads';
+  const slots = readArray(expectRecord(value, path), 'slots', path);
+  return parseProofSlots(value).map((slot, index): FinalUploadSlot => {
+    const slotPath = `${path}.slots[${index}]`;
+    const record = expectRecord(slots[index], slotPath);
+    return {
+      ...slot,
+      thumbUrl: readNullableString(record, 'thumbUrl', slotPath),
+      thumbHeaders: record.thumbHeaders === null || record.thumbHeaders === undefined ? {} : parseHeaders(record.thumbHeaders, `${slotPath}.thumbHeaders`),
+    };
+  });
+}
+
+/**
+ * Parses what registering a batch of proofs or finals gave back.
+ * @param value Unknown response body.
+ * @returns The gallery and the uploads that were not registered.
+ */
+export function parseRegisterUploads(value: unknown): RegisterUploadsResult {
+  const path = 'registerUploads';
+  const record = expectRecord(value, path);
+  return {
+    gallery: parseGallery(record.gallery, `${path}.gallery`),
+    rejected: readArray(record, 'rejected', path).map((item, index) => {
+      const itemPath = `${path}.rejected[${index}]`;
+      const rejection = expectRecord(item, itemPath);
+      return { photoId: readString(rejection, 'photoId', itemPath), reason: readString(rejection, 'reason', itemPath) };
+    }),
+  };
+}
+
+/**
+ * Parses the place to upload the ZIP.
+ * @param value Unknown response body.
+ * @returns The place.
+ */
+export function parseZipSlot(value: unknown): ZipUploadSlot {
+  const path = 'zipUpload';
+  const record = expectRecord(value, path);
+  return {
+    url: readString(record, 'url', path),
+    headers: parseHeaders(record.headers, `${path}.headers`),
+    expiresAt: readString(record, 'expiresAt', path),
+  };
+}
+
+/**
  * Creates the gallery API on top of an HTTP client.
  * @param client HTTP client that sends the token of the session.
  * @returns The gallery API.
@@ -169,5 +263,11 @@ export function createGalleryApi(client: HttpClient): GalleryApi {
     removeZip: (galleryId) => post(galleryId, '/zip/remove'),
     getFinalDownload: (galleryId, photoId, signal) =>
       client.get(path(galleryId, `/finals/${encodeURIComponent(photoId)}/download`), parseFinalDownload, signal),
+    requestProofUploads: (galleryId, files, signal) => client.post(path(galleryId, '/proofs/uploads'), { files }, parseProofSlots, signal),
+    registerProofs: (galleryId, photos, signal) => client.post(path(galleryId, '/proofs'), { photos }, parseRegisterUploads, signal),
+    requestFinalUploads: (galleryId, files, signal) => client.post(path(galleryId, '/finals/uploads'), { files }, parseFinalSlots, signal),
+    registerFinals: (galleryId, photoIds, details, signal) => client.post(path(galleryId, '/finals'), { photoIds, details }, parseRegisterUploads, signal),
+    requestZipUpload: (galleryId, bytes, signal) => client.post(path(galleryId, '/zip/upload'), { bytes }, parseZipSlot, signal),
+    registerZip: (galleryId, signal) => client.post(path(galleryId, '/zip'), {}, (body) => parseGallery(body), signal),
   };
 }

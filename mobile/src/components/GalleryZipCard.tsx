@@ -4,6 +4,7 @@ import type { GalleryZipCardProps } from '../types/components/GalleryComponents.
 import { describeZip } from '../utils/gallery';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { GalleryZipUpload } from './GalleryZipUpload';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { spacing } from '../theme/tokens';
@@ -18,14 +19,16 @@ import { spacing } from '../theme/tokens';
 export function GalleryZipCard({ gallery, handlers }: GalleryZipCardProps): ReactElement | null {
   const styles = useStyles();
 
-  if (gallery.zip === null) {
+  const canUpload = gallery.allowedActions.includes('UploadZip');
+  if (gallery.zip === null && !canUpload) {
     return null;
   }
 
   return (
     <AppCard style={styles.card}>
       <Text style={styles.title}>ZIP con las fotos</Text>
-      {describeZip(gallery.zip).map((line) => (
+      {canUpload && <GalleryZipUpload gallery={gallery} />}
+      {gallery.zip !== null && describeZip(gallery.zip).map((line) => (
         <Text key={line} style={styles.body}>
           {line}
         </Text>

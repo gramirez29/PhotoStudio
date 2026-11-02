@@ -7,6 +7,7 @@ import { formatDateTime, formatMoney } from '../utils/format';
 import { splitSelection } from '../utils/gallery';
 import { ActionButton } from './ActionButton';
 import { AppCard } from './AppCard';
+import { GalleryFinalUpload } from './GalleryFinalUpload';
 import { GallerySelectionBlock } from './GallerySelectionBlock';
 import { makeStyles } from '../theme/makeStyles';
 import { FONT_FAMILIES } from '../theme/fonts';
@@ -58,6 +59,7 @@ export function GallerySelection({ gallery }: GallerySelectionProps): ReactEleme
             galleryId={gallery.id}
           />
         )}
+        {gallery.allowedActions.includes('UploadFinals') && <GalleryFinalUpload gallery={gallery} photos={query.data.photos} />}
       </>
     );
   }

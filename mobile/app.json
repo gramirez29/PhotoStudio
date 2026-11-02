@@ -25,6 +25,14 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "PhotoSense Studio usa tus fotos solo para subir las que elijas a la galería de tu cliente.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
