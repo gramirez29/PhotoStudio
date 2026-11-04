@@ -83,6 +83,39 @@
   padding-left: var(--space-md);
 }
 
+/* Loader with its message, centered in the page while something loads. */
+.loading-screen {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.loading-screen__spinner {
+  animation: loading-spin 0.9s linear infinite;
+  border: 4px solid var(--color-silver);
+  border-radius: 50%;
+  border-top-color: var(--color-accent);
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Without motion the spinner stays still; the message says what is happening. */
+@media (prefers-reduced-motion: reduce) {
+  .loading-screen__spinner {
+    animation: none;
+  }
+}
+
 .state {
   align-items: flex-start;
   display: flex;

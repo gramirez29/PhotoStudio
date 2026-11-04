@@ -44,6 +44,7 @@ export function StudioGalleryDetail({ galleryId, user }: StudioGalleryDetailProp
   }
 
   const status = describeGalleryStatus(gallery.data.status);
+  const archived = gallery.data.status === 'Archived';
 
   return (
     <div className="stack">
@@ -66,8 +67,17 @@ export function StudioGalleryDetail({ galleryId, user }: StudioGalleryDetailProp
         <p>{describePhotos(gallery.data)}</p>
         <p className="muted">{describeExtraPhoto(gallery.data)}</p>
       </section>
-      <StudioProofs gallery={gallery.data} />
-      {gallery.data.selectionSubmittedAt !== null && gallery.data.status !== 'Archived' && <StudioFinals gallery={gallery.data} />}
+      {archived ? (
+        <section className="card" aria-labelledby="archived-title">
+          <h2 id="archived-title">Galería archivada</h2>
+          <p className="muted">
+            Se liberó el espacio: las pruebas, los finales y el ZIP ya se borraron del almacenamiento y el cliente ya no puede descargar.
+          </p>
+        </section>
+      ) : (
+        <StudioProofs gallery={gallery.data} />
+      )}
+      {gallery.data.selectionSubmittedAt !== null && !archived && <StudioFinals gallery={gallery.data} />}
     </div>
   );
 }
