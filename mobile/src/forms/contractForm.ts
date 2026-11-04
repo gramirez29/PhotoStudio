@@ -4,15 +4,6 @@ import type { ContractFormErrors, ContractFormResult, ContractFormValues } from 
 /** Most characters of the name of the person who signs. */
 export const MAX_SIGNER_NAME_LENGTH = 100;
 
-/** Most characters of the place of the session (the backend enforces the same limit). */
-export const MAX_LOCATION_LENGTH = 200;
-
-/** Fewest people a session can declare (the backend enforces the same limit). */
-export const MIN_PARTICIPANTS = 1;
-
-/** Most people a session can declare (the backend enforces the same limit). */
-export const MAX_PARTICIPANTS = 100;
-
 /**
  * Builds the form before anyone types: the client signs on the phone, and the name of the signer is suggested from the booking.
  * @param clientName Name of the client of the booking.
@@ -23,8 +14,6 @@ export function initialContractValues(clientName: string): ContractFormValues {
     kind: 'InPerson',
     signerName: clientName,
     idNumber: '',
-    participantCount: '',
-    sessionLocation: '',
     imageUse: null,
     accepted: false,
   };
@@ -51,16 +40,6 @@ function validateDeclaration(values: ContractFormValues): { -readonly [Field in 
   const idDigits = readIdDigits(values.idNumber);
   if (idDigits === null || ![9, 11, 12].includes(idDigits.length)) {
     errors.idNumber = 'Escribe la cédula (9 dígitos) o el DIMEX (11 o 12 dígitos).';
-  }
-
-  const typedCount = values.participantCount.trim();
-  const participants = /^\d+$/.test(typedCount) ? Number(typedCount) : Number.NaN;
-  if (!Number.isInteger(participants) || participants < MIN_PARTICIPANTS || participants > MAX_PARTICIPANTS) {
-    errors.participantCount = `Escribe cuántas personas vienen (de ${MIN_PARTICIPANTS} a ${MAX_PARTICIPANTS}).`;
-  }
-
-  if (values.sessionLocation.trim().length > MAX_LOCATION_LENGTH) {
-    errors.sessionLocation = `El lugar no puede pasar de ${MAX_LOCATION_LENGTH} caracteres.`;
   }
 
   if (values.imageUse === null) {
@@ -105,7 +84,6 @@ export function validateContract(values: ContractFormValues, templateVersion: st
     return { ok: false, errors: allErrors };
   }
 
-  const location = values.sessionLocation.trim();
   return {
     ok: true,
     request: {
@@ -114,8 +92,6 @@ export function validateContract(values: ContractFormValues, templateVersion: st
       isPaperContract: false,
       declaration: {
         idNumber: idDigits,
-        participantCount: Number(values.participantCount.trim()),
-        ...(location.length > 0 ? { sessionLocation: location } : {}),
         imageUse: values.imageUse,
       },
     },

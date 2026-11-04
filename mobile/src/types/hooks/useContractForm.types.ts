@@ -23,7 +23,7 @@ export interface ContractFormState {
   /** Sets the way of recording the signature. */
   readonly setKind: (kind: ContractSignatureKind) => void;
   /** Sets the text of a field, and clears its validation message. */
-  readonly setText: (field: 'signerName' | 'idNumber' | 'participantCount' | 'sessionLocation', text: string) => void;
+  readonly setText: (field: 'signerName' | 'idNumber', text: string) => void;
   /** Sets the image use the client chose, or the acceptance of the contract. */
   readonly setChoice: <Field extends Extract<ContractField, 'imageUse' | 'accepted'>>(field: Field, value: ContractFormValues[Field]) => void;
   /** Validates the form and sends the signature. */

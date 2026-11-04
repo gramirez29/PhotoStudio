@@ -30,6 +30,7 @@ import {
   readBoolean,
   readLiteral,
   readNullableString,
+  readNullableNumber,
   readNumber,
   readString,
 } from './guards';
@@ -129,7 +130,7 @@ export function parseDeclaration(value: unknown, path: string): ClientDeclaratio
   const record = expectRecord(value, path);
   return {
     idNumber: readString(record, 'idNumber', path),
-    participantCount: readNumber(record, 'participantCount', path),
+    participantCount: readNullableNumber(record, 'participantCount', path),
     sessionLocation: readNullableString(record, 'sessionLocation', path),
     imageUse: readLiteral(record, 'imageUse', IMAGE_USES, path),
   };

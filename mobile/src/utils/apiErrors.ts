@@ -94,7 +94,7 @@ export function bookingCommandErrorMessage(error: Error): string {
     case 'contract.invalid_id_number':
       return 'La cédula o el DIMEX no es válido. Revísalo y corrígelo.';
     case 'contract.invalid_details':
-      return 'Revisa el número de personas y el lugar de la sesión.';
+      return 'Revisa los datos del contrato.';
     case 'money.invalid_amount':
     case 'money.invalid_currency':
     case 'money.currency_mismatch':

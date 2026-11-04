@@ -99,6 +99,18 @@ export function readNumber(record: JsonRecord, key: string, path: string): numbe
 }
 
 /**
+ * Reads a finite number property that can be null or missing.
+ * @param record Object to read from.
+ * @param key Property name.
+ * @param path Location of the object, for error messages.
+ * @returns The number value, or null.
+ */
+export function readNullableNumber(record: JsonRecord, key: string, path: string): number | null {
+  const value = record[key];
+  return value === null || value === undefined ? null : readNumber(record, key, path);
+}
+
+/**
  * Reads a required boolean property.
  * @param record Object to read from.
  * @param key Property name.

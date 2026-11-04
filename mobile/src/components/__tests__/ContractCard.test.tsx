@@ -24,15 +24,13 @@ describe('ContractCard', () => {
       templateVersion: 'v1',
       channel: 'Portal',
       signedAt: '2026-10-01T18:00:00+00:00',
-      declaration: { idNumber: '112345678', participantCount: 3, sessionLocation: null, imageUse: 'NotAuthorized' },
+      declaration: { idNumber: '112345678', participantCount: null, sessionLocation: null, imageUse: 'NotAuthorized' },
     };
 
     render(<ContractCard booking={parseBooking({ ...bookingPayload, contract })} />);
 
     expect(screen.getByText(/Firmado por María Pérez desde el enlace el /)).toBeTruthy();
     expect(screen.getByText('Cédula o DIMEX: 1-1234-5678')).toBeTruthy();
-    expect(screen.getByText('Personas en la sesión: 3')).toBeTruthy();
-    expect(screen.getByText('Lugar: por definir con el cliente')).toBeTruthy();
     expect(screen.getByText('Uso de las fotos: No autoriza publicar las fotos')).toBeTruthy();
   });
 });

@@ -80,9 +80,9 @@ export interface BookingExtraResponse {
 export interface ClientDeclarationResponse {
   /** Identity number of the signer, digits only (cédula of 9 digits or DIMEX of 11 or 12). */
   readonly idNumber: string;
-  /** Number of people in the session. */
-  readonly participantCount: number;
-  /** Place of the session, or null when the client left it blank. */
+  /** Number of people in the session, or null when it was not asked. */
+  readonly participantCount: number | null;
+  /** Place of the session, or null when it was not given. */
   readonly sessionLocation: string | null;
   /** What the client allowed to do with the photos. */
   readonly imageUse: ImageUse;
@@ -260,10 +260,6 @@ export interface SignContractInPersonRequest {
 export interface InPersonDeclarationRequest {
   /** Identity number of the signer: a cédula of 9 digits or a DIMEX of 11 or 12. */
   readonly idNumber: string;
-  /** Number of people in the session. */
-  readonly participantCount: number;
-  /** Place of the session; omitted when the client left it blank. */
-  readonly sessionLocation?: string;
   /** What the client allows to do with the photos. */
   readonly imageUse: ImageUse;
 }

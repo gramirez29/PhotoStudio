@@ -39,8 +39,6 @@ describe('useContractForm', () => {
   function fillDeclaration(result: { readonly current: ReturnType<typeof useContractForm> }): void {
     act(() => {
       result.current.setText('idNumber', '1-1234-5678');
-      result.current.setText('participantCount', '3');
-      result.current.setText('sessionLocation', 'Parque La Sabana');
       result.current.setChoice('imageUse', 'Authorized');
       result.current.setChoice('accepted', true);
     });
@@ -89,7 +87,6 @@ describe('useContractForm', () => {
     act(() => result.current.setText('idNumber', '1'));
 
     expect(result.current.errors.idNumber).toBeUndefined();
-    expect(result.current.errors.participantCount).toBeDefined();
   });
 
   it('records the signature with the declaration and the version that was read, and goes back', async () => {
@@ -105,7 +102,7 @@ describe('useContractForm', () => {
       signerName: booking.clientName,
       templateVersion: 'v7',
       isPaperContract: false,
-      declaration: { idNumber: '112345678', participantCount: 3, sessionLocation: 'Parque La Sabana', imageUse: 'Authorized' },
+      declaration: { idNumber: '112345678', imageUse: 'Authorized' },
     });
   });
 

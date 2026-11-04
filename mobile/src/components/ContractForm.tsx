@@ -88,21 +88,6 @@ export function ContractForm({ booking }: ContractFormProps): ReactElement {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              <FormInput
-                label="¿Cuántas personas vienen a la sesión?"
-                value={form.values.participantCount}
-                onChangeText={(text) => form.setText('participantCount', text)}
-                error={form.errors.participantCount}
-                keyboardType="number-pad"
-                maxLength={3}
-              />
-              <FormInput
-                label="Lugar de la sesión (opcional)"
-                value={form.values.sessionLocation}
-                onChangeText={(text) => form.setText('sessionLocation', text)}
-                error={form.errors.sessionLocation}
-                autoCapitalize="sentences"
-              />
               <SelectField
                 label="Uso de las fotos (cláusula 12)"
                 options={Object.values(IMAGE_USE_CHOICE_LABELS)}
