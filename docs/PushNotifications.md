@@ -203,9 +203,9 @@ Todas exigen sesión y se acotan al fotógrafo del token (CLAUDE.md §7.1).
 
 El código ya envía `Authorization: Bearer <token>` cuando la variable existe (`ExpoPushSender`); no hace falta desplegar nada para activarla, solo este orden:
 
-1. expo.dev → *Account settings* → *Access tokens* → crear un token **de acceso personal o de organización** (nombre sugerido: `photostudio-push`). Copiarlo: no se vuelve a mostrar.
+1. Abrir <https://expo.dev/settings/access-tokens> con la cuenta dueña del proyecto (`g.raba29-dev`) y crear un token (nombre sugerido: `photostudio-push-<ambiente>`; **Limit access** puede quedar apagado). Copiarlo: no se vuelve a mostrar.
 2. Guardarlo en Railway como `EXPO_ACCESS_TOKEN` en la API **y** en el worker (los dos envían pushes), en cada ambiente. Nunca en el repositorio ni en un chat.
-3. Esperar a que ambos servicios reinicien y **después** activar *Enhanced Security for Push Notifications* en la configuración del proyecto en expo.dev (el nombre exacto de la opción puede variar). Si se activa antes, Expo rechaza todos los envíos hasta que el token esté desplegado.
+3. Esperar a que ambos servicios reinicien y **después**, en esa misma página de tokens, activar el interruptor *Enhanced Security for Push Notifications*. Si se activa antes, Expo rechaza todos los envíos (`UNAUTHORIZED`) hasta que el token esté desplegado. La opción es de la cuenta, no del proyecto: no hay nada en "Project settings".
 4. Probar con un push real (un comprobante nuevo). Si algo falla, la API o el worker registran un **error** `Expo rejected the credentials (HTTP 401|403)… EXPO_ACCESS_TOKEN configured: True|False`: `False` = falta la variable en ese servicio; `True` = el token es incorrecto, está revocado o es de otra cuenta.
 
 Para rotarlo: crear un token nuevo, ponerlo en Railway (API y worker), esperar el reinicio y revocar el anterior en expo.dev.
