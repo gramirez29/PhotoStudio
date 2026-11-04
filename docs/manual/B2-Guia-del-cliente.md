@@ -31,7 +31,7 @@ Si la reserva no tiene correo registrado, el cliente solo puede ver; debe pedirl
 
 1. Toca **Firmar contrato** (tras confirmar el correo).
 2. Lee el contrato completo: ya viene con sus datos, el precio, el anticipo y las políticas.
-3. Completa: **nombre**, **cédula**, **lugar** (opcional) y **cómo autoriza el uso de las fotos**; marca que **leyó y acepta**.
+3. Completa: **nombre**, **cédula** y **cómo autoriza el uso de las fotos**; marca que **leyó y acepta**.
 4. Firma. Queda guardado el **texto exacto** que firmó, y recibe una **copia por correo**.
 
 Puede volver a leerlo cuando quiera con **Ver contrato firmado**.

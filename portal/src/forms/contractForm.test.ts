@@ -6,7 +6,6 @@ import { INITIAL_CONTRACT_VALUES, readIdDigits, validateContractForm } from './c
 const VALID: ContractFormValues = {
   signerName: '  María Pérez  ',
   idNumber: '1-1234-5678',
-  sessionLocation: '  Parque La Sabana  ',
   imageUse: 'Authorized',
   acceptsTerms: true,
 };
@@ -31,17 +30,10 @@ describe('validateContractForm', () => {
         templateVersion: 'v1',
         signerName: 'María Pérez',
         idNumber: '112345678',
-        sessionLocation: 'Parque La Sabana',
         imageUse: 'Authorized',
         acceptsTerms: true,
       },
     });
-  });
-
-  it('leaves the location out when it is blank', () => {
-    const result = validateContractForm({ ...VALID, sessionLocation: '   ' }, 'v1');
-
-    expect(result.ok && 'sessionLocation' in result.request).toBe(false);
   });
 
   it('asks for everything that is missing, each next to its field', () => {
@@ -64,12 +56,6 @@ describe('validateContractForm', () => {
 
   it.each(['15600012345', '155600012345'])('accepts the DIMEX %s', (idNumber) => {
     expect(validateContractForm({ ...VALID, idNumber }, 'v1').ok).toBe(true);
-  });
-
-  it('rejects a location that is too long', () => {
-    const result = validateContractForm({ ...VALID, sessionLocation: 'a'.repeat(201) }, 'v1');
-
-    expect(!result.ok && result.errors.sessionLocation).toBeDefined();
   });
 
   it('does not sign without accepting the contract or choosing the image use', () => {

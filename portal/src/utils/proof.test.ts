@@ -183,7 +183,7 @@ describe('describeSignContractError', () => {
     ['contract.template_changed', /cambió mientras lo leías/],
     ['booking.contract_already_signed', /ya está firmado/],
     ['contract.invalid_id_number', /cédula o el DIMEX/],
-    ['contract.invalid_details', /lugar de la sesión/],
+    ['contract.invalid_details', /datos del contrato/],
     ['booking.invalid_transition', /ya no se puede firmar/],
     ['concurrency.conflict', /cambió mientras firmabas/],
   ])('explains %s', (code, message) => {

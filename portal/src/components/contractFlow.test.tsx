@@ -90,7 +90,6 @@ describe('contract flow', () => {
   async function fillForm(user: ReturnType<typeof userEvent.setup>): Promise<void> {
     await user.type(await screen.findByLabelText(/Tu nombre completo/), 'María Pérez');
     await user.type(screen.getByLabelText('Cédula o DIMEX'), '1-1234-5678');
-    await user.type(screen.getByLabelText(/Lugar de la sesión/), 'Parque La Sabana');
     await user.click(screen.getByLabelText(/No autorizo la publicación/));
   }
 
@@ -129,7 +128,6 @@ describe('contract flow', () => {
       templateVersion: 'v1',
       signerName: 'María Pérez',
       idNumber: '112345678',
-      sessionLocation: 'Parque La Sabana',
       imageUse: 'NotAuthorized',
       acceptsTerms: true,
     });

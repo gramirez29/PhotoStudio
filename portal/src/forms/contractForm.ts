@@ -3,14 +3,10 @@ import type { ContractFormResult, ContractFormValues } from '../types/forms/cont
 /** Most characters of the name of the signer. */
 export const MAX_SIGNER_NAME_LENGTH = 100;
 
-/** Most characters of the place of the session (the backend enforces the same limit). */
-export const MAX_LOCATION_LENGTH = 200;
-
 /** The form before the client types anything. */
 export const INITIAL_CONTRACT_VALUES: ContractFormValues = {
   signerName: '',
   idNumber: '',
-  sessionLocation: '',
   imageUse: null,
   acceptsTerms: false,
 };
@@ -47,11 +43,6 @@ export function validateContractForm(values: ContractFormValues, templateVersion
     errors.idNumber = 'Escribe tu cédula (9 dígitos) o tu DIMEX (11 o 12 dígitos).';
   }
 
-  const location = values.sessionLocation.trim();
-  if (location.length > MAX_LOCATION_LENGTH) {
-    errors.sessionLocation = `El lugar no puede tener más de ${MAX_LOCATION_LENGTH} caracteres.`;
-  }
-
   if (values.imageUse === null) {
     errors.imageUse = 'Elige si autorizas o no el uso de las fotos.';
   }
@@ -70,7 +61,6 @@ export function validateContractForm(values: ContractFormValues, templateVersion
       templateVersion,
       signerName,
       idNumber: idDigits,
-      ...(location.length > 0 ? { sessionLocation: location } : {}),
       imageUse: values.imageUse,
       acceptsTerms: true,
     },

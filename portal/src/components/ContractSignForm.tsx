@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
-import { MAX_LOCATION_LENGTH, MAX_SIGNER_NAME_LENGTH, validateContractForm } from '../forms/contractForm';
+import { MAX_SIGNER_NAME_LENGTH, validateContractForm } from '../forms/contractForm';
 import { useSignContract } from '../hooks/useContract';
 import type { ContractSignFormProps } from '../types/components/ContractSteps.types';
 import type { ContractFormErrors } from '../types/forms/contractForm.types';
@@ -11,7 +11,7 @@ import { TextField } from './TextField';
 
 /**
  * The part of the contract only the client can fill in, and the signature: who signs, the identity number,
- * where, what the photos may be used for, and the acceptance. The signature is the name typed. What the client typed
+ * what the photos may be used for, and the acceptance. The signature is the name typed. What the client typed
  * lives in the parent, so it survives a verification that expires halfway.
  * @param props Component props.
  * @returns The form.
@@ -96,19 +96,6 @@ export function ContractSignForm({
         inputMode="numeric"
         autoComplete="off"
         maxLength={16}
-      />
-      <TextField
-        id="location"
-        label="Lugar de la sesión (opcional)"
-        value={values.sessionLocation}
-        onChange={(sessionLocation) => {
-          onChange({ ...values, sessionLocation });
-          setErrors({ ...errors, sessionLocation: undefined });
-        }}
-        error={errors.sessionLocation}
-        hint="Si todavía no lo definen, déjalo en blanco y lo acuerdan con tu fotógrafo."
-        autoComplete="off"
-        maxLength={MAX_LOCATION_LENGTH}
       />
       <RadioGroupField
         id="image-use"

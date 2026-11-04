@@ -6,8 +6,6 @@ export interface ContractFormValues {
   readonly signerName: string;
   /** Identity number as typed; hyphens and spaces are allowed. */
   readonly idNumber: string;
-  /** Place of the session as typed; optional. */
-  readonly sessionLocation: string;
   /** The image use option the client chose, or null while they have not chosen. */
   readonly imageUse: ImageUse | null;
   /** Whether the client ticked the box that says they read and accept the contract. */

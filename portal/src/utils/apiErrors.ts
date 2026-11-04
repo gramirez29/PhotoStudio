@@ -204,7 +204,7 @@ export function describeSignContractError(error: unknown): ActionErrorView {
   }
 
   if (error instanceof ApiError && error.code === 'contract.invalid_details') {
-    return { message: 'Revisa el lugar de la sesión.', retryAfterSeconds: null, sessionExpired: false };
+    return { message: 'Revisa los datos del contrato.', retryAfterSeconds: null, sessionExpired: false };
   }
 
   if (error instanceof ApiError && (error.code === 'booking.invalid_transition' || error.code === 'booking.guard_failed')) {
