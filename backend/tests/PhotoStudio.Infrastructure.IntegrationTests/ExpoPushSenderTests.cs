@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Infrastructure.Push;
@@ -187,5 +188,56 @@ public sealed class ExpoPushSenderTests
 
         result.InvalidTokens.ShouldBeEmpty();
         handler.Requests.ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// A logger that keeps what it receives, so a test can check what was reported.
+    /// </summary>
+    private sealed class CapturingLogger : ILogger<ExpoPushSender>
+    {
+        /// <summary>Gets the entries logged, as level and message.</summary>
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        /// <inheritdoc />
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        /// <inheritdoc />
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        /// <inheritdoc />
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception)));
+    }
+
+    /// <summary>
+    /// Expo rejecting the credentials (enhanced security on, access token missing or wrong) is reported as an error that names
+    /// the variable, is not thrown, and does not stop the remaining batches.
+    /// </summary>
+    /// <param name="status">Status Expo answers with.</param>
+    /// <param name="configured">Whether the sender has an access token.</param>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, false)]
+    [InlineData(HttpStatusCode.Forbidden, true)]
+    public async Task SendAsync_WhenCredentialsAreRejected_LogsAnErrorAndKeepsGoing(HttpStatusCode status, bool configured)
+    {
+        var calls = 0;
+        var handler = new StubHandler((_, _) => ++calls == 1 ? new HttpResponseMessage(status) : Tickets("{\"status\":\"ok\"}"));
+        var logger = new CapturingLogger();
+        var sender = new ExpoPushSender(
+            new HttpClient(handler) { BaseAddress = new Uri(ExpoPushSender.BaseAddress) },
+            new ExpoPushOptions(configured ? "secret" : null),
+            logger);
+
+        var result = await sender.SendAsync(Messages(101), TestContext.Current.CancellationToken);
+
+        result.InvalidTokens.ShouldBeEmpty();
+        handler.Bodies.Count.ShouldBe(2);
+        var entry = logger.Entries.Single();
+        entry.Level.ShouldBe(LogLevel.Error);
+        entry.Message.ShouldContain("EXPO_ACCESS_TOKEN");
+        entry.Message.ShouldContain(configured ? "True" : "False");
+        entry.Message.ShouldNotContain("secret");
     }
 }

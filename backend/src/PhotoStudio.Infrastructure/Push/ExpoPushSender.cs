@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -109,6 +110,12 @@ public sealed partial class ExpoPushSender(HttpClient httpClient, ExpoPushOption
         }
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            LogUnauthorized(logger, (int)response.StatusCode, batch.Length, options.AccessToken is not null);
+            return [];
+        }
+
         if (!response.IsSuccessStatusCode)
         {
             LogRefused(logger, (int)response.StatusCode, batch.Length);
@@ -169,6 +176,17 @@ public sealed partial class ExpoPushSender(HttpClient httpClient, ExpoPushOption
     /// <param name="count">Messages in the batch.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Expo refused the push request (HTTP {Status}); {Count} messages were not sent.")]
     private static partial void LogRefused(ILogger logger, int status, int count);
+
+    /// <summary>
+    /// Logs a batch that Expo refused for lack of valid credentials, which happens when the project enabled enhanced push security
+    /// and the access token is missing, wrong or revoked. Every push fails until it is fixed, so it is logged as an error.
+    /// </summary>
+    /// <param name="logger">Logger.</param>
+    /// <param name="status">HTTP status of the answer (401 or 403).</param>
+    /// <param name="count">Messages in the batch.</param>
+    /// <param name="tokenConfigured">Whether <c>EXPO_ACCESS_TOKEN</c> is set; when it is, the token itself is wrong or revoked.</param>
+    [LoggerMessage(Level = LogLevel.Error, Message = "Expo rejected the credentials (HTTP {Status}); {Count} push messages were not sent. EXPO_ACCESS_TOKEN configured: {TokenConfigured}. Enhanced push security needs a valid access token.")]
+    private static partial void LogUnauthorized(ILogger logger, int status, int count, bool tokenConfigured);
 
     /// <summary>
     /// Logs an answer that does not have the expected shape.

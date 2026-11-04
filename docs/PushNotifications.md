@@ -199,6 +199,17 @@ Todas exigen sesión y se acotan al fotógrafo del token (CLAUDE.md §7.1).
 | `EXPO_ACCESS_TOKEN` | Variable de Railway (API **y** worker) | Opcional: solo si el proyecto de Expo activa la seguridad mejorada para push |
 | `EXPO_PUBLIC_API_URL` | `eas.json` (build) y `mobile/.env` (servidor de desarrollo) | Va dentro del paquete: nunca secretos |
 
+**Seguridad mejorada del push (`EXPO_ACCESS_TOKEN`)**
+
+El código ya envía `Authorization: Bearer <token>` cuando la variable existe (`ExpoPushSender`); no hace falta desplegar nada para activarla, solo este orden:
+
+1. expo.dev → *Account settings* → *Access tokens* → crear un token **de acceso personal o de organización** (nombre sugerido: `photostudio-push`). Copiarlo: no se vuelve a mostrar.
+2. Guardarlo en Railway como `EXPO_ACCESS_TOKEN` en la API **y** en el worker (los dos envían pushes), en cada ambiente. Nunca en el repositorio ni en un chat.
+3. Esperar a que ambos servicios reinicien y **después** activar *Enhanced Security for Push Notifications* en la configuración del proyecto en expo.dev (el nombre exacto de la opción puede variar). Si se activa antes, Expo rechaza todos los envíos hasta que el token esté desplegado.
+4. Probar con un push real (un comprobante nuevo). Si algo falla, la API o el worker registran un **error** `Expo rejected the credentials (HTTP 401|403)… EXPO_ACCESS_TOKEN configured: True|False`: `False` = falta la variable en ese servicio; `True` = el token es incorrecto, está revocado o es de otra cuenta.
+
+Para rotarlo: crear un token nuevo, ponerlo en Railway (API y worker), esperar el reinicio y revocar el anterior en expo.dev.
+
 **Build de desarrollo (Android)**
 
 ```bash
@@ -245,6 +256,7 @@ Nota (Windows): Smart App Control puede bloquear el DLL recién compilado y hace
 | `push_devices` vacío | La app no pidió o no obtuvo el token | Permiso denegado; dispositivo emulado; build sin `extra.eas.projectId`; `google-services.json` ausente en el build |
 | La app responde `failed` al registrar | Sin red, sesión vencida, o el token no es de Expo | Respuesta de `POST /api/push-devices` (422 `push.invalid_token`) |
 | Expo responde `InvalidCredentials` / `MismatchSenderId` | Falta o está mal la clave FCM V1 en EAS, o el `google-services.json` es de otro proyecto | expo.dev → Credentials; que el paquete coincida |
+| Log de error `Expo rejected the credentials (HTTP 401/403)` y no llega ningún push | La seguridad mejorada está activa y `EXPO_ACCESS_TOKEN` falta (`configured: False`) o es inválido (`True`) en ese servicio | Variables de Railway de la API **y** del worker; tokens en expo.dev (ver §10) |
 | `DeviceNotRegistered` | La app se desinstaló o cambió el token | Se borra solo; reinstala y vuelve a iniciar sesión |
 | Llega con retraso | El despertador no corrió y esperó al cron del worker | Logs `The maintenance pass triggered by a booking change failed`; que la petición fuera exitosa y a `/api/bookings` o `/public/bookings` |
 | Llega pero no abre la reserva | El `data` no trae `bookingId` o la ruta no existe | `readBookingId` ignora datos mal formados |
@@ -254,7 +266,7 @@ Nota (Windows): Smart App Control puede bloquear el DLL recién compilado y hace
 ## 13. Seguridad, privacidad y límites
 
 - **Aislamiento entre fotógrafos:** los endpoints toman el `PhotographerId` solo del token; `unregister` solo borra un token del propio fotógrafo.
-- **El token de Expo identifica un teléfono, no autentica a quien envía.** Con la configuración por defecto de Expo, la API de envío no exige credenciales: quien conozca un token podría mandarle mensajes a ese teléfono. La *seguridad mejorada* de Expo lo cierra exigiendo un token de acceso (`EXPO_ACCESS_TOKEN`), y está en el TODO. Los tokens solo viajan por HTTPS, se guardan en `push_devices` y no se escriben en los logs.
+- **El token de Expo identifica un teléfono, no autentica a quien envía.** Con la configuración por defecto de Expo, la API de envío no exige credenciales: quien conozca un token podría mandarle mensajes a ese teléfono. La *seguridad mejorada* de Expo lo cierra exigiendo un token de acceso (`EXPO_ACCESS_TOKEN`); el código está listo y el procedimiento de activación está en §10. Si el token falta o es inválido, el rechazo (401/403) se registra como error con un mensaje que lo dice. Los tokens solo viajan por HTTPS, se guardan en `push_devices` y no se escriben en los logs.
 - **Contenido en la pantalla de bloqueo:** el push incluye el nombre del cliente y montos. Es lo que hace útil el aviso, pero quien vea el teléfono bloqueado lo ve. Un modo "privado" es un TODO.
 - **La clave de cuenta de servicio de FCM** permite enviar notificaciones con tu proyecto de Firebase: solo en EAS.
 - **`google-services.json`** no es secreto en sentido estricto (las claves de Android están ligadas al paquete), pero no se versiona por ser un repositorio público.
@@ -274,7 +286,7 @@ Ordenados por prioridad.
 
 - [ ] **Perfil `production` de EAS** y proyecto/credenciales de producción (keystore propio, `EXPO_PUBLIC_API_URL` de producción, Firebase de producción o el mismo con apps separadas).
 - [ ] **Distribución:** Google Play (~25 USD, pago único) o APK directo; el perfil `preview` para pruebas internas sin servidor de desarrollo.
-- [ ] **Activar la seguridad mejorada de Expo** y definir `EXPO_ACCESS_TOKEN` en Railway (API y worker).
+- [ ] **Activar la seguridad mejorada de Expo** y definir `EXPO_ACCESS_TOKEN` en Railway (API y worker). Código y diagnóstico listos; falta ejecutar el procedimiento de §10 en cada ambiente (es una acción en expo.dev y Railway).
 - [ ] **Ícono de notificación y colores de marca** en Android (el ícono pequeño debe ser monocromo): depende de definir la paleta y los íconos (CLAUDE.md §3, brecha 6).
 - [ ] **Privacidad en pantalla de bloqueo:** texto genérico cuando el teléfono está bloqueado (visibilidad de la notificación en Android) o un ajuste para elegirlo.
 
