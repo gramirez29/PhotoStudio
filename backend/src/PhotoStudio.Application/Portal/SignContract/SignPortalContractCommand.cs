@@ -10,7 +10,7 @@ namespace PhotoStudio.Application.Portal.SignContract;
 /// <param name="TemplateVersion">Version of the contract the client read; it must still be the current one.</param>
 /// <param name="SignerName">Name typed by the signer.</param>
 /// <param name="IdNumber">Identity number of the signer (cédula or DIMEX).</param>
-/// <param name="ParticipantCount">Number of people in the session.</param>
+/// <param name="ParticipantCount">Number of people in the session; optional.</param>
 /// <param name="SessionLocation">Place of the session; optional.</param>
 /// <param name="ImageUse">What the client allows to do with the photos.</param>
 /// <param name="AcceptsTerms">Whether the client ticked the box that says they read and accept the contract.</param>
@@ -20,7 +20,7 @@ public sealed record SignPortalContractCommand(
     string TemplateVersion,
     string SignerName,
     string IdNumber,
-    int ParticipantCount,
+    int? ParticipantCount,
     string? SessionLocation,
     ImageUse ImageUse,
     bool AcceptsTerms);

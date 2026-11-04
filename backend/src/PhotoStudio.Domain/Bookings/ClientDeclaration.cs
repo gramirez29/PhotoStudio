@@ -17,7 +17,7 @@ public sealed record ClientDeclaration
     /// <summary>
     /// Initializes a new instance of the <see cref="ClientDeclaration"/> class. Use <see cref="Create"/>, which validates the values.
     /// </summary>
-    private ClientDeclaration(string idNumber, int participantCount, string? sessionLocation, ImageUse imageUse)
+    private ClientDeclaration(string idNumber, int? participantCount, string? sessionLocation, ImageUse imageUse)
     {
         IdNumber = idNumber;
         ParticipantCount = participantCount;
@@ -28,8 +28,8 @@ public sealed record ClientDeclaration
     /// <summary>Gets the identity number of the signer, digits only (cédula of 9 digits or DIMEX of 11 or 12).</summary>
     public string IdNumber { get; }
 
-    /// <summary>Gets the number of people who take part in the session.</summary>
-    public int ParticipantCount { get; }
+    /// <summary>Gets the number of people who take part in the session, or <see langword="null"/> when it was not asked.</summary>
+    public int? ParticipantCount { get; }
 
     /// <summary>Gets the place of the session as the client wrote it, or <see langword="null"/> when they left it blank.</summary>
     public string? SessionLocation { get; }
@@ -41,12 +41,12 @@ public sealed record ClientDeclaration
     /// Creates a declaration after validating and normalizing its values.
     /// </summary>
     /// <param name="idNumber">Identity number as typed; spaces and hyphens are ignored, so <c>1-1234-5678</c> is accepted.</param>
-    /// <param name="participantCount">Number of people in the session, between 1 and <see cref="MaxParticipants"/>.</param>
+    /// <param name="participantCount">Number of people in the session, between 1 and <see cref="MaxParticipants"/>; optional.</param>
     /// <param name="sessionLocation">Place of the session; optional.</param>
     /// <param name="imageUse">What the client allows to do with the photos.</param>
     /// <returns>The declaration.</returns>
     /// <exception cref="DomainException">When the identity number, the number of people or the location is not valid.</exception>
-    public static ClientDeclaration Create(string idNumber, int participantCount, string? sessionLocation, ImageUse imageUse)
+    public static ClientDeclaration Create(string idNumber, int? participantCount, string? sessionLocation, ImageUse imageUse)
     {
         var digits = new string((idNumber ?? string.Empty).Where(character => character is not ('-' or ' ')).ToArray());
         if (digits.Length is not (9 or 11 or 12) || !digits.All(char.IsAsciiDigit))

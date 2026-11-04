@@ -10,8 +10,8 @@ import { RadioGroupField } from './RadioGroupField';
 import { TextField } from './TextField';
 
 /**
- * The part of the contract only the client can fill in, and the signature: who signs, the identity number, how many people
- * come, where, what the photos may be used for, and the acceptance. The signature is the name typed. What the client typed
+ * The part of the contract only the client can fill in, and the signature: who signs, the identity number,
+ * where, what the photos may be used for, and the acceptance. The signature is the name typed. What the client typed
  * lives in the parent, so it survives a verification that expires halfway.
  * @param props Component props.
  * @returns The form.
@@ -96,19 +96,6 @@ export function ContractSignForm({
         inputMode="numeric"
         autoComplete="off"
         maxLength={16}
-      />
-      <TextField
-        id="participants"
-        label="¿Cuántas personas vienen a la sesión?"
-        value={values.participantCount}
-        onChange={(participantCount) => {
-          onChange({ ...values, participantCount });
-          setErrors({ ...errors, participantCount: undefined });
-        }}
-        error={errors.participantCount}
-        inputMode="numeric"
-        autoComplete="off"
-        maxLength={3}
       />
       <TextField
         id="location"

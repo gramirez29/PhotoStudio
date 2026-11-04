@@ -6,17 +6,10 @@ export const MAX_SIGNER_NAME_LENGTH = 100;
 /** Most characters of the place of the session (the backend enforces the same limit). */
 export const MAX_LOCATION_LENGTH = 200;
 
-/** Fewest people a session can declare (the backend enforces the same limit). */
-export const MIN_PARTICIPANTS = 1;
-
-/** Most people a session can declare (the backend enforces the same limit). */
-export const MAX_PARTICIPANTS = 100;
-
 /** The form before the client types anything. */
 export const INITIAL_CONTRACT_VALUES: ContractFormValues = {
   signerName: '',
   idNumber: '',
-  participantCount: '',
   sessionLocation: '',
   imageUse: null,
   acceptsTerms: false,
@@ -54,12 +47,6 @@ export function validateContractForm(values: ContractFormValues, templateVersion
     errors.idNumber = 'Escribe tu cédula (9 dígitos) o tu DIMEX (11 o 12 dígitos).';
   }
 
-  const typedCount = values.participantCount.trim();
-  const participants = /^\d+$/.test(typedCount) ? Number(typedCount) : Number.NaN;
-  if (!Number.isInteger(participants) || participants < MIN_PARTICIPANTS || participants > MAX_PARTICIPANTS) {
-    errors.participantCount = `Escribe cuántas personas vienen a la sesión (de ${MIN_PARTICIPANTS} a ${MAX_PARTICIPANTS}).`;
-  }
-
   const location = values.sessionLocation.trim();
   if (location.length > MAX_LOCATION_LENGTH) {
     errors.sessionLocation = `El lugar no puede tener más de ${MAX_LOCATION_LENGTH} caracteres.`;
@@ -83,7 +70,6 @@ export function validateContractForm(values: ContractFormValues, templateVersion
       templateVersion,
       signerName,
       idNumber: idDigits,
-      participantCount: participants,
       ...(location.length > 0 ? { sessionLocation: location } : {}),
       imageUse: values.imageUse,
       acceptsTerms: true,

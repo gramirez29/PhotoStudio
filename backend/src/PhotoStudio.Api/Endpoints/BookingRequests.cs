@@ -70,10 +70,10 @@ public sealed record EditBookingDetailsRequest(
 /// What the client declared when signing the contract on the photographer's phone.
 /// </summary>
 /// <param name="IdNumber">Identity number of the signer (cédula or DIMEX).</param>
-/// <param name="ParticipantCount">Number of people in the session.</param>
+/// <param name="ParticipantCount">Number of people in the session; optional.</param>
 /// <param name="SessionLocation">Place of the session, optional.</param>
 /// <param name="ImageUse">What the client allows to do with the photos: <c>Authorized</c> or <c>NotAuthorized</c>.</param>
-public sealed record InPersonDeclarationRequest(string IdNumber, int ParticipantCount, string? SessionLocation, ImageUse ImageUse);
+public sealed record InPersonDeclarationRequest(string IdNumber, int? ParticipantCount, string? SessionLocation, ImageUse ImageUse);
 
 /// <summary>
 /// HTTP body to register a contract signed in person or on paper.

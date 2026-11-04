@@ -6,7 +6,6 @@ import { INITIAL_CONTRACT_VALUES, readIdDigits, validateContractForm } from './c
 const VALID: ContractFormValues = {
   signerName: '  María Pérez  ',
   idNumber: '1-1234-5678',
-  participantCount: '3',
   sessionLocation: '  Parque La Sabana  ',
   imageUse: 'Authorized',
   acceptsTerms: true,
@@ -32,7 +31,6 @@ describe('validateContractForm', () => {
         templateVersion: 'v1',
         signerName: 'María Pérez',
         idNumber: '112345678',
-        participantCount: 3,
         sessionLocation: 'Parque La Sabana',
         imageUse: 'Authorized',
         acceptsTerms: true,
@@ -54,7 +52,6 @@ describe('validateContractForm', () => {
       'acceptsTerms',
       'idNumber',
       'imageUse',
-      'participantCount',
       'signerName',
     ]);
   });
@@ -67,12 +64,6 @@ describe('validateContractForm', () => {
 
   it.each(['15600012345', '155600012345'])('accepts the DIMEX %s', (idNumber) => {
     expect(validateContractForm({ ...VALID, idNumber }, 'v1').ok).toBe(true);
-  });
-
-  it.each(['0', '101', '2.5', '-1', 'tres', ''])('rejects "%s" people', (participantCount) => {
-    const result = validateContractForm({ ...VALID, participantCount }, 'v1');
-
-    expect(!result.ok && result.errors.participantCount).toBeDefined();
   });
 
   it('rejects a location that is too long', () => {

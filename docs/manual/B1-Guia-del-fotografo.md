@@ -94,7 +94,7 @@ El cliente nunca instala nada: abre el enlace en su navegador.
 Si el cliente está contigo, no necesita el enlace.
 
 - **Firmar contrato:** Acciones → **Firmar contrato**. Dos modos:
-  - **Firma en el celular:** el cliente lee el contrato (se rellena con su reserva y las políticas), escribe su cédula, cuántas personas, el lugar (opcional), el uso que autoriza para las fotos, marca "leí y acepto" y firma. Entregas el celular al cliente.
+  - **Firma en el celular:** el cliente lee el contrato (se rellena con su reserva y las políticas), escribe su cédula, el lugar (opcional), el uso que autoriza para las fotos, marca "leí y acepto" y firma. Entregas el celular al cliente.
   - **Contrato en papel:** solo registras el nombre de quien firma.
 - **Registrar pago:** Acciones → **Registrar pago**. Eliges **efectivo o SINPE Móvil**; el monto sugerido es el anticipo que falta o el saldo; no puedes registrar más que el saldo. Entra **ya verificado**. Un doble toque no registra dos veces (clave de idempotencia).
 
