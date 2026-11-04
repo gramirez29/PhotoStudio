@@ -628,6 +628,7 @@ Una cuenta nueva tiene que **demostrar que es dueña del correo** con un código
 3. Con ese token la API **solo** acepta dos endpoints, bajo la política `any-user`:
    - `POST /api/account/email/verify` `{ code }` → 200 con una **sesión nueva** (`emailVerified: true`); 422 `auth.invalid_email_code` si el código es malo, venció o se gastó (la respuesta no dice cuál).
    - `POST /api/account/email/resend` → 202 `{ maskedEmail, expiresAt }`; 429 `auth.email_code_rate_limited` (con `Retry-After`); 409 `auth.email_already_verified` o `auth.email_missing`; 503 `email.delivery_failed`.
+   - `POST /api/account/email/change` `{ email }` → 202 `{ maskedEmail, expiresAt }`: reemplaza el correo y envía el código a la dirección nueva (ver "Corregir un correo mal escrito" abajo); 409 `auth.email_already_verified` / `user.email_taken`; 422 `user.invalid_email`; 429 `auth.email_code_rate_limited`; 503 `email.delivery_failed`.
 4. Todo lo demás responde **403** a ese token: la política por defecto y la de respaldo exigen que el token no diga `email_verified: false`, y `system-operator` también. Los endpoints anónimos (`/health`, `/api/auth/*`, `/public/*`) no cambian.
 5. Verificar cambia lo que el token puede hacer, así que la respuesta es una sesión nueva y se **cierran las demás sesiones** de la cuenta (como al cambiar la contraseña). La app la adopta y se abre.
 
@@ -641,7 +642,19 @@ Las mismas del portal: 6 dígitos, vive 10 minutos, **un solo uso**, hash HMAC c
 - **Cuentas antiguas.** Una cuenta creada antes de esto no tiene `emailVerifiedAt`, así que **se le pide verificar en su próximo inicio de sesión**. Una cuenta sin correo (de antes de que existiera el campo) no puede recibir un código y **no se bloquea**.
 - **Tokens ya emitidos.** Un token sin el claim (vive como máximo 15 minutos) se acepta, para que desplegar no corte las sesiones abiertas. Al renovarlo trae el claim.
 - **La app** decide sus pantallas con `emailVerified` de la sesión (`app/verify-email.tsx`: código, "Enviar un código nuevo" con espera de 60 s y "Salir"); mientras sea `false` solo existe esa pantalla y el registro del push no corre.
-- **Sigue sin resolverse:** quien se equivoca al escribir el correo al registrarse **no puede verificar** y no hay forma de cambiarlo desde la app; el usuario queda tomado. Hoy la salida es que un operador ponga el interruptor en `false` o corrija el correo en Mongo. Pendiente: cambiar el correo mientras no está verificado. Tampoco se resuelve que alguien ocupe el correo de otra persona sin poder usarlo (el índice único sigue protegiéndolo).
+- **Tampoco se resuelve** que alguien ocupe el correo de otra persona sin poder usarlo (el índice único sigue protegiéndolo; la dueña real no puede registrarse con él hasta que el ocupante lo cambie o se borre la cuenta).
+
+### Corregir un correo mal escrito
+
+Quien se equivoca al escribir el correo al registrarse no recibe el código y, sin esto, quedaba atrapado. `POST /api/account/email/change` (política `any-user`, 10 por minuto por IP) con `{ email }`:
+
+1. Normaliza el correo (422 `user.invalid_email`) y carga al usuario. Si **ya verificó** → 409 `auth.email_already_verified`: una vez verificado, el correo es una prueba de identidad y cambiarlo no se hace solo con una sesión (queda pendiente un flujo con contraseña y código a ambas direcciones, si alguna vez hace falta).
+2. **Revisa los límites del código antes de tocar nada** (un minuto entre códigos, cinco por hora, los contadores de `email_verifications`). Si no puede enviar, responde 429 y **el correo no cambia**. El cambio no reinicia esos contadores, así que no sirve para mandar correo a muchas direcciones a través del servicio. Costo: justo tras registrarse hay que esperar hasta un minuto para corregir (la app muestra la espera).
+3. Si la dirección es la misma que ya tiene, no escribe nada y solo reenvía el código.
+4. Reemplaza el correo con una escritura condicionada a `emailVerifiedAt == null` (`ChangeUnverifiedEmailAsync`): un correo que se verifica entre la lectura y la escritura nunca se pisa (409). El índice único decide si otra cuenta usa la dirección (409 `user.email_taken`, el mismo dato que ya revela el registro).
+5. Envía el código nuevo **a la dirección nueva**; el registro del código se reemplaza, así que el código enviado a la dirección equivocada deja de servir. No toca sesiones: el token no lleva el correo.
+
+También sirve a una cuenta antigua sin correo: puede ponerse uno y verificarlo. La app lo ofrece en la pantalla de verificación ("¿Te equivocaste de correo? Cámbialo", con la dirección actual para editar). Pruebas: `ChangeUnverifiedEmailHandlerTests` (9) y 4 de punta a punta en `EmailVerificationApiTests`.
 - **Recuperación de contraseña** sigue pendiente, pero ahora ya hay un correo verificado en el que apoyarla.
 
 ## 21. La web del fotógrafo (cookie y segundo factor)

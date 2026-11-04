@@ -1,4 +1,10 @@
-import type { AuthSessionResponse, ChangePasswordRequest, EmailVerificationSentResponse, VerifyEmailRequest } from './auth';
+import type {
+  AuthSessionResponse,
+  ChangeEmailRequest,
+  ChangePasswordRequest,
+  EmailVerificationSentResponse,
+  VerifyEmailRequest,
+} from './auth';
 
 /** Account endpoints of the signed-in user. They need the access token, so they use the client that manages the session. */
 export interface AccountApi {
@@ -25,4 +31,13 @@ export interface AccountApi {
    * @returns Where the code went (masked) and when it expires.
    */
   resendEmailVerification(signal?: AbortSignal): Promise<EmailVerificationSentResponse>;
+
+  /**
+   * Replaces the email of an account that has not verified it, for the user who misspelled it, and sends the code to the new
+   * address. The backend refuses it once the email is verified and keeps the limits of the code.
+   * @param request The address the user wants.
+   * @param signal Optional signal to cancel the request.
+   * @returns Where the code went (masked) and when it expires.
+   */
+  changeUnverifiedEmail(request: ChangeEmailRequest, signal?: AbortSignal): Promise<EmailVerificationSentResponse>;
 }

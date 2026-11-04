@@ -112,6 +112,24 @@ public sealed class MongoUserRepository(IMongoDatabase database) : IUserReposito
             cancellationToken: cancellationToken);
 
     /// <inheritdoc />
+    public async Task<bool> ChangeUnverifiedEmailAsync(Guid id, string email, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _collection.UpdateOneAsync(
+                user => user.Id == id && user.EmailVerifiedAt == null,
+                Builders<UserDocument>.Update.Set(user => user.Email, email),
+                cancellationToken: cancellationToken);
+
+            return result.ModifiedCount == 1;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            throw new ConflictException(ApplicationErrorCodes.EmailTaken, "That email is already registered.");
+        }
+    }
+
+    /// <inheritdoc />
     public Task ResetFailedLoginsAsync(Guid id, CancellationToken cancellationToken) =>
         _collection.UpdateOneAsync(
             user => user.Id == id,

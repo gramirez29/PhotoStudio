@@ -4,6 +4,7 @@ using PhotoStudio.Api.Auth;
 using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Identity;
+using PhotoStudio.Application.Identity.ChangeEmail;
 using PhotoStudio.Application.Identity.ChangePassword;
 using PhotoStudio.Application.Identity.ResendEmailVerification;
 using PhotoStudio.Application.Identity.VerifyEmail;
@@ -23,6 +24,12 @@ public sealed record ChangePasswordRequest(string CurrentPassword, string NewPas
 /// </summary>
 /// <param name="Code">The six digits the user typed.</param>
 public sealed record VerifyEmailRequest(string Code);
+
+/// <summary>
+/// HTTP body to replace the email of an account that has not verified it.
+/// </summary>
+/// <param name="Email">The address the user wants.</param>
+public sealed record ChangeEmailRequest(string Email);
 
 /// <summary>
 /// Endpoints of the signed-in user's own account. They require an access token, unlike <see cref="AuthEndpoints"/>.
@@ -50,6 +57,7 @@ public static class AccountEndpoints
 
         email.MapPost("/verify", VerifyEmailAsync).WithName("VerifyEmail").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
         email.MapPost("/resend", ResendEmailVerificationAsync).WithName("ResendEmailVerification").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
+        email.MapPost("/change", ChangeUnverifiedEmailAsync).WithName("ChangeUnverifiedEmail").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
 
         return endpoints;
     }
@@ -85,6 +93,23 @@ public static class AccountEndpoints
         ICommandHandler<VerifyEmailCommand, AuthSessionResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(new VerifyEmailCommand(user.GetPhotographerId(), request.Code), cancellationToken));
+
+    /// <summary>
+    /// Replaces the email of the signed-in user, who has not verified it, and sends the code to the new address.
+    /// </summary>
+    /// <param name="request">The address the user wants.</param>
+    /// <param name="user">Authenticated user.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>202 with where the code went (masked); 409 <c>auth.email_already_verified</c> or <c>user.email_taken</c>; 422 <c>user.invalid_email</c>; 429 <c>auth.email_code_rate_limited</c> (with <c>Retry-After</c>); 503 <c>email.delivery_failed</c>.</returns>
+    private static async Task<Accepted<EmailVerificationSentResponse>> ChangeUnverifiedEmailAsync(
+        ChangeEmailRequest request,
+        ClaimsPrincipal user,
+        ICommandHandler<ChangeUnverifiedEmailCommand, EmailVerificationSentResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Accepted(
+            (string?)null,
+            await handler.HandleAsync(new ChangeUnverifiedEmailCommand(user.GetPhotographerId(), request.Email), cancellationToken));
 
     /// <summary>
     /// Sends a new code to the email of the signed-in user.

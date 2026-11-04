@@ -84,4 +84,15 @@ public interface IUserRepository
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>A task that completes when the user is recorded as verified.</returns>
     Task MarkEmailVerifiedAsync(Guid id, DateTimeOffset verifiedAt, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Replaces the email, only while the user has not verified it. The condition is part of the write, so an email that gets
+    /// verified meanwhile is never overwritten. The unique index on the email decides whether another account uses the address.
+    /// </summary>
+    /// <param name="id">User identifier.</param>
+    /// <param name="email">New email, already normalized.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns><see langword="true"/> when the email was replaced; <see langword="false"/> when the user is already verified or does not exist.</returns>
+    /// <exception cref="Exceptions.ConflictException">When another account already uses the address.</exception>
+    Task<bool> ChangeUnverifiedEmailAsync(Guid id, string email, CancellationToken cancellationToken);
 }

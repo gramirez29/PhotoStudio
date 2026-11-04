@@ -22,4 +22,20 @@ export interface VerifyEmailFormState {
   readonly verify: () => void;
   /** Sends a new code to the email of the account. */
   readonly resend: () => void;
+  /** Whether the user is correcting the address instead of typing the code. */
+  readonly isChangingEmail: boolean;
+  /** Address typed in the correction. */
+  readonly newEmail: string;
+  /** Validation message of the address, or undefined. */
+  readonly newEmailError: string | undefined;
+  /** Whether the correction is being sent. */
+  readonly isSavingEmail: boolean;
+  /** Opens the correction, with the current address ready to edit. */
+  readonly openEmailChange: () => void;
+  /** Closes the correction and goes back to the code. */
+  readonly closeEmailChange: () => void;
+  /** Called with the text of the address field on every change. */
+  readonly setNewEmail: (text: string) => void;
+  /** Sends the corrected address and, when the backend accepts it, a code goes there. */
+  readonly saveEmail: () => void;
 }

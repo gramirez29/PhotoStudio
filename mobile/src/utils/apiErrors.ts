@@ -319,6 +319,34 @@ export function resendEmailCodeErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed correction of the email of the account into a message for the user.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function changeEmailErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'user.email_taken':
+      return 'Ese correo ya está registrado en otra cuenta.';
+    case 'user.invalid_email':
+      return 'Escribe un correo válido, por ejemplo nombre@correo.com.';
+    case 'auth.email_code_rate_limited':
+      return 'Ya te enviamos un código hace poco. Espera un momento e inténtalo de nuevo; tu correo no cambió.';
+    case 'auth.email_already_verified':
+      return 'Tu correo ya está verificado y no se puede cambiar desde aquí.';
+    case 'email.delivery_failed':
+      return 'No pudimos enviar el correo ahora. Inténtalo en un momento.';
+    case 'rate_limit.exceeded':
+      return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    default:
+      return 'No se pudo cambiar el correo. Inténtalo de nuevo.';
+  }
+}
+
+/**
  * Converts the error of a failed correction of a booking into a message for the user. It words the refusals of this action (the
  * package or the price can no longer change, an invalid email) instead of the generic ones of the other actions.
  * @param error Error of the mutation.

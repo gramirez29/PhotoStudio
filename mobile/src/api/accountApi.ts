@@ -25,5 +25,6 @@ export function createAccountApi(client: HttpClient): AccountApi {
     changePassword: (request, signal) => client.post('/api/account/password', request, parseAuthSession, signal),
     verifyEmail: (request, signal) => client.post('/api/account/email/verify', request, parseAuthSession, signal),
     resendEmailVerification: (signal) => client.post('/api/account/email/resend', undefined, parseEmailVerificationSent, signal),
+    changeUnverifiedEmail: (request, signal) => client.post('/api/account/email/change', request, parseEmailVerificationSent, signal),
   };
 }

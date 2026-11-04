@@ -28,7 +28,7 @@ El enlace es un **canal, no un requisito**: también puedes firmar el contrato y
 3. Te llega un **código de 6 dígitos** al correo. Escríbelo en la pantalla "Verifica tu correo". Hasta verificarlo no puedes usar la app. Si no llega, **Enviar un código nuevo** (espera 60 segundos entre envíos).
 4. Listo: quedas con la sesión iniciada.
 
-Entras después con usuario y contraseña. Cinco contraseñas malas seguidas bloquean la cuenta 15 minutos. **Pendiente:** recuperar una contraseña olvidada y corregir un correo mal escrito.
+Entras después con usuario y contraseña. Cinco contraseñas malas seguidas bloquean la cuenta 15 minutos. Si te equivocaste al escribir el correo y no te llega el código, en la pantalla "Verifica tu correo" toca **¿Te equivocaste de correo? Cámbialo**, escribe el correcto y te enviamos el código ahí (si lo acabas de pedir, espera hasta un minuto). Solo se puede mientras no lo hayas verificado. **Pendiente:** recuperar una contraseña olvidada.
 
 ### Cambiar el tema o la contraseña
 Menú ☰ → **Ajustes**: tema Sistema / Claro / Oscuro; **Cambiar contraseña** (pide la actual y la nueva dos veces; cierra tus otras sesiones).

@@ -295,6 +295,115 @@ public sealed class EmailVerificationApiTests(ApiFixture fixture)
         });
 
     /// <summary>
+    /// The whole correction: the user misspelled the address, changes it, the code goes to the new address, the old code stops
+    /// working, and verifying with the new one opens the app.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ChangeEmail_FixesAMisspelledAddress_AndTheNewCodeVerifies()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        await using var factory = fixture.CreateFactoryRequiringEmailVerification();
+        var client = fixture.CreateClient(factory);
+        var username = NewUsername();
+        var wrong = $"{username}@exmaple.com";
+        var right = $"{username}@example.com";
+        var session = await (await client.RegisterRawAsync(username, email: wrong)).ReadSessionAsync();
+        var wrongCode = fixture.Emails.LastCodeFor(wrong);
+        await AgeTheCodeAsync(session.PhotographerId);
+
+        var changed = await client.SendAsync(HttpMethod.Post, "/api/account/email/change", session.AccessToken, new { email = $" {right.ToUpperInvariant()} " });
+
+        changed.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        (await changed.ReadJsonAsync()).GetProperty("maskedEmail").GetString().ShouldBe($"{right[0]}***@example.com");
+        var newCode = fixture.Emails.LastCodeFor(right);
+        if (newCode != wrongCode)
+        {
+            (await client.SendAsync(HttpMethod.Post, "/api/account/email/verify", session.AccessToken, new { code = wrongCode })).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        }
+
+        var verified = await client.SendAsync(HttpMethod.Post, "/api/account/email/verify", session.AccessToken, new { code = newCode });
+        verified.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var json = await verified.ReadJsonAsync();
+        json.GetProperty("emailVerified").GetBoolean().ShouldBeTrue();
+        json.GetProperty("email").GetString().ShouldBe(right);
+        (await client.SendAsync(HttpMethod.Get, "/api/bookings", json.GetProperty("accessToken").GetString())).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// Changing the address right after the code was sent is refused with the time to wait, and the account keeps its address: the
+    /// limits of the code cannot be skipped by changing it, so the service cannot be used to send mail to many addresses.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ChangeEmail_InsideTheCooldown_IsRefusedAndKeepsTheAddress()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        await using var factory = fixture.CreateFactoryRequiringEmailVerification();
+        var client = fixture.CreateClient(factory);
+        var username = NewUsername();
+        var session = await (await client.RegisterRawAsync(username)).ReadSessionAsync();
+        var other = $"{username}.other@example.com";
+
+        var changed = await client.SendAsync(HttpMethod.Post, "/api/account/email/change", session.AccessToken, new { email = other });
+
+        changed.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        (await changed.ReadCodeAsync()).ShouldBe("auth.email_code_rate_limited");
+        fixture.Emails.Messages.Any(message => message.To == other).ShouldBeFalse();
+        var code = fixture.Emails.LastCodeFor($"{username}@example.com");
+        (await client.SendAsync(HttpMethod.Post, "/api/account/email/verify", session.AccessToken, new { code })).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// An address another account uses and an address without a valid shape are refused with their own codes, and nothing is sent.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ChangeEmail_ToAnAddressInUseOrInvalid_IsRefused()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        await using var factory = fixture.CreateFactoryRequiringEmailVerification();
+        var client = fixture.CreateClient(factory);
+        var owner = NewUsername();
+        await client.RegisterRawAsync(owner);
+        var username = NewUsername();
+        var session = await (await client.RegisterRawAsync(username)).ReadSessionAsync();
+        await AgeTheCodeAsync(session.PhotographerId);
+
+        var taken = await client.SendAsync(HttpMethod.Post, "/api/account/email/change", session.AccessToken, new { email = $"{owner}@example.com" });
+        var invalid = await client.SendAsync(HttpMethod.Post, "/api/account/email/change", session.AccessToken, new { email = "not-an-email" });
+
+        taken.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await taken.ReadCodeAsync()).ShouldBe("user.email_taken");
+        invalid.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await invalid.ReadCodeAsync()).ShouldBe("user.invalid_email");
+        fixture.Emails.Messages.Count(message => message.To == $"{owner}@example.com").ShouldBe(1);
+    }
+
+    /// <summary>
+    /// Once the email is verified the address can no longer be changed with a session alone, and without a token the endpoint is a 401.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ChangeEmail_AfterVerifying_IsRefused_AndNeedsAToken()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, SkipReason);
+        await using var factory = fixture.CreateFactoryRequiringEmailVerification();
+        var client = fixture.CreateClient(factory);
+        var username = NewUsername();
+        var session = await (await client.RegisterRawAsync(username)).ReadSessionAsync();
+        var code = fixture.Emails.LastCodeFor($"{username}@example.com");
+        var open = (await (await client.SendAsync(HttpMethod.Post, "/api/account/email/verify", session.AccessToken, new { code })).ReadSessionAsync()).AccessToken;
+
+        var refused = await client.SendAsync(HttpMethod.Post, "/api/account/email/change", open, new { email = $"{username}.new@example.com" });
+        var anonymous = await client.SendAsync(HttpMethod.Post, "/api/account/email/change", null, new { email = "a@example.com" });
+
+        refused.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await refused.ReadCodeAsync()).ShouldBe("auth.email_already_verified");
+        anonymous.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
     /// Makes the code of a user old enough to ask for another one, by moving back the instants stored with it.
     /// </summary>
     /// <param name="userId">User whose code is aged.</param>

@@ -27,6 +27,7 @@ using PhotoStudio.Application.Contracts;
 using PhotoStudio.Application.Identity;
 using PhotoStudio.Application.Identity.Studio;
 using PhotoStudio.Application.Identity.ChangePassword;
+using PhotoStudio.Application.Identity.ChangeEmail;
 using PhotoStudio.Application.Identity.Login;
 using PhotoStudio.Application.Identity.Logout;
 using PhotoStudio.Application.Identity.RefreshSession;
@@ -209,6 +210,7 @@ public static class DependencyInjection
         services.AddScoped<EmailVerificationSender>();
         services.AddScoped<ICommandHandler<VerifyEmailCommand, AuthSessionResponse>, VerifyEmailHandler>();
         services.AddScoped<ICommandHandler<ResendEmailVerificationCommand, EmailVerificationSentResponse>, ResendEmailVerificationHandler>();
+        services.AddScoped<ICommandHandler<ChangeUnverifiedEmailCommand, EmailVerificationSentResponse>, ChangeUnverifiedEmailHandler>();
 
         // The web area of the photographer: password plus a code by email in a browser that is not remembered.
         services.AddScoped<CredentialChecker>();
