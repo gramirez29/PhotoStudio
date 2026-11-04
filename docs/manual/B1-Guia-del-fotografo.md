@@ -57,6 +57,23 @@ Al crear, la reserva queda **Tentativa**: el horario queda apartado por **48 hor
 ### Editar una reserva
 Detalle → **Editar reserva**. Puedes corregir los datos del cliente siempre que la reserva esté viva. El **paquete, precio, extras y descuento** solo se pueden cambiar mientras no haya contrato firmado ni pagos (de ellos salen el texto del contrato y el anticipo); si ya los hay, aparecen bloqueados con el motivo. Cambiar el correo cancela el código enviado al anterior.
 
+### Reservas vencidas
+Una reserva **Tentativa** vence cuando se cumple su plazo: **48 horas** desde que se creó o el inicio de la sesión, lo que ocurra primero. Al vencer pasa a **Vencida**, se libera el horario y ya no admite acciones ni se puede revertir; si el cliente aún quiere la sesión, crea una reserva nueva.
+
+- **No vence mientras haya un comprobante por verificar.** Si lo rechazas y el plazo ya pasó, vence en la siguiente pasada automática (cada 15 minutos aproximadamente).
+- Si ya había dinero pagado, se crea una liquidación con **reembolso de todo lo pagado** y lo ves en la tarjeta "Dinero de esta reserva" y en Reembolsos pendientes (sección 10).
+- Al vencer se cancelan los recordatorios de esa sesión. **No se envía ningún aviso al cliente**: si quieres avisarle, hazlo tú por WhatsApp.
+- Un operador de sistema puede forzar la revisión desde Ajustes → **Liberar reservas vencidas**.
+
+### Buscar y filtrar tus reservas
+En el inicio, el botón **Filtrar** (ícono de embudo) abre el panel de filtros:
+
+- **Buscar por nombre:** escribe parte del nombre del cliente; la búsqueda se hace al dejar de teclear, sin distinguir mayúsculas.
+- **Estado:** toca un estado (Tentativa, Confirmada, Completada, Cancelada, **Vencida**, Cliente ausente); tócalo de nuevo para quitarlo.
+- La **escoba** limpia todos los filtros; solo aparece si hay alguno aplicado, y el botón Filtrar muestra cuántos hay.
+
+Sin filtros la lista muestra las reservas recientes (las que terminaron hace menos de 30 días). **Con un filtro se busca en todo el historial**. En ambos casos, lo más recién creado va primero.
+
 ## 4. Compartir el enlace con el cliente
 
 En el detalle de la reserva, tarjeta **Enlace**: toca el botón, **confirma** (crear un enlace nuevo **cancela el anterior** y no se puede recuperar), y se abre WhatsApp con un mensaje listo. Envíalo. También puedes compartir el texto.
