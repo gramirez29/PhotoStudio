@@ -6,16 +6,42 @@
   gap: var(--space-md);
 }
 
+/* The way out of the page: the buttons share one height and one weight, the links look like the buttons (no underline), and the
+   least common action ("sign out and forget this browser") is a quiet text button under the others, so it is not mistaken for them. */
 .studio-bar__actions {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
 }
 
 .studio-bar__actions .button {
+  align-items: center;
+  border-width: 1.5px;
+  display: inline-flex;
+  flex: 1 1 9rem;
   font-size: 1rem;
+  font-weight: 600;
+  justify-content: center;
   min-height: 44px;
   padding: 0 var(--space-md);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.studio-bar__actions .button--quiet {
+  border-color: transparent;
+  color: var(--color-text-muted);
+  flex-basis: 100%;
+  font-weight: 400;
+  min-height: 36px;
+  white-space: normal;
+}
+
+.studio-bar__actions .button--quiet:hover:not(:disabled) {
+  color: var(--color-text);
+  text-decoration: underline;
 }
 
 .gallery-card__head {
@@ -40,6 +66,20 @@
     align-items: flex-start;
     flex-direction: row;
     justify-content: space-between;
+  }
+
+  .studio-bar__actions {
+    justify-content: flex-end;
+    max-width: 28rem;
+  }
+
+  .studio-bar__actions .button {
+    flex: 0 0 auto;
+  }
+
+  .studio-bar__actions .button--quiet {
+    flex-basis: 100%;
+    text-align: right;
   }
 }
 

@@ -66,7 +66,7 @@ export function StudioGalleries({ user }: StudioGalleriesProps): ReactElement {
           <button type="button" className="button button--secondary" disabled={logout.isPending} onClick={() => logout.mutate(false)}>
             Salir
           </button>
-          <button type="button" className="button button--secondary" disabled={logout.isPending} onClick={() => logout.mutate(true)}>
+          <button type="button" className="button button--secondary button--quiet" disabled={logout.isPending} onClick={() => logout.mutate(true)}>
             Salir y olvidar este navegador
           </button>
         </div>
