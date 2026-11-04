@@ -22,6 +22,7 @@ import type {
 } from '../types/api/booking';
 import type { BookingsApi } from '../types/api/bookingsApi';
 import type { HttpClient } from '../types/api/http';
+import { buildFilterParams, NO_BOOKING_FILTER } from '../utils/bookingFilters';
 import { buildPagedPath } from '../utils/pagination';
 import {
   expectRecord,
@@ -269,7 +270,8 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
         parseBooking,
         signal,
       ),
-    listBookings: (cursor, signal) => client.get(buildPagedPath('/api/bookings', cursor), parseBookingList, signal),
+    listBookings: (cursor, filter = NO_BOOKING_FILTER, signal) =>
+      client.get(buildPagedPath('/api/bookings', cursor, buildFilterParams(filter)), parseBookingList, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
     getContract: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}/contract`, parseBookingContract, signal),
   };

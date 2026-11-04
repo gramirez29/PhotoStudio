@@ -16,6 +16,7 @@ using PhotoStudio.Application.Bookings.Responses;
 using PhotoStudio.Application.Bookings.RevertClientAbsent;
 using PhotoStudio.Application.Bookings.SignContractInPerson;
 using PhotoStudio.Application.Pagination;
+using PhotoStudio.Domain.Bookings;
 
 namespace PhotoStudio.Api.Endpoints;
 
@@ -78,16 +79,42 @@ public static class BookingEndpoints
     /// <param name="cancellationToken">Request cancellation token.</param>
     /// <param name="cursor">The <c>nextCursor</c> of the previous page; omitted for the first page. 400 when it is not valid.</param>
     /// <param name="limit">How many bookings the page has (5 by default, at most 50).</param>
+    /// <param name="status">Only the bookings in this status; 400 when it is not a booking status.</param>
+    /// <param name="name">Only the bookings whose client name contains this text, ignoring case.</param>
     /// <returns>200 with the page of booking summaries and the cursor of the next one, if any.</returns>
     private static async Task<Ok<BookingListResponse>> ListAsync(
         ClaimsPrincipal user,
         IQueryHandler<ListBookingsQuery, BookingListResponse> handler,
         CancellationToken cancellationToken,
         string? cursor = null,
-        int? limit = null) =>
+        int? limit = null,
+        string? status = null,
+        string? name = null) =>
         TypedResults.Ok(await handler.HandleAsync(
-            new ListBookingsQuery(user.GetPhotographerId(), PageCursors.Read(cursor), PageSizes.Resolve(limit)),
+            new ListBookingsQuery(
+                user.GetPhotographerId(),
+                PageCursors.Read(cursor),
+                PageSizes.Resolve(limit),
+                BookingListFilter.From(ReadStatus(status), name)),
             cancellationToken));
+
+    /// <summary>
+    /// Reads the status filter of the query string.
+    /// </summary>
+    /// <param name="status">The text received, or <see langword="null"/> when there is no status filter.</param>
+    /// <returns>The status, or <see langword="null"/> when none was asked for.</returns>
+    /// <exception cref="BadHttpRequestException">The text is not the name of a booking status.</exception>
+    private static BookingStatus? ReadStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<BookingStatus>(status, ignoreCase: false, out var parsed) && Enum.IsDefined(parsed)
+            ? parsed
+            : throw new BadHttpRequestException("The status filter is not a booking status.");
+    }
 
     /// <summary>
     /// Reads a booking.

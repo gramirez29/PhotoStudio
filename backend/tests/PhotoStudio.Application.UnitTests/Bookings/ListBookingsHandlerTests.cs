@@ -34,7 +34,7 @@ public sealed class ListBookingsHandlerTests
     {
         var photographerId = Guid.CreateVersion7();
         _repository
-            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>())
             .Returns([]);
 
         await _handler.HandleAsync(new ListBookingsQuery(photographerId), TestContext.Current.CancellationToken);
@@ -44,6 +44,7 @@ public sealed class ListBookingsHandlerTests
             Now.AddDays(-ListBookingsHandler.HistoryDays),
             null,
             PageSizes.Default + 1,
+            BookingListFilter.None,
             Arg.Any<CancellationToken>());
     }
 
@@ -58,7 +59,7 @@ public sealed class ListBookingsHandlerTests
         var first = NewBooking(photographerId, "Ana Vargas", 5);
         var second = NewBooking(photographerId, "Luis Mora", 8);
         _repository
-            .ListByPhotographerAsync(photographerId, Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ListByPhotographerAsync(photographerId, Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>())
             .Returns([first, second]);
 
         var page = await _handler.HandleAsync(new ListBookingsQuery(photographerId), TestContext.Current.CancellationToken);
@@ -81,7 +82,7 @@ public sealed class ListBookingsHandlerTests
     public async Task HandleAsync_WithoutBookings_ReturnsAnEmptyList()
     {
         _repository
-            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>())
             .Returns([]);
 
         var page = await _handler.HandleAsync(new ListBookingsQuery(Guid.CreateVersion7()), TestContext.Current.CancellationToken);
@@ -101,7 +102,7 @@ public sealed class ListBookingsHandlerTests
         var photographerId = Guid.CreateVersion7();
         var found = new[] { NewBooking(photographerId, "Ana", 5), NewBooking(photographerId, "Luis", 6), NewBooking(photographerId, "Eva", 7) };
         _repository
-            .ListByPhotographerAsync(photographerId, Arg.Any<DateTimeOffset>(), null, 3, Arg.Any<CancellationToken>())
+            .ListByPhotographerAsync(photographerId, Arg.Any<DateTimeOffset>(), null, 3, Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>())
             .Returns(found);
 
         var page = await _handler.HandleAsync(new ListBookingsQuery(photographerId, null, 2), TestContext.Current.CancellationToken);
@@ -122,13 +123,44 @@ public sealed class ListBookingsHandlerTests
         var photographerId = Guid.CreateVersion7();
         var after = new PageCursor(Now, Guid.CreateVersion7());
         _repository
-            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>())
             .Returns([]);
 
         await _handler.HandleAsync(new ListBookingsQuery(photographerId, after, 500), TestContext.Current.CancellationToken);
 
         await _repository.Received(1).ListByPhotographerAsync(
-            photographerId, Arg.Any<DateTimeOffset>(), after, PageSizes.Max + 1, Arg.Any<CancellationToken>());
+            photographerId, Arg.Any<DateTimeOffset>(), after, PageSizes.Max + 1, Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// With a filter the handler passes it on and lifts the history window, so a search can find old bookings.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WithAFilter_PassesItOnAndLiftsTheHistoryWindow()
+    {
+        var photographerId = Guid.CreateVersion7();
+        var filter = BookingListFilter.From(BookingStatus.Completed, "ana");
+        _repository
+            .ListByPhotographerAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<PageCursor?>(), Arg.Any<int>(), Arg.Any<BookingListFilter>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        await _handler.HandleAsync(new ListBookingsQuery(photographerId, null, 5, filter), TestContext.Current.CancellationToken);
+
+        await _repository.Received(1).ListByPhotographerAsync(
+            photographerId, DateTimeOffset.MinValue, null, 6, filter, Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// The text of the search is trimmed and cut, and an empty text is no criterion at all.
+    /// </summary>
+    [Fact]
+    public void BookingListFilter_From_CleansTheText()
+    {
+        BookingListFilter.From(null, "   ").IsActive.ShouldBeFalse();
+        BookingListFilter.From(null, "  Ana ").NameContains.ShouldBe("Ana");
+        BookingListFilter.From(null, new string('a', 500)).NameContains!.Length.ShouldBe(BookingListFilter.MaxNameLength);
+        BookingListFilter.From(BookingStatus.Expired, null).IsActive.ShouldBeTrue();
     }
 
     /// <summary>

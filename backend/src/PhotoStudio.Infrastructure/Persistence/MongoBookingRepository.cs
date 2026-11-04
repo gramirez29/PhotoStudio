@@ -1,5 +1,8 @@
+using System.Text.RegularExpressions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using PhotoStudio.Application.Abstractions;
+using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Exceptions;
 using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Bookings;
@@ -56,10 +59,24 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
         DateTimeOffset endingAfter,
         PageCursor? after,
         int limit,
+        BookingListFilter listFilter,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(listFilter);
+
         var filters = Builders<BookingDocument>.Filter;
         var filter = filters.Eq(booking => booking.PhotographerId, photographerId) & filters.Gte(booking => booking.SlotEnd, endingAfter.UtcDateTime);
+        if (listFilter.Status is { } status)
+        {
+            filter &= filters.Eq(booking => booking.Status, status.ToString());
+        }
+
+        if (listFilter.NameContains is { } name)
+        {
+            // The text is escaped so that what the user types is searched literally, never run as a pattern.
+            filter &= filters.Regex(booking => booking.ClientName, new BsonRegularExpression(Regex.Escape(name), "i"));
+        }
+
         if (after is { } cursor)
         {
             // Keyset page: older than the cursor, or the same instant with a smaller identifier (the tie-break of the sort).

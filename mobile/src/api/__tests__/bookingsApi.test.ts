@@ -180,6 +180,22 @@ describe('createBookingsApi', () => {
     expect(page.items).toHaveLength(1);
   });
 
+  it('sends the filters of the list as query parameters', async () => {
+    const filtered = stubFetch(jsonResponse(200, { items: [], nextCursor: null }));
+    await createBookingsApi(createHttpClient('https://api.example.test', { fetchFn: filtered.fetchFn })).listBookings(null, {
+      status: 'Completed',
+      name: ' Ana ',
+    });
+    const unfiltered = stubFetch(jsonResponse(200, { items: [], nextCursor: null }));
+    await createBookingsApi(createHttpClient('https://api.example.test', { fetchFn: unfiltered.fetchFn })).listBookings(null, {
+      status: null,
+      name: '',
+    });
+
+    expect(filtered.urls).toEqual(['https://api.example.test/api/bookings?limit=5&status=Completed&name=Ana']);
+    expect(unfiltered.urls).toEqual(['https://api.example.test/api/bookings?limit=5']);
+  });
+
   it('asks for the next page with the cursor of the previous one, encoded', async () => {
     const { fetchFn, urls } = stubFetch(jsonResponse(200, { items: [], nextCursor: null }));
     const api = createBookingsApi(createHttpClient('https://api.example.test', { fetchFn }));

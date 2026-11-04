@@ -49,6 +49,7 @@ public sealed class PagedListsApiTests(ApiFixture fixture)
     /// <returns>A task that completes when the test finishes.</returns>
     [Theory]
     [InlineData("/api/bookings?cursor=garbage")]
+    [InlineData("/api/bookings?status=Nope")]
     [InlineData("/api/notifications?cursor=1.2.3")]
     public async Task AListWithABadCursor_IsRefused(string path)
     {

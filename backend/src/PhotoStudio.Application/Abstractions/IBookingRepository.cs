@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Pagination;
 using PhotoStudio.Domain.Bookings;
 using PhotoStudio.Domain.Common;
@@ -24,6 +25,7 @@ public interface IBookingRepository
     /// <param name="endingAfter">Sessions that ended before this instant are left out.</param>
     /// <param name="after">The last booking the caller already has; the list continues right after it. <see langword="null"/> starts at the newest.</param>
     /// <param name="limit">Maximum number of bookings to return.</param>
+    /// <param name="filter">Leaves out the bookings that do not have the status or the client name asked for.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The bookings, possibly empty.</returns>
     Task<IReadOnlyList<Booking>> ListByPhotographerAsync(
@@ -31,6 +33,7 @@ public interface IBookingRepository
         DateTimeOffset endingAfter,
         PageCursor? after,
         int limit,
+        BookingListFilter filter,
         CancellationToken cancellationToken);
 
     /// <summary>
