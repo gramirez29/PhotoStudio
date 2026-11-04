@@ -124,7 +124,7 @@ Una pantalla para probar a mano cada endpoint, sobre el documento OpenAPI. Muest
    | `EMAIL_FROM` | `PhotoSense Studio <no-reply@mail.photosensestudio.com>` |
    | `PORTAL_BASE_URL` | `https://develop.photosensestudio.com` |
    | `PORTAL_SESSION_DAYS` (opcional) | Días que dura la sesión del cliente tras confirmar su correo; por defecto 30, máximo 90 |
-   | `EXPO_ACCESS_TOKEN` | **opcional**: solo si el proyecto de Expo activa la seguridad mejorada para push; sin ella el envío funciona |
+   | `EXPO_ACCESS_TOKEN` | secreto, **recomendada**: token de acceso de Expo; es obligatoria en cuanto se activa la seguridad mejorada del push (orden y diagnóstico en `PushNotifications.md` §10). Sin ella el envío funciona, pero cualquiera con un token de teléfono podría escribirle |
    | `AUTH_REGISTRATION_ENABLED` | `true` hasta crear tu cuenta; luego `false` |
    | `AUTH_EMAIL_VERIFICATION_REQUIRED` | **opcional**, `true` por defecto: las cuentas tienen que verificar su correo (`docs/Authentication.md` §20). Al activarlo **todas las cuentas existentes piden verificar** en su próximo inicio de sesión, y necesita `RESEND_API_KEY` y `EMAIL_FROM` bien puestos. Ponla en `false` si el correo falla y nadie puede entrar |
 
