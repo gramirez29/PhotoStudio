@@ -67,8 +67,6 @@ describe('ContractForm', () => {
     expect(screen.getByText('CONTRATO DE SERVICIOS')).toBeTruthy();
     expect(screen.getByLabelText('Nombre de quien firma (su firma)')).toBeTruthy();
     expect(screen.getByLabelText('Cédula o DIMEX')).toBeTruthy();
-    expect(screen.getByLabelText('¿Cuántas personas vienen a la sesión?')).toBeTruthy();
-    expect(screen.getByLabelText('Lugar de la sesión (opcional)')).toBeTruthy();
     expect(screen.getByLabelText('El cliente leyó el contrato y lo acepta')).toBeTruthy();
   });
 
@@ -78,12 +76,10 @@ describe('ContractForm', () => {
     render(<ContractForm booking={booking} />);
 
     fireEvent.changeText(screen.getByLabelText('Cédula o DIMEX'), '1-1234-5678');
-    fireEvent.changeText(screen.getByLabelText('¿Cuántas personas vienen a la sesión?'), '3');
     fireEvent(screen.getByLabelText('El cliente leyó el contrato y lo acepta'), 'valueChange', true);
     fireEvent.press(screen.getByRole('button', { name: 'Registrar firma' }));
 
     expect(state.setText).toHaveBeenCalledWith('idNumber', '1-1234-5678');
-    expect(state.setText).toHaveBeenCalledWith('participantCount', '3');
     expect(state.setChoice).toHaveBeenCalledWith('accepted', true);
     expect(state.submit).toHaveBeenCalledTimes(1);
   });

@@ -128,10 +128,6 @@ export interface SignContractRequest {
   readonly signerName: string;
   /** Identity number of the signer, as typed (the server keeps the digits). */
   readonly idNumber: string;
-  /** Number of people in the session. */
-  readonly participantCount: number;
-  /** Place of the session; omitted when the client left it blank. */
-  readonly sessionLocation?: string;
   /** What the client allows to do with the photos. */
   readonly imageUse: ImageUse;
   /** Whether the client ticked the box that says they read and accept the contract. */

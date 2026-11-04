@@ -87,7 +87,7 @@ public static partial class ContractRenderer
             ["sessionDate"] = FormatLongDate(start),
             ["sessionTime"] = FormatTime(start),
             ["location"] = declaration is null ? Blank : declaration.SessionLocation ?? "un lugar que se definirá con el Fotógrafo",
-            ["participants"] = declaration is null ? Blank : declaration.ParticipantCount.ToString(CultureInfo.InvariantCulture),
+            ["participantsText"] = FormatParticipants(declaration),
             ["totalPrice"] = NotificationPushText.FormatMoney(booking.PackagePrice),
             ["depositPercent"] = FormatNumber(depositPercent),
             ["depositAmount"] = NotificationPushText.FormatMoney(booking.DepositRequired),
@@ -104,6 +104,15 @@ public static partial class ContractRenderer
             ["signerName"] = string.IsNullOrWhiteSpace(signerName) ? Blank : signerName.Trim(),
         };
     }
+
+    /// <summary>
+    /// Writes how many people come to the session, when the client said it.
+    /// </summary>
+    /// <param name="declaration">What the client declared, if given.</param>
+    /// <returns>For example <c>, para 4 personas</c>; a blank to fill in when there is no declaration; empty when the number was not given.</returns>
+    private static string FormatParticipants(ClientDeclaration? declaration) => declaration is null
+        ? ", para " + Blank + " personas"
+        : declaration.ParticipantCount is { } count ? ", para " + count.ToString(CultureInfo.InvariantCulture) + " personas" : string.Empty;
 
     /// <summary>
     /// Writes the package the client booked, to follow the type of session.

@@ -1,7 +1,7 @@
 CONTRATO DE SERVICIOS FOTOGRÁFICOS – PHOTOSENSE STUDIO
 Entre PhotoSense Studio, en adelante "el Fotógrafo", y {{clientName}}, cédula {{idNumber}}, teléfono {{phone}}, en adelante "el Cliente", se acuerda lo siguiente:
 
-1. Servicio. Sesión de {{service}}{{packageText}}, el {{sessionDate}} a las {{sessionTime}}, en {{location}}, para {{participants}} personas. Incluye lo descrito en el paquete vigente a la fecha de firma.{{extrasText}}
+1. Servicio. Sesión de {{service}}{{packageText}}, el {{sessionDate}} a las {{sessionTime}}, en {{location}}{{participantsText}}. Incluye lo descrito en el paquete vigente a la fecha de firma.{{extrasText}}
 2. Precio y pago. Total: {{totalPrice}}{{priceBreakdown}}, más desplazamiento si aplica. El Cliente paga el {{depositPercent}}% ({{depositAmount}}) como adelanto para confirmar la fecha, por SINPE Móvil, transferencia o efectivo. El {{balancePercent}}% restante ({{balanceAmount}}) se paga una vez finalizada la sesión.
 3. Reserva. Al crearse la reserva, la fecha queda apartada de forma provisional por {{holdHours}} horas. La reserva queda confirmada cuando el Cliente firma este contrato y el Fotógrafo verifica el pago del adelanto. Si pasado ese plazo no se cumplen ambas condiciones, la reserva vence y la fecha se libera. Una reserva con un comprobante de pago pendiente de revisión no vence mientras se revisa.
 4. Reprogramación. Con al menos {{rescheduleNoticeHours}} horas de aviso, el Cliente puede reprogramar la sesión {{rescheduleLimit}}, sujeto a disponibilidad; el adelanto se traslada a la nueva fecha. Con menos aviso, o más veces, la reprogramación queda a criterio del Fotógrafo.

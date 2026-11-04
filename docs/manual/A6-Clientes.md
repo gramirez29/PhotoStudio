@@ -100,7 +100,7 @@ React 19 + Vite + TypeScript, mobile-first, en Cloudflare Pages. Un solo sitio c
 La dirección se lee una sola vez; cada enlace es una carga completa de página. Los temas (claro y oscuro) comparten los tokens de la marca (`src/theme/tokens.css`). La política de contenido está en `public/_headers` (permite R2 para subir y bajar fotos). Detalle en `docs/ClientPortalWeb.md`.
 
 ### Portal del cliente
-Muestra la reserva, la cotización, el contrato (leer y firmar con declaración de cédula, personas, lugar y uso de imagen), el comprobante SINPE y la tarjeta "Tus fotos" (selección y descarga). Una sola sesión de portal sirve para todo; un aviso "Tu correo ya está confirmado en este dispositivo hasta el …" permite cerrarla.
+Muestra la reserva, la cotización, el contrato (leer y firmar con declaración de cédula y uso de imagen), el comprobante SINPE y la tarjeta "Tus fotos" (selección y descarga). Una sola sesión de portal sirve para todo; un aviso "Tu correo ya está confirmado en este dispositivo hasta el …" permite cerrarla.
 
 ### Web del fotógrafo
 - Inicio de sesión con contraseña y código por correo; lista de galerías paginada.

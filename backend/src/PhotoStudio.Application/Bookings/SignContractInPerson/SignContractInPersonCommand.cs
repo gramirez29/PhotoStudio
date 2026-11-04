@@ -7,10 +7,10 @@ namespace PhotoStudio.Application.Bookings.SignContractInPerson;
 /// client knows. They are the same ones the client gives through the portal.
 /// </summary>
 /// <param name="IdNumber">Identity number of the signer (cédula or DIMEX).</param>
-/// <param name="ParticipantCount">Number of people in the session.</param>
+/// <param name="ParticipantCount">Number of people in the session; optional.</param>
 /// <param name="SessionLocation">Place of the session; optional.</param>
 /// <param name="ImageUse">What the client allows to do with the photos.</param>
-public sealed record InPersonDeclaration(string IdNumber, int ParticipantCount, string? SessionLocation, ImageUse ImageUse);
+public sealed record InPersonDeclaration(string IdNumber, int? ParticipantCount, string? SessionLocation, ImageUse ImageUse);
 
 /// <summary>
 /// Command to register a contract signed face to face or on paper (B2, photographer side). Face to face, the client reads the

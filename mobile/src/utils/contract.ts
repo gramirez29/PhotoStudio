@@ -27,16 +27,16 @@ export function formatIdNumber(digits: string): string {
 }
 
 /**
- * Describes what the client declared when signing through the portal: who they are, how many come, where, and what the photos
- * may be used for.
+ * Describes what the client declared when signing through the portal: who they are and what the photos may be used for, and,
+ * when the contract has them (older ones do), how many came and where.
  * @param declaration What the client declared.
  * @returns The lines, in Spanish.
  */
 export function describeDeclaration(declaration: ClientDeclarationResponse): readonly string[] {
   return [
     `Cédula o DIMEX: ${formatIdNumber(declaration.idNumber)}`,
-    `Personas en la sesión: ${declaration.participantCount}`,
-    `Lugar: ${declaration.sessionLocation ?? 'por definir con el cliente'}`,
+    ...(declaration.participantCount === null ? [] : [`Personas en la sesión: ${declaration.participantCount}`]),
+    ...(declaration.sessionLocation === null ? [] : [`Lugar: ${declaration.sessionLocation}`]),
     `Uso de las fotos: ${IMAGE_USE_LABELS[declaration.imageUse]}`,
   ];
 }

@@ -60,6 +60,17 @@ public sealed class ClientDeclarationTests
     }
 
     /// <summary>
+    /// The number of people is optional: the portal no longer asks for it.
+    /// </summary>
+    [Fact]
+    public void Create_WithoutParticipantCount_IsAccepted()
+    {
+        var declaration = ClientDeclaration.Create("112345678", null, null, ImageUse.Authorized);
+
+        declaration.ParticipantCount.ShouldBeNull();
+    }
+
+    /// <summary>
     /// A blank location is stored as nothing, and a written one is trimmed.
     /// </summary>
     /// <param name="typed">Location as typed.</param>

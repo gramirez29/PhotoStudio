@@ -246,7 +246,6 @@ describe('portal API, code and proof', () => {
       templateVersion: 'v1',
       signerName: 'María Pérez',
       idNumber: '112345678',
-      participantCount: 3,
       imageUse: 'Authorized',
       acceptsTerms: true,
     } as const;

@@ -6,8 +6,6 @@ const COMPLETE: ContractFormValues = {
   kind: 'InPerson',
   signerName: '  María Pérez  ',
   idNumber: '1-1234-5678',
-  participantCount: '3',
-  sessionLocation: '  Parque La Sabana  ',
   imageUse: 'NotAuthorized',
   accepted: true,
 };
@@ -18,8 +16,6 @@ describe('initialContractValues', () => {
       kind: 'InPerson',
       signerName: 'María Pérez',
       idNumber: '',
-      participantCount: '',
-      sessionLocation: '',
       imageUse: null,
       accepted: false,
     });
@@ -46,19 +42,13 @@ describe('validateContract', () => {
         signerName: 'María Pérez',
         templateVersion: 'v7',
         isPaperContract: false,
-        declaration: { idNumber: '112345678', participantCount: 3, sessionLocation: 'Parque La Sabana', imageUse: 'NotAuthorized' },
+        declaration: { idNumber: '112345678', imageUse: 'NotAuthorized' },
       },
     });
   });
 
-  it('leaves the location out when it is blank', () => {
-    const result = validateContract({ ...COMPLETE, sessionLocation: '   ' }, 'v1');
-
-    expect(result.ok && result.request.declaration !== undefined && 'sessionLocation' in result.request.declaration).toBe(false);
-  });
-
   it('marks a paper contract and asks for nothing but the name', () => {
-    const result = validateContract({ ...COMPLETE, kind: 'Paper', idNumber: '', participantCount: '', imageUse: null, accepted: false }, '');
+    const result = validateContract({ ...COMPLETE, kind: 'Paper', idNumber: '', imageUse: null, accepted: false }, '');
 
     expect(result).toEqual({ ok: true, request: { signerName: 'María Pérez', templateVersion: 'v2', isPaperContract: true } });
   });
@@ -80,7 +70,7 @@ describe('validateContract', () => {
   it('asks for everything the client has to give on the phone, each next to its field', () => {
     const result = validateContract(initialContractValues('María Pérez'), 'v1');
 
-    expect(!result.ok && Object.keys(result.errors).sort()).toEqual(['accepted', 'idNumber', 'imageUse', 'participantCount']);
+    expect(!result.ok && Object.keys(result.errors).sort()).toEqual(['accepted', 'idNumber', 'imageUse']);
   });
 
   it.each(['12345678', '1234567890', '1234567890123', '11234567A'])('rejects the identity number %s', (idNumber) => {
@@ -91,18 +81,6 @@ describe('validateContract', () => {
 
   it.each(['15600012345', '155600012345'])('accepts the DIMEX %s', (idNumber) => {
     expect(validateContract({ ...COMPLETE, idNumber }, 'v1').ok).toBe(true);
-  });
-
-  it.each(['0', '101', '2.5', '-1', 'tres', ''])('rejects "%s" people', (participantCount) => {
-    const result = validateContract({ ...COMPLETE, participantCount }, 'v1');
-
-    expect(!result.ok && result.errors.participantCount).toBeDefined();
-  });
-
-  it('rejects a location that is too long', () => {
-    const result = validateContract({ ...COMPLETE, sessionLocation: 'a'.repeat(201) }, 'v1');
-
-    expect(!result.ok && result.errors.sessionLocation).toBeDefined();
   });
 
   it('does not accept the signature until the client confirms they accept the contract', () => {

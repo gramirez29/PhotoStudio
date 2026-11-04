@@ -53,7 +53,7 @@ Ver `docs/Deployment.md`: un solo sitio (página principal en `/` y portal en `/
 | 1 | CORS en el API para `/public/**` (`docs/ClientPortal.md` §5.1) | **Hecho** |
 | 2 | Scaffold de `portal/` + vista de la reserva solo lectura + estados de error + configuración de Pages | **Hecho** (el proyecto de Pages `photosense-develop` ya existe y se publica desde Actions en `develop.photosensestudio.com`, protegido con Cloudflare Access; pendiente el de producción: pasos en `portal/README.md`) |
 | 3 | Código por correo + formulario de comprobante + estados del pago | **Hecho** |
-| 3.1 | Contrato: leer y firmar desde el enlace (cédula, personas, lugar, uso de imagen, nombre escrito como firma). Comparte la sesión del código con el comprobante | **Hecho** (§8) |
+| 3.1 | Contrato: leer y firmar desde el enlace (cédula, uso de imagen, nombre escrito como firma). Comparte la sesión del código con el comprobante | **Hecho** (§8) |
 | 4 | Pulido: accesibilidad, pruebas de punta a punta contra el API local, lista de revisión de despliegue | Pendiente |
 
 Después, fuera de este plan: nada pendiente aquí. El correo de una reserva existente se corrige con **Editar reserva** en la
@@ -120,7 +120,7 @@ El backend está descrito en `docs/ClientPortal.md` §2.1. En el portal:
 
 - **Tarjeta "Contrato"** (`ContractFlow`) en la página de la reserva: dice si está firmado y ofrece "Leer y firmar contrato" (solo si la API manda `canSignContract`) o "Ver contrato firmado". Sin correo en la reserva dice que el fotógrafo debe registrarlo; el portal no decide por su cuenta qué permite el estado.
 - **Pasos:** código por correo (los mismos `CodeRequestStep` y `CodeEntryStep`, ahora con el motivo en el texto) → contrato (`ContractReadStep`: el texto en una caja con scroll y foco de teclado, `ContractDocument`) → formulario (`ContractSignForm`) → "Firmaste tu contrato" (`ContractSignedStep`). Leer el contrato exige la sesión porque el texto lleva el teléfono y, firmado, la cédula.
-- **Formulario:** nombre escrito (es la firma), cédula o DIMEX, número de personas, lugar (opcional), uso de imagen (dos opciones; **no hay una elegida por defecto**) y la casilla "He leído el contrato completo y lo acepto". `forms/contractForm.ts` repite las reglas del servidor para avisar junto al campo. Lo escrito se conserva si la verificación vence a la mitad.
+- **Formulario:** nombre escrito (es la firma), cédula o DIMEX, uso de imagen (dos opciones; **no hay una elegida por defecto**) y la casilla "He leído el contrato completo y lo acepto". `forms/contractForm.ts` repite las reglas del servidor para avisar junto al campo. Lo escrito se conserva si la verificación vence a la mitad.
 - **Sesión compartida:** `BookingPage` guarda la sesión que sale de confirmar el código y se la pasa a `ContractFlow` y `ProofFlow`, así el cliente confirma su correo una vez y no una por acción. `ProofFlow` ya no guarda su propia sesión de entrada: el evento `open` la recibe.
 - **Privacidad:** la consulta del contrato usa `gcTime: 0` y no se reintenta sola, para no conservar el texto en la caché cuando nada lo muestra.
 - **Verificado** a mano contra la API local en un navegador (leer, validar, firmar, ver el contrato firmado, subir un comprobante sin segundo código) y con pruebas: formulario, reductor, errores, API y el flujo completo con `fetch` simulado.

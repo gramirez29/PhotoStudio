@@ -37,17 +37,17 @@ describe('formatIdNumber', () => {
 });
 
 describe('describeDeclaration', () => {
-  it('lists the id, the people, the place and what the photos may be used for', () => {
+  it('lists the id and what the photos may be used for, and the people and the place only when the contract has them', () => {
     expect(describeDeclaration(DECLARATION)).toEqual([
       'Cédula o DIMEX: 1-1234-5678',
       'Personas en la sesión: 3',
       'Lugar: Parque La Sabana',
       'Uso de las fotos: Autoriza publicar las fotos',
     ]);
-  });
-
-  it('says the place is still to be agreed when the client left it blank', () => {
-    expect(describeDeclaration({ ...DECLARATION, sessionLocation: null })).toContain('Lugar: por definir con el cliente');
+    expect(describeDeclaration({ ...DECLARATION, participantCount: null, sessionLocation: null })).toEqual([
+      'Cédula o DIMEX: 1-1234-5678',
+      'Uso de las fotos: Autoriza publicar las fotos',
+    ]);
   });
 
   it('says when the client does not allow publishing', () => {

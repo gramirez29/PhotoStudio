@@ -309,9 +309,10 @@ public sealed class ClientDeclarationDocument
     [BsonElement("idNumber")]
     public string IdNumber { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the number of people in the session.</summary>
+    /// <summary>Gets or sets the number of people in the session, if the client said it.</summary>
     [BsonElement("participantCount")]
-    public int ParticipantCount { get; set; }
+    [BsonIgnoreIfNull]
+    public int? ParticipantCount { get; set; }
 
     /// <summary>Gets or sets the place of the session, if the client wrote one.</summary>
     [BsonElement("sessionLocation")]

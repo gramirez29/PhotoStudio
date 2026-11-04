@@ -57,10 +57,10 @@ public sealed record ContractResponse(
 /// What the client declared when signing the contract through the portal, as the photographer sees it.
 /// </summary>
 /// <param name="IdNumber">Identity number of the signer, digits only.</param>
-/// <param name="ParticipantCount">Number of people in the session.</param>
+/// <param name="ParticipantCount">Number of people in the session; optional.</param>
 /// <param name="SessionLocation">Place of the session, if the client wrote one.</param>
 /// <param name="ImageUse">What the client allowed to do with the photos.</param>
-public sealed record ClientDeclarationResponse(string IdNumber, int ParticipantCount, string? SessionLocation, ImageUse ImageUse);
+public sealed record ClientDeclarationResponse(string IdNumber, int? ParticipantCount, string? SessionLocation, ImageUse ImageUse);
 
 /// <summary>
 /// Contract of a booking as the photographer reads it.
