@@ -1,3 +1,4 @@
+using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Pagination;
 using MongoDB.Driver;
 using PhotoStudio.Application.Exceptions;
@@ -204,7 +205,7 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
         await repository.AddAsync(newer, TestContext.Current.CancellationToken);
         await repository.AddAsync(foreign, TestContext.Current.CancellationToken);
 
-        var bookings = await repository.ListByPhotographerAsync(photographerId, Now, null, 50, TestContext.Current.CancellationToken);
+        var bookings = await repository.ListByPhotographerAsync(photographerId, Now, null, 50, BookingListFilter.None, TestContext.Current.CancellationToken);
 
         bookings.Select(booking => booking.Id).ShouldBe([newer.Id, older.Id]);
     }
@@ -229,9 +230,43 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
             SessionStart.AddDays(5),
             null,
             50,
+            BookingListFilter.None,
             TestContext.Current.CancellationToken);
 
         bookings.Select(booking => booking.Id).ShouldBe([recent.Id]);
+    }
+
+    /// <summary>
+    /// Filtering by status and by client name returns only the bookings that meet both, ignoring case, still newest first;
+    /// the text is searched literally, so a pattern character matches nothing special.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task ListByPhotographerAsync_WithAFilter_ReturnsOnlyMatchingBookingsNewestFirst()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var photographerId = Guid.CreateVersion7();
+        var repository = NewRepository();
+        var older = NewBooking(photographerId, SessionStart, SessionStart.AddHours(2), Now.AddHours(-3), "Ana Vargas");
+        var middle = NewBooking(photographerId, SessionStart.AddDays(1), SessionStart.AddDays(1).AddHours(2), Now.AddHours(-2), "Luis Mora");
+        var newest = NewBooking(photographerId, SessionStart.AddDays(2), SessionStart.AddDays(2).AddHours(2), Now.AddHours(-1), "Ana Solís");
+        await repository.AddAsync(older, TestContext.Current.CancellationToken);
+        await repository.AddAsync(middle, TestContext.Current.CancellationToken);
+        await repository.AddAsync(newest, TestContext.Current.CancellationToken);
+
+        var byName = await repository.ListByPhotographerAsync(
+            photographerId, DateTimeOffset.MinValue, null, 50, BookingListFilter.From(null, "  ANA "), TestContext.Current.CancellationToken);
+        var byStatus = await repository.ListByPhotographerAsync(
+            photographerId, DateTimeOffset.MinValue, null, 50, BookingListFilter.From(BookingStatus.Tentative, null), TestContext.Current.CancellationToken);
+        var otherStatus = await repository.ListByPhotographerAsync(
+            photographerId, DateTimeOffset.MinValue, null, 50, BookingListFilter.From(BookingStatus.Completed, "ana"), TestContext.Current.CancellationToken);
+        var literal = await repository.ListByPhotographerAsync(
+            photographerId, DateTimeOffset.MinValue, null, 50, BookingListFilter.From(null, ".*"), TestContext.Current.CancellationToken);
+
+        byName.Select(booking => booking.Id).ShouldBe([newest.Id, older.Id]);
+        byStatus.Select(booking => booking.Id).ShouldBe([newest.Id, middle.Id, older.Id]);
+        otherStatus.ShouldBeEmpty();
+        literal.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -252,7 +287,7 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
             await repository.AddAsync(booking, TestContext.Current.CancellationToken);
         }
 
-        var listed = await repository.ListByPhotographerAsync(photographerId, Now, null, 2, TestContext.Current.CancellationToken);
+        var listed = await repository.ListByPhotographerAsync(photographerId, Now, null, 2, BookingListFilter.None, TestContext.Current.CancellationToken);
 
         listed.Select(booking => booking.Id).ShouldBe([bookings[3].Id, bookings[2].Id]);
     }
@@ -277,9 +312,9 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
             await repository.AddAsync(booking, TestContext.Current.CancellationToken);
         }
 
-        var first = await repository.ListByPhotographerAsync(photographerId, Now, null, 2, TestContext.Current.CancellationToken);
+        var first = await repository.ListByPhotographerAsync(photographerId, Now, null, 2, BookingListFilter.None, TestContext.Current.CancellationToken);
         var cursor = new PageCursor(first[^1].CreatedAt, first[^1].Id);
-        var second = await repository.ListByPhotographerAsync(photographerId, Now, cursor, 2, TestContext.Current.CancellationToken);
+        var second = await repository.ListByPhotographerAsync(photographerId, Now, cursor, 2, BookingListFilter.None, TestContext.Current.CancellationToken);
 
         var expected = sameInstant.OrderByDescending(booking => booking.Id).Select(booking => booking.Id).Append(older.Id).ToList();
         first.Concat(second).Select(booking => booking.Id).ShouldBe(expected);
@@ -755,11 +790,12 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     /// <param name="start">Session start.</param>
     /// <param name="end">Session end.</param>
     /// <param name="createdAt">Creation instant; <see cref="Now"/> when omitted.</param>
+    /// <param name="clientName">Client name; a fixed name when omitted.</param>
     /// <returns>The new booking.</returns>
-    private static Booking NewBooking(Guid photographerId, DateTimeOffset start, DateTimeOffset end, DateTimeOffset? createdAt = null) => Booking.Create(
+    private static Booking NewBooking(Guid photographerId, DateTimeOffset start, DateTimeOffset end, DateTimeOffset? createdAt = null, string clientName = "María Pérez") => Booking.Create(
         Guid.CreateVersion7(),
         photographerId,
-        ClientContact.Create("María Pérez", "+506 8888-8888"),
+        ClientContact.Create(clientName, "+506 8888-8888"),
         "Retrato familiar",
         Money.Create(100_000m, "CRC"),
         TimeSlot.Create(start, end),

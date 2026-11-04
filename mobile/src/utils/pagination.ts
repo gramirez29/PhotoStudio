@@ -1,14 +1,22 @@
 import { PAGE_SIZE } from '../constants/pagination';
 
 /**
- * Builds the path of a page of a list: the page size and, after the first page, the cursor the backend gave with the page before.
+ * Builds the path of a page of a list: the page size, the filters if any and, after the first page, the cursor the backend gave
+ * with the page before.
  * @param path Path of the list, without a query string.
  * @param cursor The `nextCursor` of the previous page, or null for the first page.
+ * @param params Extra query parameters, such as the filters of the list; their values are encoded.
  * @returns The path with its query string.
  */
-export function buildPagedPath(path: string, cursor: string | null): string {
-  const query = `limit=${PAGE_SIZE}`;
-  return cursor === null ? `${path}?${query}` : `${path}?${query}&cursor=${encodeURIComponent(cursor)}`;
+export function buildPagedPath(path: string, cursor: string | null, params: Readonly<Record<string, string>> = {}): string {
+  const parts = [`limit=${PAGE_SIZE}`];
+  for (const [key, value] of Object.entries(params)) {
+    parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+  }
+  if (cursor !== null) {
+    parts.push(`cursor=${encodeURIComponent(cursor)}`);
+  }
+  return `${path}?${parts.join('&')}`;
 }
 
 /**

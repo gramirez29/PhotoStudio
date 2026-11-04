@@ -21,3 +21,12 @@ describe('flattenPages', () => {
     expect(flattenPages([{ items: [] }])).toEqual([]);
   });
 });
+
+describe('buildPagedPath with filters', () => {
+  it('puts the filters between the page size and the cursor, encoded', () => {
+    expect(buildPagedPath('/api/bookings', null, { status: 'Completed', name: 'Ana & María' })).toBe(
+      '/api/bookings?limit=5&status=Completed&name=Ana%20%26%20Mar%C3%ADa',
+    );
+    expect(buildPagedPath('/api/bookings', 'c1', { status: 'Expired' })).toBe('/api/bookings?limit=5&status=Expired&cursor=c1');
+  });
+});

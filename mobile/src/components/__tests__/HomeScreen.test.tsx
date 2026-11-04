@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import HomeScreen from '../../app/index';
 import { useBookings } from '../../hooks/useBookings';
 import { useSessionStore } from '../../session/sessionStore';
@@ -129,6 +129,47 @@ describe('HomeScreen', () => {
 
     expect(screen.getByText('Ana Vargas')).toBeTruthy();
     expect(screen.getByText('Reintentar')).toBeTruthy();
+  });
+
+  it('opens the filters from the funnel button, which has a name, and searches by status when a chip is chosen', () => {
+    bookingsAre({ data: pagesOf('Ana Vargas') as never });
+    render(<HomeScreen />);
+    expect(screen.queryByLabelText('Limpiar filtros')).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
+    expect(screen.getByRole('button', { name: 'Filtrar' }).props.accessibilityState).toMatchObject({ expanded: true });
+    fireEvent.press(screen.getByText('Completada'));
+
+    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: 'Completed', name: '' });
+    expect(screen.getByTestId('filter-count')).toBeTruthy();
+  });
+
+  it('searches by name after the pause in typing', () => {
+    jest.useFakeTimers();
+    bookingsAre({ data: pagesOf('Ana Vargas') as never });
+    render(<HomeScreen />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
+    fireEvent.changeText(screen.getByLabelText('Buscar por nombre'), 'ana');
+    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: null, name: '' });
+    act(() => jest.advanceTimersByTime(400));
+
+    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: null, name: 'ana' });
+    jest.useRealTimers();
+  });
+
+  it('shows the broom only while a filter is applied, and the broom takes every filter off', () => {
+    bookingsAre({ data: pagesOf() as never });
+    render(<HomeScreen />);
+    fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
+    fireEvent.press(screen.getByText('Cancelada'));
+
+    expect(screen.getByText('Ninguna reserva coincide con los filtros.')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Limpiar filtros'));
+
+    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: null, name: '' });
+    expect(screen.queryByLabelText('Limpiar filtros')).toBeNull();
+    expect(screen.getByText('Todavía no tienes reservas.')).toBeTruthy();
   });
 
   it('offers to retry when the bookings could not be loaded', () => {

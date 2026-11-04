@@ -315,3 +315,11 @@ export interface RevertClientAbsentRequest {
   /** Why the mark is reverted; required. */
   readonly reason: string;
 }
+
+/** What narrows the list of bookings (the `status` and `name` of `GET /api/bookings`). */
+export interface BookingListFilter {
+  /** Only the bookings in this status, or null for any status. */
+  readonly status: BookingStatus | null;
+  /** Only the bookings whose client name contains this text, ignoring case; empty for any name. */
+  readonly name: string;
+}

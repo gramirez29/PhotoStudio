@@ -29,9 +29,11 @@ public sealed class ListBookingsHandler(
         ArgumentNullException.ThrowIfNull(query);
 
         var limit = Math.Clamp(query.Limit, 1, PageSizes.Max);
-        var endingAfter = timeProvider.GetUtcNow().AddDays(-HistoryDays);
+        var filter = query.Filter ?? BookingListFilter.None;
+        // Without a filter the list shows what still matters; searching looks through the whole history instead.
+        var endingAfter = filter.IsActive ? DateTimeOffset.MinValue : timeProvider.GetUtcNow().AddDays(-HistoryDays);
         // One more than the page: if it comes, there is a next page, and it is not part of this one.
-        var bookings = await repository.ListByPhotographerAsync(query.PhotographerId, endingAfter, query.After, limit + 1, cancellationToken);
+        var bookings = await repository.ListByPhotographerAsync(query.PhotographerId, endingAfter, query.After, limit + 1, filter, cancellationToken);
 
         var page = bookings.Take(limit).ToList();
         var next = bookings.Count > limit ? new PageCursor(page[^1].CreatedAt, page[^1].Id).Encode() : null;

@@ -1,6 +1,7 @@
 import type {
   BookingContractResponse,
   BookingLinkResponse,
+  BookingListFilter,
   BookingListResponse,
   BookingResponse,
   CancelBookingRequest,
@@ -114,10 +115,11 @@ export interface BookingsApi {
   /**
    * Loads one page of the bookings of the signed-in photographer, the most recently created first.
    * @param cursor The `nextCursor` of the previous page, or null for the first page.
+   * @param filter What narrows the list (status and client name); every booking when omitted.
    * @param signal Optional signal to cancel the request.
    * @returns The page of booking summaries.
    */
-  listBookings(cursor: string | null, signal?: AbortSignal): Promise<BookingListResponse>;
+  listBookings(cursor: string | null, filter?: BookingListFilter, signal?: AbortSignal): Promise<BookingListResponse>;
 
   /**
    * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.
