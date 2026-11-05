@@ -205,7 +205,7 @@ public sealed class UserTests
     }
 
     /// <summary>
-    /// The user locks when the failed attempts reach the limit, not before.
+    /// An address is blocked when its failed attempts reach the limit, not before.
     /// </summary>
     [Fact]
     public void ShouldLock_IsTrueFromTheLimitOn()
@@ -213,5 +213,17 @@ public sealed class UserTests
         User.ShouldLock(User.MaxFailedLoginAttempts - 1).ShouldBeFalse();
         User.ShouldLock(User.MaxFailedLoginAttempts).ShouldBeTrue();
         User.ShouldLock(User.MaxFailedLoginAttempts + 1).ShouldBeTrue();
+    }
+
+    /// <summary>
+    /// The account locks for every address only from the larger limit, which one address cannot reach because it is blocked first.
+    /// </summary>
+    [Fact]
+    public void ShouldLockAcrossAddresses_IsTrueFromTheLargerLimitOn()
+    {
+        User.MaxFailedLoginAttemptsAcrossAddresses.ShouldBeGreaterThan(User.MaxFailedLoginAttempts);
+        User.ShouldLockAcrossAddresses(User.MaxFailedLoginAttempts).ShouldBeFalse();
+        User.ShouldLockAcrossAddresses(User.MaxFailedLoginAttemptsAcrossAddresses - 1).ShouldBeFalse();
+        User.ShouldLockAcrossAddresses(User.MaxFailedLoginAttemptsAcrossAddresses).ShouldBeTrue();
     }
 }

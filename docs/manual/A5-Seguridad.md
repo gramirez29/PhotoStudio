@@ -17,7 +17,7 @@ Un endpoint nuevo es **protegido por defecto** (`FallbackPolicy = RequireAuthent
 
 - **Contraseña:** 8 a 128 caracteres; se guarda solo el hash (PBKDF2 del hasher de ASP.NET Core); no se puede recuperar.
 - **Usuario:** 3–30 caracteres `a-z 0-9 . - _`, único sin distinguir mayúsculas; el correo también es único (índices, no "buscar y luego insertar").
-- **Bloqueo:** 5 fallos seguidos bloquean al usuario 15 minutos. El contador es atómico (`$inc`), así que no se evade con intentos en paralelo. Un usuario desconocido tarda lo mismo y responde igual que una contraseña mala (no se puede averiguar qué usuarios existen).
+- **Bloqueo por cuenta y dirección:** 5 fallos seguidos desde una misma dirección bloquean **esa dirección para esa cuenta** 15 minutos (quien solo conoce tu usuario no puede dejarte fuera); 20 fallos entre varias direcciones bloquean la cuenta para todas. Los contadores son atómicos (`$inc`), así que no se evaden con intentos en paralelo, y la dirección se guarda solo como hash con clave. Recuperar la contraseña por correo quita todos los bloqueos (`docs/Authentication.md` §23). Un usuario desconocido tarda lo mismo y responde igual que una contraseña mala (no se puede averiguar qué usuarios existen).
 - **JWT:** HS256 con emisor, audiencia y firma verificados; solo se acepta ese algoritmo. Vida de 15 minutos.
 - **Renovación:** token de 256 bits aleatorios, de **un solo uso**; en Mongo solo su hash, agrupado por *familia* de login. Si alguien reusa un token ya usado (señal de robo), se revoca toda la familia.
 - **Verificación del correo:** al registrarse llega un código; hasta verificarlo, el token lleva `email_verified: false` y la API responde 403 a todo salvo verificar o reenviar.

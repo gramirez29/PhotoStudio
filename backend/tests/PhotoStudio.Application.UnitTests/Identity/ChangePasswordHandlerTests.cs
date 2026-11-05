@@ -91,20 +91,55 @@ public sealed class ChangePasswordHandlerTests
     }
 
     /// <summary>
-    /// The fifth wrong current password locks the user, like the login does.
+    /// The fifth wrong current password from an address blocks that address for the user, like the login does.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task HandleAsync_AtTheFailureLimit_LocksTheUser()
+    public async Task HandleAsync_AtTheFailureLimitOfAnAddress_BlocksThatAddress()
     {
         var account = GivenAccount(currentPasswordMatches: false);
-        _fixture.Users.RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttempts);
+        _fixture.LoginFailures.RegisterFailureAsync(account.Id, Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttempts);
 
         await Should.ThrowAsync<DomainException>(() => NewHandler().HandleAsync(
-            new ChangePasswordCommand(account.Id, "wrong", "a brand new password"),
+            new ChangePasswordCommand(account.Id, "wrong", "a brand new password", "203.0.113.5"),
             TestContext.Current.CancellationToken));
 
-        await _fixture.Users.Received(1).LockAsync(account.Id, IdentityFixture.Now + User.LockoutDuration, Arg.Any<CancellationToken>());
+        await _fixture.LoginFailures.Received(1).BlockAsync(account.Id, "code-hash-login-address:203.0.113.5", IdentityFixture.Now + User.LockoutDuration, Arg.Any<CancellationToken>());
+        await _fixture.Users.DidNotReceive().LockAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A blocked address cannot try passwords through this endpoint either.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_FromABlockedAddress_RefusesWithoutVerifying()
+    {
+        var account = GivenAccount(currentPasswordMatches: true);
+        _fixture.LoginFailures.GetAsync(account.Id, "code-hash-login-address:203.0.113.5", Arg.Any<CancellationToken>())
+            .Returns(new LoginAddressFailure(account.Id, "key", 0, IdentityFixture.Now.AddMinutes(5)));
+
+        var exception = await Should.ThrowAsync<AccountLockedException>(() => NewHandler().HandleAsync(
+            new ChangePasswordCommand(account.Id, "old password", "a brand new password", "203.0.113.5"),
+            TestContext.Current.CancellationToken));
+
+        exception.RetryAfter.ShouldBe(TimeSpan.FromMinutes(5));
+        _fixture.PasswordHasher.DidNotReceive().Verify(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    /// <summary>
+    /// Changing the password forgets the failures of every address: whoever was guessing the old one has nothing left to guess.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WhenThePasswordChanges_ForgetsTheFailuresOfEveryAddress()
+    {
+        var account = GivenAccount(currentPasswordMatches: true);
+        _fixture.Users.ChangePasswordAsync(account.Id, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        await NewHandler().HandleAsync(new ChangePasswordCommand(account.Id, "old password", "a brand new password"), TestContext.Current.CancellationToken);
+
+        await _fixture.LoginFailures.Received(1).DeleteAllForUserAsync(account.Id, Arg.Any<CancellationToken>());
     }
 
     /// <summary>
@@ -206,5 +241,5 @@ public sealed class ChangePasswordHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private ChangePasswordHandler NewHandler() =>
-        new(_fixture.Users, _fixture.RefreshTokens, _fixture.PasswordHasher, _fixture.Sessions, _fixture.StudioAccess, _fixture.Clock);
+        new(_fixture.Users, _fixture.RefreshTokens, _fixture.PasswordHasher, _fixture.Sessions, _fixture.Guard, _fixture.StudioAccess, _fixture.Clock);
 }

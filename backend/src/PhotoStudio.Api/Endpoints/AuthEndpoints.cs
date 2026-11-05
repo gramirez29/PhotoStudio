@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using PhotoStudio.Api.Auth;
 using PhotoStudio.Api.RateLimiting;
 using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Identity;
@@ -54,14 +55,16 @@ public static class AuthEndpoints
     /// Signs in with username and password.
     /// </summary>
     /// <param name="request">Credentials.</param>
+    /// <param name="context">The request, to know the address it came from.</param>
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
-    /// <returns>200 with the session; 401 when the credentials are not accepted; 429 when the user is locked or the rate limit is hit.</returns>
+    /// <returns>200 with the session; 401 when the credentials are not accepted; 429 when the user is locked, this address is blocked for it, or the rate limit is hit.</returns>
     private static async Task<Ok<AuthSessionResponse>> LoginAsync(
         LoginRequest request,
+        HttpContext context,
         ICommandHandler<LoginCommand, AuthSessionResponse> handler,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await handler.HandleAsync(request.ToCommand(), cancellationToken));
+        TypedResults.Ok(await handler.HandleAsync(request.ToCommand(ClientAddress.Of(context)), cancellationToken));
 
     /// <summary>
     /// Sends the code to choose a new password to the verified email of the account, if there is one. The answer is the same whether

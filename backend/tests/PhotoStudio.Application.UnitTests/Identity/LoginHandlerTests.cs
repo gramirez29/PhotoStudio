@@ -136,35 +136,116 @@ public sealed class LoginHandlerTests
     {
         var account = IdentityFixture.NewUser();
         GivenAccount(account, passwordMatches: false);
-        _fixture.Users.RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttempts - 1);
+        _fixture.Users.RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttemptsAcrossAddresses - 1);
+        _fixture.LoginFailures.RegisterFailureAsync(account.Id, Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttempts - 1);
 
         var exception = await Should.ThrowAsync<AuthenticationFailedException>(
             () => NewHandler().HandleAsync(new LoginCommand("ana", "wrong"), TestContext.Current.CancellationToken));
 
         exception.Code.ShouldBe(ApplicationErrorCodes.InvalidCredentials);
         await _fixture.Users.Received(1).RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>());
+        await _fixture.LoginFailures.Received(1).RegisterFailureAsync(account.Id, Arg.Any<string>(), IdentityFixture.Now, Arg.Any<CancellationToken>());
+        await _fixture.LoginFailures.DidNotReceive().BlockAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
         await _fixture.Users.DidNotReceive().LockAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
         await _fixture.RefreshTokens.DidNotReceive().AddAsync(Arg.Any<RefreshToken>(), Arg.Any<CancellationToken>());
     }
 
     /// <summary>
-    /// The failure that reaches the limit locks the user for the lockout duration.
+    /// The failure that reaches the limit of an address blocks that address for the lockout duration, and does not lock the account:
+    /// somebody who only knows the username cannot lock its owner out.
     /// </summary>
     /// <returns>A task that completes when the test finishes.</returns>
     [Fact]
-    public async Task HandleAsync_WhenTheLimitIsReached_LocksTheAccount()
+    public async Task HandleAsync_WhenTheLimitOfAnAddressIsReached_BlocksThatAddressOnly()
     {
-        var account = IdentityFixture.NewUser(failedLoginAttempts: User.MaxFailedLoginAttempts - 1);
+        var account = IdentityFixture.NewUser();
         GivenAccount(account, passwordMatches: false);
+        _fixture.LoginFailures.RegisterFailureAsync(account.Id, Arg.Any<string>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttempts);
         _fixture.Users.RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttempts);
 
         await Should.ThrowAsync<AuthenticationFailedException>(
-            () => NewHandler().HandleAsync(new LoginCommand("ana", "wrong"), TestContext.Current.CancellationToken));
+            () => NewHandler().HandleAsync(new LoginCommand("ana", "wrong", "203.0.113.5"), TestContext.Current.CancellationToken));
+
+        await _fixture.LoginFailures.Received(1).BlockAsync(
+            account.Id,
+            "code-hash-login-address:203.0.113.5",
+            IdentityFixture.Now + User.LockoutDuration,
+            Arg.Any<CancellationToken>());
+        await _fixture.Users.DidNotReceive().LockAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Failures from many addresses together, enough that one address could not have made them, lock the account for every address.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WhenTheLimitAcrossAddressesIsReached_LocksTheAccount()
+    {
+        var account = IdentityFixture.NewUser(failedLoginAttempts: User.MaxFailedLoginAttemptsAcrossAddresses - 1);
+        GivenAccount(account, passwordMatches: false);
+        _fixture.Users.RegisterFailedLoginAsync(account.Id, Arg.Any<CancellationToken>()).Returns(User.MaxFailedLoginAttemptsAcrossAddresses);
+
+        await Should.ThrowAsync<AuthenticationFailedException>(
+            () => NewHandler().HandleAsync(new LoginCommand("ana", "wrong", "203.0.113.5"), TestContext.Current.CancellationToken));
 
         await _fixture.Users.Received(1).LockAsync(
             account.Id,
             IdentityFixture.Now + User.LockoutDuration,
             Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// A blocked address is refused even with the right password, and says how long to wait, while the owner signing in from another
+    /// address is not affected.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_FromABlockedAddress_RefusesWhileAnotherAddressStillSignsIn()
+    {
+        var account = IdentityFixture.NewUser();
+        GivenAccount(account, passwordMatches: true);
+        _fixture.LoginFailures.GetAsync(account.Id, "code-hash-login-address:198.51.100.7", Arg.Any<CancellationToken>())
+            .Returns(new LoginAddressFailure(account.Id, "code-hash-login-address:198.51.100.7", 0, IdentityFixture.Now.AddMinutes(10)));
+
+        var exception = await Should.ThrowAsync<AccountLockedException>(
+            () => NewHandler().HandleAsync(new LoginCommand("ana", "correct horse", "198.51.100.7"), TestContext.Current.CancellationToken));
+        var session = await NewHandler().HandleAsync(new LoginCommand("ana", "correct horse", "203.0.113.5"), TestContext.Current.CancellationToken);
+
+        exception.RetryAfter.ShouldBe(TimeSpan.FromMinutes(10));
+        session.PhotographerId.ShouldBe(account.Id);
+        _fixture.PasswordHasher.Received(1).Verify(account.PasswordHash, "correct horse");
+    }
+
+    /// <summary>
+    /// A block that already ended no longer refuses the address.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_FromAnAddressWhoseBlockEnded_SignsIn()
+    {
+        var account = IdentityFixture.NewUser();
+        GivenAccount(account, passwordMatches: true);
+        _fixture.LoginFailures.GetAsync(account.Id, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new LoginAddressFailure(account.Id, "key", 0, IdentityFixture.Now.AddSeconds(-1)));
+
+        var session = await NewHandler().HandleAsync(new LoginCommand("ana", "correct horse", "203.0.113.5"), TestContext.Current.CancellationToken);
+
+        session.PhotographerId.ShouldBe(account.Id);
+    }
+
+    /// <summary>
+    /// A good login forgets the failures of its address.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task HandleAsync_WithTheRightPassword_ForgetsTheFailuresOfTheAddress()
+    {
+        var account = IdentityFixture.NewUser();
+        GivenAccount(account, passwordMatches: true);
+
+        await NewHandler().HandleAsync(new LoginCommand("ana", "correct horse", "203.0.113.5"), TestContext.Current.CancellationToken);
+
+        await _fixture.LoginFailures.Received(1).DeleteAsync(account.Id, "code-hash-login-address:203.0.113.5", Arg.Any<CancellationToken>());
     }
 
     /// <summary>
@@ -234,9 +315,8 @@ public sealed class LoginHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private LoginHandler NewHandler() => new(
-        _fixture.Users,
+        _fixture.Credentials,
         _fixture.RefreshTokens,
-        _fixture.PasswordHasher,
         _fixture.Sessions,
         _fixture.Clock);
 }

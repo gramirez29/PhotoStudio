@@ -184,7 +184,7 @@ public static class StudioEndpoints
         CancellationToken cancellationToken)
     {
         var deviceToken = cookies.Read(context.Request, StudioCookies.Device);
-        var result = await handler.HandleAsync(new StudioLoginCommand(request.Username, request.Password, deviceToken), cancellationToken);
+        var result = await handler.HandleAsync(new StudioLoginCommand(request.Username, request.Password, deviceToken, ClientAddress.Of(context)), cancellationToken);
 
         switch (result)
         {

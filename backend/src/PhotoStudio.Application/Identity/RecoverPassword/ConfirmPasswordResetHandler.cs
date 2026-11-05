@@ -12,8 +12,8 @@ namespace PhotoStudio.Application.Identity.RecoverPassword;
 /// of the other codes: each guess is counted atomically before it is compared, five wrong guesses spend the code, a code works once,
 /// and the answer to a wrong, expired or spent code, to an unknown account and to an account that cannot recover its password is
 /// always the same. The new password is validated first, so a weak one does not spend the code. On success every session of the
-/// user is closed (the person who forgot the password may have lost the phone), the web area is cut off too, a lockout from failed
-/// logins is lifted, and the owner is told by email that the password changed. Nobody is signed in afterwards: the user signs in with
+/// user is closed (the person who forgot the password may have lost the phone), the web area is cut off too, every block
+/// from failed logins (of the account and of each address) is lifted, and the owner is told by email that the password changed. Nobody is signed in afterwards: the user signs in with
 /// the new password.
 /// </summary>
 /// <param name="users">User repository.</param>
@@ -22,6 +22,7 @@ namespace PhotoStudio.Application.Identity.RecoverPassword;
 /// <param name="passwordHasher">Password hashing.</param>
 /// <param name="refreshTokens">Refresh token repository.</param>
 /// <param name="studioAccess">Revokes what the web area trusts about the user.</param>
+/// <param name="guard">Forgets the failed logins of the account, so the owner is not left blocked after recovering it.</param>
 /// <param name="email">Sends the notice of the change.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 /// <param name="logger">Logger.</param>
@@ -32,6 +33,7 @@ public sealed partial class ConfirmPasswordResetHandler(
     IPasswordHasher passwordHasher,
     IRefreshTokenRepository refreshTokens,
     StudioAccessRevoker studioAccess,
+    LoginAttemptGuard guard,
     IEmailSender email,
     TimeProvider timeProvider,
     ILogger<ConfirmPasswordResetHandler> logger) : ICommandHandler<ConfirmPasswordResetCommand, PasswordResetResponse>
@@ -67,6 +69,7 @@ public sealed partial class ConfirmPasswordResetHandler(
         }
 
         await codes.DeleteAsync(user.Id, cancellationToken);
+        await guard.ForgetAllAsync(user.Id, cancellationToken);
         await refreshTokens.RevokeAllForUserAsync(user.Id, now, cancellationToken);
         await studioAccess.RevokeAllAsync(user.Id, cancellationToken);
         await NotifyAsync(user, cancellationToken);

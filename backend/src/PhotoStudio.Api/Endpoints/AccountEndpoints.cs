@@ -67,16 +67,18 @@ public static class AccountEndpoints
     /// </summary>
     /// <param name="request">Current and new password.</param>
     /// <param name="user">The authenticated user.</param>
+    /// <param name="context">The request, to know the address it came from.</param>
     /// <param name="handler">Command handler.</param>
     /// <param name="cancellationToken">Request cancellation token.</param>
-    /// <returns>200 with the new session; 422 when the current password is wrong or the new one is not valid; 429 when the user is locked or the rate limit is hit.</returns>
+    /// <returns>200 with the new session; 422 when the current password is wrong or the new one is not valid; 429 when the user is locked, this address is blocked for it, or the rate limit is hit.</returns>
     private static async Task<Ok<AuthSessionResponse>> ChangePasswordAsync(
         ChangePasswordRequest request,
         ClaimsPrincipal user,
+        HttpContext context,
         ICommandHandler<ChangePasswordCommand, AuthSessionResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(
-            new ChangePasswordCommand(user.GetPhotographerId(), request.CurrentPassword, request.NewPassword),
+            new ChangePasswordCommand(user.GetPhotographerId(), request.CurrentPassword, request.NewPassword, ClientAddress.Of(context)),
             cancellationToken));
 
     /// <summary>

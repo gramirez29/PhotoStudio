@@ -41,7 +41,8 @@ internal sealed class IdentityFixture
         VerificationSender = new EmailVerificationSender(Codes, CodeService, Email);
         StudioAccess = new StudioAccessRevoker(StudioSessions, StudioDevices, StudioChallenges);
         StudioIssuer = new StudioSessionIssuer(StudioSessions, StudioDevices, TokenGenerator);
-        Credentials = new CredentialChecker(Users, PasswordHasher);
+        Guard = new LoginAttemptGuard(Users, LoginFailures, CodeService);
+        Credentials = new CredentialChecker(Users, PasswordHasher, Guard);
     }
 
     /// <summary>Gets the substituted user repository.</summary>
@@ -82,6 +83,12 @@ internal sealed class IdentityFixture
 
     /// <summary>Gets the real issuer of the sessions of the web area, built on the substituted ports.</summary>
     public StudioSessionIssuer StudioIssuer { get; }
+
+    /// <summary>Gets the substituted store of the failed logins per network address.</summary>
+    public ILoginFailureRepository LoginFailures { get; } = Substitute.For<ILoginFailureRepository>();
+
+    /// <summary>Gets the real limiter of the guesses of a password, built on the substituted ports.</summary>
+    public LoginAttemptGuard Guard { get; }
 
     /// <summary>Gets the real credential checker, built on the substituted ports.</summary>
     public CredentialChecker Credentials { get; }

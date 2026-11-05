@@ -15,6 +15,8 @@ Los índices los crea `MongoIndexInitializer` al arrancar (API y worker). Todos 
 | `users` | Cuentas de fotógrafos: usuario, correo, hash de contraseña, nombre, teléfono, intentos fallidos, bloqueo, `isSystemOperator` | Usuario único; correo único (parcial: ignora cuentas antiguas sin correo) |
 | `refresh_tokens` | Tokens de renovación de la app: **solo el hash**, familia de login, uso | Hash único; familia; fotógrafo; se borran solos (TTL) |
 | `email_verifications` | Código de verificación del correo de la cuenta | TTL de 1 hora |
+| `password_resets` | Código de 6 dígitos (solo su hash) para elegir una contraseña nueva | Un documento por usuario; se borra solo 1 hora después de vencer |
+| `login_failures` | Fallos seguidos de login por cuenta y dirección (la dirección solo como hash con clave) y el fin del bloqueo | Un documento por cuenta y dirección (`_id`); se borra solo 1 día después del último fallo |
 | `studio_sessions` | Sesiones de la web del fotógrafo (cookie): solo el hash | Hash único; usuario; TTL |
 | `studio_devices` | Navegadores recordados (salta el código por correo 30 días) | Hash único; usuario; TTL |
 | `studio_challenges` | Códigos de segundo factor de la web en curso | Hash único; TTL |

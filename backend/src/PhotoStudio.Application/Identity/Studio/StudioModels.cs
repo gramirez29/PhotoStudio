@@ -64,7 +64,8 @@ public sealed record StudioCodeSentResponse(string MaskedEmail, DateTimeOffset E
 /// <param name="Username">Username as typed.</param>
 /// <param name="Password">Password as typed.</param>
 /// <param name="DeviceToken">Secret of the device cookie the browser sent, if it sent one.</param>
-public sealed record StudioLoginCommand(string? Username, string? Password, string? DeviceToken);
+/// <param name="ClientAddress">Network address the request came from, if known; the failed guesses are counted per address.</param>
+public sealed record StudioLoginCommand(string? Username, string? Password, string? DeviceToken, string? ClientAddress = null);
 
 /// <summary>
 /// Command to finish a web sign-in with the code from the email.

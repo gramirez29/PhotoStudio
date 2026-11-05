@@ -133,7 +133,7 @@ export function loginErrorMessage(error: Error): string {
     case 'auth.invalid_credentials':
       return 'El usuario o la contraseña no son correctos.';
     case 'auth.account_locked':
-      return 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
+      return 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo, o recupera tu contraseña con "¿Olvidaste tu contraseña?".';
     case 'rate_limit.exceeded':
       return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
     default:
