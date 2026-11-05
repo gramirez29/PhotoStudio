@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using PhotoStudio.Domain.Bookings;
 
 namespace PhotoStudio.Infrastructure.Persistence.Documents;
 
@@ -171,6 +172,36 @@ public sealed class BookingPolicyDocument
     /// <summary>Gets or sets the client-absent revert window, in days.</summary>
     [BsonElement("clientAbsentRevertWindowDays")]
     public int ClientAbsentRevertWindowDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the share of the deposit kept when the client cancels late. A booking stored before this was a policy has no
+    /// value, and keeps the 100% that was always applied.
+    /// </summary>
+    [BsonElement("lateCancellationRetention")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal LateCancellationRetention { get; set; } = 1m;
+
+    /// <summary>
+    /// Gets or sets the share of the deposit kept when the client does not show up. A booking stored before this was a policy
+    /// keeps the 100% that was always applied.
+    /// </summary>
+    [BsonElement("clientAbsentRetention")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal ClientAbsentRetention { get; set; } = 1m;
+
+    /// <summary>
+    /// Gets or sets the share of what was paid that goes back when the photographer cancels. A booking stored before this was a
+    /// policy keeps the 100% that was always applied.
+    /// </summary>
+    [BsonElement("photographerCancellationRefund")]
+    [BsonRepresentation(BsonType.Decimal128)]
+    public decimal PhotographerCancellationRefund { get; set; } = 1m;
+
+    /// <summary>
+    /// Gets or sets the days to deliver the final photos after the selection. A booking stored before this was a policy gets the default.
+    /// </summary>
+    [BsonElement("deliveryDeadlineDays")]
+    public int DeliveryDeadlineDays { get; set; } = BookingPolicy.DefaultDeliveryDeadlineDays;
 }
 
 /// <summary>

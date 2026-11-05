@@ -27,6 +27,7 @@ function pagesWithUnread(...pages: number[]): unknown {
           proofAmount: null,
           selectedPhotos: null,
           extraPhotos: null,
+          deliveryDeadline: null,
           deliveredAt: '2026-10-16T21:00:00+00:00',
           readAt: null,
         },

@@ -78,6 +78,40 @@ public sealed class NotificationPlanner(IBookingRepository bookings, INotificati
     }
 
     /// <summary>
+    /// Schedules the warning that the deadline to publish the final photos is near, for a selection the client just sent. The deadline
+    /// is the instant of the selection plus the <see cref="Domain.Bookings.BookingPolicy.DeliveryDeadlineDays"/> frozen in the booking,
+    /// and the warning is due <see cref="NotificationPolicy.DeliveryDeadlineLeadTime"/> before it, or right away when that moment has
+    /// already passed. Whether the photos are still unpublished is decided when the warning comes due. Does nothing when the booking
+    /// does not exist.
+    /// </summary>
+    /// <param name="bookingId">Booking whose client sent the selection.</param>
+    /// <param name="galleryId">Gallery the selection belongs to.</param>
+    /// <param name="selectionSubmittedAt">Instant the client sent the selection.</param>
+    /// <param name="now">Current instant.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes when the warning is scheduled.</returns>
+    public async Task ScheduleDeliveryDeadlineAsync(Guid bookingId, Guid galleryId, DateTimeOffset selectionSubmittedAt, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var booking = await bookings.GetByIdAsync(bookingId, cancellationToken);
+        if (booking is null)
+        {
+            return;
+        }
+
+        var deadline = selectionSubmittedAt.AddDays(booking.Policy.DeliveryDeadlineDays);
+        var due = deadline - NotificationPolicy.DeliveryDeadlineLeadTime;
+        await notifications.TryAddAsync(
+            Notification.Schedule(
+                booking.PhotographerId,
+                booking.Id,
+                NotificationType.DeliveryDeadlineApproaching,
+                Notification.DeliveryDeadlineKey(galleryId, selectionSubmittedAt),
+                due > now ? due : now,
+                now),
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Schedules the notice that a proof of payment waits for verification, due right away: the photographer should hear about
     /// it as soon as the next delivery run. Whether the proof is still pending is decided when the notice comes due, because
     /// the photographer may resolve it first. Does nothing when the booking or the payment does not exist.

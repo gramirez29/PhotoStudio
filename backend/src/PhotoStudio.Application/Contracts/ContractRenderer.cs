@@ -98,6 +98,8 @@ public static partial class ContractRenderer
             ["rescheduleLimit"] = FormatRescheduleLimit(policy.MaxReschedules),
             ["freeCancellationHours"] = policy.FreeCancellationWindowHours.ToString(CultureInfo.InvariantCulture),
             ["absentToleranceMinutes"] = policy.ClientAbsentToleranceMinutes.ToString(CultureInfo.InvariantCulture),
+            ["retentionClause"] = FormatRetentionClause(policy),
+            ["photographerRefundText"] = $"el {FormatNumber(decimal.Round(policy.PhotographerCancellationRefund * 100m, 2))}%",
             ["imageAuthorized"] = declaration?.ImageUse == ImageUse.Authorized ? "[x]" : "[ ]",
             ["imageDenied"] = declaration?.ImageUse == ImageUse.NotAuthorized ? "[x]" : "[ ]",
             ["signedDate"] = signedAt is { } instant ? FormatLongDate(instant.ToOffset(CostaRicaOffset)) + ", " + FormatTime(instant.ToOffset(CostaRicaOffset)) : Blank,
@@ -163,6 +165,45 @@ public static partial class ContractRenderer
         }
 
         return $" ({string.Join(", ", parts)})";
+    }
+
+    /// <summary>
+    /// Writes what the photographer keeps when the client cancels late or does not show up, from the shares frozen in the booking. With
+    /// the usual 100% it is the sentence the contract always had; with another share the sentence says the share, and when the two cases
+    /// have different shares each gets its own.
+    /// </summary>
+    /// <param name="policy">Policy frozen in the booking.</param>
+    /// <returns>The sentence or sentences of the clause.</returns>
+    private static string FormatRetentionClause(BookingPolicy policy)
+    {
+        var hours = policy.FreeCancellationWindowHours.ToString(CultureInfo.InvariantCulture);
+        var tolerance = policy.ClientAbsentToleranceMinutes.ToString(CultureInfo.InvariantCulture);
+        var absent = $"no se presenta a la sesión (se considera ausente pasados {tolerance} minutos de la hora acordada)";
+
+        if (policy.LateCancellationRetention == policy.ClientAbsentRetention)
+        {
+            return $"Si cancela con menos de {hours} horas de aviso, o {absent}, el Fotógrafo {FormatRetention(policy.LateCancellationRetention)}.";
+        }
+
+        return $"Si cancela con menos de {hours} horas de aviso, el Fotógrafo {FormatRetention(policy.LateCancellationRetention)}. " +
+            $"Si {absent}, el Fotógrafo {FormatRetention(policy.ClientAbsentRetention)}.";
+    }
+
+    /// <summary>
+    /// Writes what the photographer keeps of the deposit and what goes back, for one share.
+    /// </summary>
+    /// <param name="share">Share of the deposit that is kept, from 0 to 1.</param>
+    /// <returns>For example <c>retiene el adelanto y devuelve cualquier monto pagado por encima de él</c>.</returns>
+    private static string FormatRetention(decimal share)
+    {
+        if (share >= 1m)
+        {
+            return "retiene el adelanto y devuelve cualquier monto pagado por encima de él";
+        }
+
+        return share <= 0m
+            ? "no retiene nada del adelanto y devuelve todo lo pagado"
+            : $"retiene el {FormatNumber(decimal.Round(share * 100m, 2))}% del adelanto y devuelve todo lo demás que haya pagado";
     }
 
     /// <summary>

@@ -49,6 +49,9 @@ public static class NotificationPushText
             case NotificationType.GalleryArchiveDue:
                 return ("Galería lista para liberar", $"La galería de {details.ClientName} lleva {PhotoStudio.Domain.Galleries.Gallery.ArchiveNoticeDays} días entregada. Libera el espacio cuando ya tengas las fotos.");
 
+            case NotificationType.DeliveryDeadlineApproaching when details.DeliveryDeadline is { } deadline:
+                return ("Entrega próxima", $"Las fotos de {details.ClientName} ({details.PackageName}) deben entregarse antes del {FormatDate(deadline)}.");
+
             default:
                 return ("Sesión próxima", $"{details.ClientName} · {details.PackageName} · {FormatDateTime(details.SessionStart)}");
         }
@@ -71,6 +74,17 @@ public static class NotificationPushText
             "USD" => $"US${digits}",
             _ => $"{money.Currency} {digits}",
         };
+    }
+
+    /// <summary>
+    /// Writes the day of an instant in Costa Rica time, for example <c>vie 17 oct</c>.
+    /// </summary>
+    /// <param name="instant">Instant to write.</param>
+    /// <returns>The text.</returns>
+    internal static string FormatDate(DateTimeOffset instant)
+    {
+        var local = instant.ToOffset(CostaRicaOffset);
+        return $"{Days[(int)local.DayOfWeek]} {local.Day} {Months[local.Month - 1]}";
     }
 
     /// <summary>

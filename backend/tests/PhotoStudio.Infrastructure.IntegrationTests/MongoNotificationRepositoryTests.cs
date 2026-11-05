@@ -17,6 +17,8 @@ public sealed class MongoNotificationRepositoryTests(MongoFixture fixture) : ICl
 {
     private static readonly DateTimeOffset Now = new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
 
+    private static readonly NotificationDetails DeadlineDetails = new("María Pérez", "+50688888888", "Retrato", Now.AddDays(2), null, DeliveryDeadline: Now.AddDays(21));
+
     private static readonly NotificationDetails Details = new("María Pérez", "+50688888888", "Retrato", Now.AddDays(2), Money.Create(50_000m, "CRC"));
 
     /// <summary>
@@ -203,6 +205,28 @@ public sealed class MongoNotificationRepositoryTests(MongoFixture fixture) : ICl
         reloaded.Status.ShouldBe(NotificationStatus.Delivered);
         reloaded.Details.ShouldBe(Details);
         reloaded.Version.ShouldBe(stored.Version + 1);
+    }
+
+    /// <summary>
+    /// The delivery deadline of a warning about it is stored in the snapshot and read back as the same instant.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task UpdateAsync_PersistsTheDeliveryDeadlineOfTheSnapshot()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var repository = await NewRepositoryAsync();
+        var notification = Notification.Schedule(Guid.CreateVersion7(), Guid.CreateVersion7(), NotificationType.DeliveryDeadlineApproaching, "deadline", Now, Now);
+        await repository.TryAddAsync(notification, TestContext.Current.CancellationToken);
+        var stored = (await repository.GetByIdAsync(notification.Id, TestContext.Current.CancellationToken))!;
+
+        stored.Deliver(DeadlineDetails, Now.AddMinutes(1));
+        await repository.UpdateAsync(stored, TestContext.Current.CancellationToken);
+
+        var reloaded = (await repository.GetByIdAsync(notification.Id, TestContext.Current.CancellationToken))!;
+        reloaded.Type.ShouldBe(NotificationType.DeliveryDeadlineApproaching);
+        reloaded.Details.ShouldBe(DeadlineDetails);
+        reloaded.Details!.DeliveryDeadline.ShouldBe(Now.AddDays(21));
     }
 
     /// <summary>

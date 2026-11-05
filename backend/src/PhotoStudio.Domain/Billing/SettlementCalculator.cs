@@ -16,24 +16,16 @@ public sealed record SettlementOutcome(SettlementReason Reason, Money TotalPaid,
 /// Decides the economic outcome of a booking from its current state. It reads the state, not an event, so the answer is the
 /// same whatever the order in which events are delivered and however many times each one is.
 /// <para>
-/// Rules (the defaults of the business, see the design document): a booking that ends because of the photographer, or
-/// without a confirmed commitment of the client, gives everything back; a client that cancels a confirmed booking with less
-/// notice than the policy allows, or does not show up, loses the deposit (and only the deposit: anything paid beyond it
-/// goes back).
+/// Rules: a booking that ends without a confirmed commitment of the client gives everything back; one the photographer
+/// cancels gives back the share of what was paid that the policy says; a client that cancels a confirmed booking with less
+/// notice than the policy allows, or does not show up, loses the share of the deposit that the policy says (and only of the
+/// deposit: anything paid beyond it goes back). Every share is read from the policy that was frozen into the booking when it
+/// was created, so changing the photographer's policy later never changes what an existing booking owes. The defaults of the
+/// business are 100% in each case.
 /// </para>
 /// </summary>
 public static class SettlementCalculator
 {
-    /// <summary>
-    /// Share of the deposit retained when the client cancels a confirmed booking too late.
-    /// </summary>
-    public const decimal LateCancellationRetention = 1m;
-
-    /// <summary>
-    /// Share of the deposit retained when the client does not show up.
-    /// </summary>
-    public const decimal ClientAbsentRetention = 1m;
-
     /// <summary>
     /// Calculates what the booking owes.
     /// </summary>
@@ -48,7 +40,7 @@ public static class SettlementCalculator
         {
             BookingStatus.Cancelled => CalculateCancelled(booking),
             BookingStatus.Expired => Build(booking, SettlementReason.BookingExpired, 0m),
-            BookingStatus.ClientAbsent => Build(booking, SettlementReason.ClientAbsent, ClientAbsentRetention),
+            BookingStatus.ClientAbsent => Build(booking, SettlementReason.ClientAbsent, booking.Policy.ClientAbsentRetention),
             _ => null,
         };
     }
@@ -63,7 +55,7 @@ public static class SettlementCalculator
         var cancellation = booking.History.LastOrDefault(transition => transition.To == BookingStatus.Cancelled);
         if (cancellation is null || cancellation.Actor == Actor.Photographer)
         {
-            return Build(booking, SettlementReason.PhotographerCancelled, 0m);
+            return BuildPhotographerCancelled(booking);
         }
 
         if (cancellation.From == BookingStatus.Tentative)
@@ -74,7 +66,20 @@ public static class SettlementCalculator
         var hoursBeforeSession = (booking.Slot.Start - cancellation.OccurredAt).TotalHours;
         return hoursBeforeSession >= booking.Policy.FreeCancellationWindowHours
             ? Build(booking, SettlementReason.ClientCancelledInTime, 0m)
-            : Build(booking, SettlementReason.ClientCancelledLate, LateCancellationRetention);
+            : Build(booking, SettlementReason.ClientCancelledLate, booking.Policy.LateCancellationRetention);
+    }
+
+    /// <summary>
+    /// Builds the outcome of a booking the photographer cancelled: the policy says which share of everything that was paid goes back,
+    /// and the rest is kept. It is all of it unless the photographer's policy says otherwise.
+    /// </summary>
+    /// <param name="booking">A booking the photographer cancelled.</param>
+    /// <returns>The outcome.</returns>
+    private static SettlementOutcome BuildPhotographerCancelled(Booking booking)
+    {
+        var paid = booking.TotalVerifiedPaid;
+        var refund = paid.MultiplyBy(booking.Policy.PhotographerCancellationRefund);
+        return new SettlementOutcome(SettlementReason.PhotographerCancelled, paid, paid.Subtract(refund), refund);
     }
 
     /// <summary>

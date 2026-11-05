@@ -20,6 +20,7 @@ namespace PhotoStudio.Application.Notifications;
 /// <param name="ReadAt">Instant the photographer read it (UTC), or <see langword="null"/> while it is unread.</param>
 /// <param name="SelectedPhotos">How many photos the client chose; present only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
 /// <param name="ExtraPhotos">How many of them are extra; present only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
+/// <param name="DeliveryDeadline">Instant the final photos should be published (UTC); present only for <see cref="NotificationType.DeliveryDeadlineApproaching"/>.</param>
 public sealed record NotificationResponse(
     Guid Id,
     NotificationType Type,
@@ -33,7 +34,8 @@ public sealed record NotificationResponse(
     DateTimeOffset DeliveredAt,
     DateTimeOffset? ReadAt,
     int? SelectedPhotos = null,
-    int? ExtraPhotos = null);
+    int? ExtraPhotos = null,
+    DateTimeOffset? DeliveryDeadline = null);
 
 /// <summary>
 /// The inbox of a photographer.
@@ -83,6 +85,7 @@ public static class NotificationResponseMappings
             notification.DeliveredAt.Value,
             notification.ReadAt,
             details.SelectedPhotos,
-            details.ExtraPhotos);
+            details.ExtraPhotos,
+            details.DeliveryDeadline);
     }
 }

@@ -60,8 +60,8 @@ Estas acciones las hace el fotógrafo en su app (la reprogramación desde el enl
 | Situación | Qué pasa con el dinero (por defecto) |
 |---|---|
 | Cancela con más de 72 horas de aviso | Sin cargo |
-| Cancela tarde (menos de 72 horas) | Se retiene el anticipo |
-| No se presenta (ausente) | Se retiene el anticipo |
+| Cancela tarde (menos de 72 horas) | Se retiene el anticipo (o la parte que diga tu contrato) |
+| No se presenta (ausente) | Se retiene el anticipo (o la parte que diga tu contrato) |
 | El fotógrafo cancela | Reembolso completo |
 | La reserva vence sin confirmar | Sin cargo (no había pago verificado) |
 

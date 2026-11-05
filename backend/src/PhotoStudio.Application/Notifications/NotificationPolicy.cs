@@ -15,4 +15,9 @@ public static class NotificationPolicy
     /// before the photographer is asked to chase it.
     /// </summary>
     public static readonly TimeSpan BalanceDueDelay = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// How long before the delivery deadline the photographer is warned: three days to finish the edit.
+    /// </summary>
+    public static readonly TimeSpan DeliveryDeadlineLeadTime = TimeSpan.FromDays(3);
 }

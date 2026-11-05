@@ -117,6 +117,10 @@ public sealed class NotificationDetailsDocument
     /// <summary>Gets or sets the currency of the declared amount.</summary>
     [BsonElement("proofCurrency")]
     public string? ProofCurrency { get; set; }
+
+    /// <summary>Gets or sets the instant the final photos should be published (UTC), for delivery deadline notices.</summary>
+    [BsonElement("deliveryDeadline")]
+    public DateTime? DeliveryDeadline { get; set; }
 }
 
 /// <summary>
@@ -195,6 +199,7 @@ public static class NotificationDocumentMappings
         ProofCurrency = details.ProofAmount?.Currency,
         SelectedPhotos = details.SelectedPhotos,
         ExtraPhotos = details.ExtraPhotos,
+        DeliveryDeadline = details.DeliveryDeadline?.UtcDateTime,
     };
 
     /// <summary>
@@ -210,7 +215,8 @@ public static class NotificationDocumentMappings
         document.BalanceAmount is { } amount && document.BalanceCurrency is { } currency ? Money.Restore(amount, currency) : null,
         document.ProofAmount is { } proof && document.ProofCurrency is { } proofCurrency ? Money.Restore(proof, proofCurrency) : null,
         document.SelectedPhotos,
-        document.ExtraPhotos);
+        document.ExtraPhotos,
+        document.DeliveryDeadline is { } deadline ? ToOffset(deadline) : null);
 
     /// <summary>
     /// Converts a stored date, which MongoDB returns as UTC, to a UTC offset instant.

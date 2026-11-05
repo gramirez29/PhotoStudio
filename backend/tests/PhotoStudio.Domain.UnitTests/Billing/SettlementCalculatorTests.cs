@@ -169,6 +169,106 @@ public sealed class SettlementCalculatorTests
     }
 
     /// <summary>
+    /// What a client who cancels late loses is the share of the deposit the policy of the booking says, not always all of it; what
+    /// was paid beyond the deposit still goes back.
+    /// </summary>
+    [Fact]
+    public void Calculate_WhenTheClientCancelsLate_RetainsOnlyTheShareOfThePolicy()
+    {
+        var booking = ConfirmedWithPolicy(BookingPolicy.Create(48, 0.5m, 72, 48, 1, 30, 7, lateCancellationRetention: 0.5m), extra: 30_000m);
+        booking.Cancel(Actor.Client, "Plans changed", SessionStart.AddHours(-2));
+
+        var outcome = SettlementCalculator.Calculate(booking)!;
+
+        outcome.Reason.ShouldBe(SettlementReason.ClientCancelledLate);
+        outcome.Retained.ShouldBe(Money.Create(25_000m));
+        outcome.Refund.ShouldBe(Money.Create(55_000m));
+    }
+
+    /// <summary>
+    /// A policy that keeps nothing when the client cancels late still reports the late reason but returns everything.
+    /// </summary>
+    [Fact]
+    public void Calculate_WhenTheClientCancelsLateAndThePolicyKeepsNothing_RefundsEverything()
+    {
+        var booking = ConfirmedWithPolicy(BookingPolicy.Create(48, 0.5m, 72, 48, 1, 30, 7, lateCancellationRetention: 0m), extra: 0m);
+        booking.Cancel(Actor.Client, "Plans changed", SessionStart.AddHours(-2));
+
+        var outcome = SettlementCalculator.Calculate(booking)!;
+
+        outcome.Reason.ShouldBe(SettlementReason.ClientCancelledLate);
+        outcome.Retained.Amount.ShouldBe(0m);
+        outcome.Refund.ShouldBe(Money.Create(50_000m));
+    }
+
+    /// <summary>
+    /// The share kept when the client does not show up is its own: it can differ from the one of a late cancellation.
+    /// </summary>
+    [Fact]
+    public void Calculate_ForAClientAbsent_RetainsTheShareOfThePolicy_NotTheOneOfTheLateCancellation()
+    {
+        var policy = BookingPolicy.Create(48, 0.5m, 72, 48, 1, 30, 7, lateCancellationRetention: 1m, clientAbsentRetention: 0.4m);
+        var booking = ConfirmedWithPolicy(policy, extra: 10_000m);
+        booking.MarkClientAbsent(SessionStart.AddMinutes(policy.ClientAbsentToleranceMinutes));
+
+        var outcome = SettlementCalculator.Calculate(booking)!;
+
+        outcome.Reason.ShouldBe(SettlementReason.ClientAbsent);
+        outcome.Retained.ShouldBe(Money.Create(20_000m));
+        outcome.Refund.ShouldBe(Money.Create(40_000m));
+    }
+
+    /// <summary>
+    /// When the photographer cancels, the policy says which share of everything paid goes back; the rest is kept.
+    /// </summary>
+    [Fact]
+    public void Calculate_WhenThePhotographerCancels_RefundsTheShareOfThePolicy()
+    {
+        var booking = ConfirmedWithPolicy(BookingPolicy.Create(48, 0.5m, 72, 48, 1, 30, 7, photographerCancellationRefund: 0.5m), extra: 30_000m);
+        booking.Cancel(Actor.Photographer, "Sick", SessionStart.AddHours(-5));
+
+        var outcome = SettlementCalculator.Calculate(booking)!;
+
+        outcome.Reason.ShouldBe(SettlementReason.PhotographerCancelled);
+        outcome.TotalPaid.ShouldBe(Money.Create(80_000m));
+        outcome.Refund.ShouldBe(Money.Create(40_000m));
+        outcome.Retained.ShouldBe(Money.Create(40_000m));
+    }
+
+    /// <summary>
+    /// A booking is settled by the policy it was created with, whatever the policy of the photographer is now: two bookings of the
+    /// same cancellation owe different amounts only because their frozen policies differ.
+    /// </summary>
+    [Fact]
+    public void Calculate_UsesThePolicyFrozenInEachBooking()
+    {
+        var strict = ConfirmedWithPolicy(BookingPolicy.Default, extra: 0m);
+        var gentle = ConfirmedWithPolicy(BookingPolicy.Create(48, 0.5m, 72, 48, 1, 30, 7, lateCancellationRetention: 0.2m), extra: 0m);
+        strict.Cancel(Actor.Client, "Plans changed", SessionStart.AddHours(-2));
+        gentle.Cancel(Actor.Client, "Plans changed", SessionStart.AddHours(-2));
+
+        SettlementCalculator.Calculate(strict)!.Retained.ShouldBe(Money.Create(50_000m));
+        SettlementCalculator.Calculate(gentle)!.Retained.ShouldBe(Money.Create(10_000m));
+    }
+
+    /// <summary>
+    /// Builds a confirmed booking under a policy, with extra money paid beyond the deposit.
+    /// </summary>
+    /// <param name="policy">Policy frozen into the booking.</param>
+    /// <param name="extra">Amount paid on top of the deposit.</param>
+    /// <returns>The booking.</returns>
+    private static Booking ConfirmedWithPolicy(BookingPolicy policy, decimal extra)
+    {
+        var booking = BookingTestData.CreateConfirmed(policy);
+        if (extra > 0m)
+        {
+            booking.RecordInPersonPayment(Guid.CreateVersion7(), Money.Create(extra), PaymentMethod.Cash, "extra", Now);
+        }
+
+        return booking;
+    }
+
+    /// <summary>
     /// A booking that ended with nothing paid owes nothing either way.
     /// </summary>
     [Fact]

@@ -18,7 +18,11 @@ public sealed record BookingPolicy
         int rescheduleMinNoticeHours,
         int maxReschedules,
         int clientAbsentToleranceMinutes,
-        int clientAbsentRevertWindowDays)
+        int clientAbsentRevertWindowDays,
+        decimal lateCancellationRetention,
+        decimal clientAbsentRetention,
+        decimal photographerCancellationRefund,
+        int deliveryDeadlineDays)
     {
         TentativeHoldHours = tentativeHoldHours;
         DepositPercentage = depositPercentage;
@@ -27,12 +31,22 @@ public sealed record BookingPolicy
         MaxReschedules = maxReschedules;
         ClientAbsentToleranceMinutes = clientAbsentToleranceMinutes;
         ClientAbsentRevertWindowDays = clientAbsentRevertWindowDays;
+        LateCancellationRetention = lateCancellationRetention;
+        ClientAbsentRetention = clientAbsentRetention;
+        PhotographerCancellationRefund = photographerCancellationRefund;
+        DeliveryDeadlineDays = deliveryDeadlineDays;
     }
+
+    /// <summary>Days to deliver the final photos when the policy does not say.</summary>
+    public const int DefaultDeliveryDeadlineDays = 21;
+
+    /// <summary>Longest delivery deadline accepted.</summary>
+    public const int MaxDeliveryDeadlineDays = 365;
 
     /// <summary>
     /// Gets the default policy proposed in the design workbook.
     /// </summary>
-    public static BookingPolicy Default { get; } = new(48, 0.5m, 72, 48, 1, 30, 7);
+    public static BookingPolicy Default { get; } = new(48, 0.5m, 72, 48, 1, 30, 7, 1m, 1m, 1m, 21);
 
     /// <summary>Gets how many hours a tentative booking holds the slot before it expires.</summary>
     public int TentativeHoldHours { get; }
@@ -55,6 +69,18 @@ public sealed record BookingPolicy
     /// <summary>Gets the days during which a client-absent mark can be reverted.</summary>
     public int ClientAbsentRevertWindowDays { get; }
 
+    /// <summary>Gets the share of the deposit the photographer keeps when the client cancels a confirmed booking with less notice than <see cref="FreeCancellationWindowHours"/> (0 to 1).</summary>
+    public decimal LateCancellationRetention { get; }
+
+    /// <summary>Gets the share of the deposit the photographer keeps when the client does not show up (0 to 1).</summary>
+    public decimal ClientAbsentRetention { get; }
+
+    /// <summary>Gets the share of what the client paid that goes back when the photographer cancels (0 to 1).</summary>
+    public decimal PhotographerCancellationRefund { get; }
+
+    /// <summary>Gets the days, counted from the moment the client sends the selection, within which the photographer should publish the final photos.</summary>
+    public int DeliveryDeadlineDays { get; }
+
     /// <summary>
     /// Creates a policy after validating every value.
     /// </summary>
@@ -65,6 +91,10 @@ public sealed record BookingPolicy
     /// <param name="maxReschedules">Maximum client reschedules; zero or greater.</param>
     /// <param name="clientAbsentToleranceMinutes">Tolerance before the client can be marked absent; zero or greater.</param>
     /// <param name="clientAbsentRevertWindowDays">Days during which a client-absent mark can be reverted; zero or greater.</param>
+    /// <param name="lateCancellationRetention">Share of the deposit kept when the client cancels late, between 0 and 1.</param>
+    /// <param name="clientAbsentRetention">Share of the deposit kept when the client does not show up, between 0 and 1.</param>
+    /// <param name="photographerCancellationRefund">Share of what was paid that goes back when the photographer cancels, between 0 and 1.</param>
+    /// <param name="deliveryDeadlineDays">Days to deliver the final photos after the selection, between 1 and <see cref="MaxDeliveryDeadlineDays"/>.</param>
     /// <returns>The validated policy.</returns>
     /// <exception cref="DomainException">When any value is out of range.</exception>
     public static BookingPolicy Create(
@@ -74,7 +104,11 @@ public sealed record BookingPolicy
         int rescheduleMinNoticeHours,
         int maxReschedules,
         int clientAbsentToleranceMinutes,
-        int clientAbsentRevertWindowDays)
+        int clientAbsentRevertWindowDays,
+        decimal lateCancellationRetention = 1m,
+        decimal clientAbsentRetention = 1m,
+        decimal photographerCancellationRefund = 1m,
+        int deliveryDeadlineDays = DefaultDeliveryDeadlineDays)
     {
         if (tentativeHoldHours <= 0)
         {
@@ -92,6 +126,21 @@ public sealed record BookingPolicy
             throw new DomainException(DomainErrorCodes.InvalidPolicy, "Policy windows and limits cannot be negative.");
         }
 
+        if (lateCancellationRetention is < 0m or > 1m || clientAbsentRetention is < 0m or > 1m)
+        {
+            throw new DomainException(DomainErrorCodes.InvalidPolicy, "The share of the deposit that is kept must be between 0 and 1.");
+        }
+
+        if (photographerCancellationRefund is < 0m or > 1m)
+        {
+            throw new DomainException(DomainErrorCodes.InvalidPolicy, "The share refunded when the photographer cancels must be between 0 and 1.");
+        }
+
+        if (deliveryDeadlineDays is < 1 or > MaxDeliveryDeadlineDays)
+        {
+            throw new DomainException(DomainErrorCodes.InvalidPolicy, $"The delivery deadline must be between 1 and {MaxDeliveryDeadlineDays} days.");
+        }
+
         return new BookingPolicy(
             tentativeHoldHours,
             depositPercentage,
@@ -99,6 +148,10 @@ public sealed record BookingPolicy
             rescheduleMinNoticeHours,
             maxReschedules,
             clientAbsentToleranceMinutes,
-            clientAbsentRevertWindowDays);
+            clientAbsentRevertWindowDays,
+            lateCancellationRetention,
+            clientAbsentRetention,
+            photographerCancellationRefund,
+            deliveryDeadlineDays);
     }
 }
