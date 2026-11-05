@@ -28,6 +28,12 @@ export interface VerifyEmailRequest {
   readonly code: string;
 }
 
+/** Body to replace the email of an account that has not verified it (backend `ChangeEmailRequest`). */
+export interface ChangeEmailRequest {
+  /** The address the user wants, already normalized. */
+  readonly email: string;
+}
+
 /** Confirmation that a code to verify the email was sent (backend `EmailVerificationSentResponse`). */
 export interface EmailVerificationSentResponse {
   /** Address the code went to, partly hidden, for example `a***@gmail.com`. */

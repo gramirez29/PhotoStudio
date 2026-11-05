@@ -7,7 +7,7 @@ import type { AuthSessionResponse } from '../../types/api/auth';
 import { createQueryWrapper } from '../__fixtures__/queryWrapper';
 import { useVerifyEmailForm } from '../useVerifyEmailForm';
 
-jest.mock('../../api/client', () => ({ accountApi: { verifyEmail: jest.fn(), resendEmailVerification: jest.fn() } }));
+jest.mock('../../api/client', () => ({ accountApi: { verifyEmail: jest.fn(), resendEmailVerification: jest.fn(), changeUnverifiedEmail: jest.fn() } }));
 jest.mock('../../session/sessionManager', () => ({ adoptSession: jest.fn() }));
 
 /** The session the backend returns once the email is verified. */
@@ -110,5 +110,60 @@ describe('useVerifyEmailForm', () => {
 
     await waitFor(() => expect(result.current.submitError).toMatch(/Ya te enviamos un código hace poco/));
     expect(result.current.cooldownSeconds).toBe(0);
+  });
+
+  describe('correcting the address', () => {
+    it('opens with the current address ready to edit, and closes back to the code', () => {
+      const { result } = renderHook(() => useVerifyEmailForm(), { wrapper: Wrapper });
+
+      act(() => result.current.openEmailChange());
+      expect(result.current.isChangingEmail).toBe(true);
+      expect(result.current.newEmail).toBe('ana@example.com');
+
+      act(() => result.current.closeEmailChange());
+      expect(result.current.isChangingEmail).toBe(false);
+    });
+
+    it('does not call the backend with an address that is not valid or is the same one', () => {
+      const { result } = renderHook(() => useVerifyEmailForm(), { wrapper: Wrapper });
+      act(() => result.current.openEmailChange());
+
+      act(() => result.current.setNewEmail('not-an-email'));
+      act(() => result.current.saveEmail());
+      expect(result.current.newEmailError).toBe('Escribe un correo válido, por ejemplo nombre@correo.com.');
+
+      act(() => result.current.setNewEmail(' ANA@example.com '));
+      act(() => result.current.saveEmail());
+      expect(result.current.newEmailError).toMatch(/Ese es el correo que ya tienes/);
+      expect(accountApi.changeUnverifiedEmail).not.toHaveBeenCalled();
+    });
+
+    it('sends the normalized address, remembers it in the session, says where the code went and makes the user wait', async () => {
+      jest.mocked(accountApi.changeUnverifiedEmail).mockResolvedValue({ maskedEmail: 'a***@gmail.com', expiresAt: '2026-10-08T21:10:00+00:00' });
+      const { result } = renderHook(() => useVerifyEmailForm(), { wrapper: Wrapper });
+      act(() => result.current.openEmailChange());
+      act(() => result.current.setNewEmail('  Ana@Gmail.com '));
+
+      act(() => result.current.saveEmail());
+
+      await waitFor(() => expect(result.current.isChangingEmail).toBe(false));
+      expect(accountApi.changeUnverifiedEmail).toHaveBeenCalledWith({ email: 'ana@gmail.com' });
+      expect(useSessionStore.getState().session?.email).toBe('ana@gmail.com');
+      expect(result.current.notice).toBe('Te enviamos un código a a***@gmail.com.');
+      expect(result.current.cooldownSeconds).toBeGreaterThan(0);
+    });
+
+    it('explains an address another account uses and stays in the correction', async () => {
+      jest.mocked(accountApi.changeUnverifiedEmail).mockRejectedValue(new ApiError(409, 'taken', 'user.email_taken'));
+      const { result } = renderHook(() => useVerifyEmailForm(), { wrapper: Wrapper });
+      act(() => result.current.openEmailChange());
+      act(() => result.current.setNewEmail('otra@gmail.com'));
+
+      act(() => result.current.saveEmail());
+
+      await waitFor(() => expect(result.current.submitError).toBe('Ese correo ya está registrado en otra cuenta.'));
+      expect(result.current.isChangingEmail).toBe(true);
+      expect(useSessionStore.getState().session?.email).toBe('ana@example.com');
+    });
   });
 });

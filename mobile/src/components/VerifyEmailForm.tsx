@@ -10,7 +10,7 @@ import { FONT_FAMILIES } from '../theme/fonts';
 
 /**
  * Screen content that asks the user to prove they own their email: it says where the code went, takes the six digits, and lets
- * them ask for another code. The app shows only this until the email is verified, so nothing else is reachable meanwhile.
+ * them ask for another code or correct the address when it was misspelled. The app shows only this until the email is verified, so nothing else is reachable meanwhile.
  * @returns The form.
  */
 export function VerifyEmailForm(): ReactElement {
@@ -24,6 +24,46 @@ export function VerifyEmailForm(): ReactElement {
     resendLabel = 'Enviando…';
   } else if (waiting) {
     resendLabel = `Enviar un código nuevo (${form.cooldownSeconds} s)`;
+  }
+
+  if (form.isChangingEmail) {
+    return (
+      <KeyboardAwareScreen align="top">
+        <Text style={styles.title}>Corrige tu correo</Text>
+        <Text style={styles.body}>
+          Escribe el correo correcto y te enviaremos el código ahí. Solo puedes cambiarlo mientras no lo hayas verificado.
+        </Text>
+
+        <FormInput
+          label="Correo"
+          value={form.newEmail}
+          onChangeText={form.setNewEmail}
+          error={form.newEmailError}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="emailAddress"
+          returnKeyType="send"
+          onSubmitEditing={form.saveEmail}
+        />
+
+        {form.submitError !== null && <Text style={styles.submitError}>{form.submitError}</Text>}
+
+        <ActionButton label={form.isSavingEmail ? 'Enviando…' : 'Enviar código'} disabled={form.isSavingEmail} onPress={form.saveEmail} />
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Cancelar"
+          accessibilityState={{ disabled: form.isSavingEmail }}
+          disabled={form.isSavingEmail}
+          onPress={form.closeEmailChange}
+          style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+        >
+          <Text style={styles.linkLabel}>Cancelar</Text>
+        </Pressable>
+      </KeyboardAwareScreen>
+    );
   }
 
   return (
@@ -63,6 +103,15 @@ export function VerifyEmailForm(): ReactElement {
         style={({ pressed }) => [styles.link, pressed && styles.pressed]}
       >
         <Text style={[styles.linkLabel, resendDisabled && styles.linkLabelDisabled]}>{resendLabel}</Text>
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Cambiar el correo"
+        onPress={form.openEmailChange}
+        style={({ pressed }) => [styles.link, pressed && styles.pressed]}
+      >
+        <Text style={styles.linkLabel}>¿Te equivocaste de correo? Cámbialo</Text>
       </Pressable>
     </KeyboardAwareScreen>
   );

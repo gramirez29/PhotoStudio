@@ -9,6 +9,7 @@ export const useSessionStore = create<SessionStore>((set) => ({
   status: 'restoring',
   session: null,
   setSignedIn: (session) => set({ status: 'signedIn', session }),
+  setEmail: (email) => set((state) => (state.session === null ? state : { session: { ...state.session, email } })),
   setSignedOut: () => set({ status: 'signedOut', session: null }),
   setOffline: () => set({ status: 'offline', session: null }),
   setRestoring: () => set({ status: 'restoring', session: null }),

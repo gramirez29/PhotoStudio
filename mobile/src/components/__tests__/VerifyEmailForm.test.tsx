@@ -23,6 +23,14 @@ function formState(overrides: Partial<VerifyEmailFormState> = {}): VerifyEmailFo
     setCode: jest.fn(),
     verify: jest.fn(),
     resend: jest.fn(),
+    isChangingEmail: false,
+    newEmail: '',
+    newEmailError: undefined,
+    isSavingEmail: false,
+    openEmailChange: jest.fn(),
+    closeEmailChange: jest.fn(),
+    setNewEmail: jest.fn(),
+    saveEmail: jest.fn(),
     ...overrides,
   };
 }
@@ -96,5 +104,58 @@ describe('VerifyEmailForm', () => {
 
     expect(screen.getByText('Verificando…')).toBeTruthy();
     expect(screen.getByText('Enviando…')).toBeTruthy();
+  });
+
+  it('offers to correct a misspelled email', () => {
+    const state = formState();
+    stateIs(state);
+    render(<VerifyEmailForm />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Cambiar el correo' }));
+
+    expect(state.openEmailChange).toHaveBeenCalledTimes(1);
+  });
+
+  describe('while correcting the address', () => {
+    it('shows the address field instead of the code and sends what is typed', () => {
+      const state = formState({ isChangingEmail: true, newEmail: 'ana@gmial.com' });
+      stateIs(state);
+      render(<VerifyEmailForm />);
+
+      expect(screen.getByText('Corrige tu correo')).toBeTruthy();
+      expect(screen.queryByLabelText('Código de 6 dígitos')).toBeNull();
+      fireEvent.changeText(screen.getByLabelText('Correo'), 'ana@gmail.com');
+      fireEvent.press(screen.getByRole('button', { name: 'Enviar código' }));
+
+      expect(state.setNewEmail).toHaveBeenCalledWith('ana@gmail.com');
+      expect(state.saveEmail).toHaveBeenCalledTimes(1);
+    });
+
+    it('goes back to the code when the user cancels', () => {
+      const state = formState({ isChangingEmail: true });
+      stateIs(state);
+      render(<VerifyEmailForm />);
+
+      fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(state.closeEmailChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows the validation message and the error, and says it is sending', () => {
+      stateIs(
+        formState({
+          isChangingEmail: true,
+          newEmailError: 'Escribe un correo válido.',
+          submitError: 'Ese correo ya está registrado en otra cuenta.',
+          isSavingEmail: true,
+        }),
+      );
+
+      render(<VerifyEmailForm />);
+
+      expect(screen.getByText('Escribe un correo válido.')).toBeTruthy();
+      expect(screen.getByText('Ese correo ya está registrado en otra cuenta.')).toBeTruthy();
+      expect(screen.getByText('Enviando…')).toBeTruthy();
+    });
   });
 });

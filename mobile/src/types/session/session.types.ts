@@ -35,6 +35,8 @@ export interface SessionStore {
   readonly session: ActiveSession | null;
   /** Records a session and marks the app as signed in. */
   readonly setSignedIn: (session: ActiveSession) => void;
+  /** Replaces the email of the signed-in session, after the backend accepted a correction of it. Does nothing when nobody is signed in. */
+  readonly setEmail: (email: string) => void;
   /** Drops the session and marks the app as signed out. */
   readonly setSignedOut: () => void;
   /** Marks the app as waiting for the backend to renew a saved session. */

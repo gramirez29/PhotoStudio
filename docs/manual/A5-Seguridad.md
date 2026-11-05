@@ -67,4 +67,4 @@ Todo registro de pago exige una **clave de idempotencia**: un doble toque o un r
 
 ## 9. Pendiente
 
-Recuperación de contraseña y corrección de un correo mal escrito; verificación del teléfono; revocación de sesiones de portal antes de vencer (si se requiere).
+Recuperación de contraseña; verificación del teléfono; revocación de sesiones de portal antes de vencer (si se requiere).

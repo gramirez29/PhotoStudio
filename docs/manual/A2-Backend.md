@@ -48,7 +48,8 @@ Plantilla versionada (`contract-v1.md`) que `ContractRenderer` rellena con los d
 - Cambio de contraseña (cierra las demás sesiones).
 - **Web del fotógrafo:** sesión en cookie y segundo factor por correo (`StudioLoginChallenge`, `StudioSession`, `StudioTrustedDevice`).
 - Rol de sistema (`isSystemOperator`) para `POST /api/maintenance/run`.
-- **Pendiente:** recuperación de contraseña, corregir un correo mal escrito, verificación del teléfono.
+- Corregir un correo mal escrito: `POST /api/account/email/change`, solo antes de verificarlo y respetando los límites de envío del código (`docs/Authentication.md` §20).
+- **Pendiente:** recuperación de contraseña, verificación del teléfono.
 
 ## 5. Portal del cliente — `docs/ClientPortal.md`
 

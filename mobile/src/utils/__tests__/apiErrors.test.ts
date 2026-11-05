@@ -11,6 +11,7 @@ import {
   rescheduleBookingErrorMessage,
   resendEmailCodeErrorMessage,
   verifyEmailErrorMessage,
+  changeEmailErrorMessage,
 } from '../apiErrors';
 
 describe('loginErrorMessage', () => {
@@ -200,6 +201,24 @@ describe('resendEmailCodeErrorMessage', () => {
   it('explains a lost connection and an error nobody planned for', () => {
     expect(resendEmailCodeErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
     expect(resendEmailCodeErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo enviar el código/);
+  });
+});
+
+describe('changeEmailErrorMessage', () => {
+  it.each([
+    ['user.email_taken', /ya está registrado en otra cuenta/],
+    ['user.invalid_email', /correo válido/],
+    ['auth.email_code_rate_limited', /tu correo no cambió/],
+    ['auth.email_already_verified', /ya está verificado/],
+    ['email.delivery_failed', /No pudimos enviar el correo/],
+    ['rate_limit.exceeded', /Espera un minuto/],
+  ])('explains %s', (code, message) => {
+    expect(changeEmailErrorMessage(new ApiError(409, 'x', code))).toMatch(message);
+  });
+
+  it('explains a lost connection and an error nobody planned for', () => {
+    expect(changeEmailErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(changeEmailErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo cambiar el correo/);
   });
 });
 
