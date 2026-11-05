@@ -9,13 +9,15 @@ namespace PhotoStudio.Application.Identity.ChangePassword;
 /// <summary>
 /// Changes the password of the signed-in user. It asks for the current password even though the user has a valid token,
 /// because a stolen phone or access token must not be enough to take over the account. A wrong current password counts
-/// as a failed login (same counter and lockout as the login), so this endpoint cannot be used to guess the password.
+/// as a failed login (same counters and limits as the login, per network address and for the account), so this endpoint cannot be
+/// used to guess the password.
 /// On success every session of the user is closed and a new one is issued to the device that made the change.
 /// </summary>
 /// <param name="users">User repository.</param>
 /// <param name="refreshTokens">Refresh token repository.</param>
 /// <param name="passwordHasher">Password hashing.</param>
 /// <param name="sessions">Builds the session tokens.</param>
+/// <param name="guard">Limits the guesses of the current password.</param>
 /// <param name="studioAccess">Revokes what the web area trusts about the user: sessions, remembered browsers and pending code.</param>
 /// <param name="timeProvider">Clock abstraction.</param>
 public sealed class ChangePasswordHandler(
@@ -23,6 +25,7 @@ public sealed class ChangePasswordHandler(
     IRefreshTokenRepository refreshTokens,
     IPasswordHasher passwordHasher,
     SessionIssuer sessions,
+    LoginAttemptGuard guard,
     StudioAccessRevoker studioAccess,
     TimeProvider timeProvider) : ICommandHandler<ChangePasswordCommand, AuthSessionResponse>
 {
@@ -33,7 +36,7 @@ public sealed class ChangePasswordHandler(
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The new session of the device that changed the password.</returns>
     /// <exception cref="AuthenticationFailedException">When the user no longer exists.</exception>
-    /// <exception cref="AccountLockedException">When the user is locked by too many failed attempts.</exception>
+    /// <exception cref="AccountLockedException">When the user is locked, or the address is blocked for it, by too many failed attempts.</exception>
     /// <exception cref="DomainException">When the current password is wrong, or the new one is weak or equal to the current one.</exception>
     /// <exception cref="ConflictException">When the password was changed by another request meanwhile.</exception>
     public async Task<AuthSessionResponse> HandleAsync(ChangePasswordCommand command, CancellationToken cancellationToken)
@@ -44,20 +47,12 @@ public sealed class ChangePasswordHandler(
         var user = await users.GetByIdAsync(command.PhotographerId, cancellationToken)
             ?? throw new AuthenticationFailedException(ApplicationErrorCodes.InvalidCredentials, "The session is no longer valid. Sign in again.");
 
-        if (user.IsLockedAt(now))
-        {
-            throw new AccountLockedException(user.LockedUntil!.Value - now);
-        }
+        await guard.EnsureAllowedAsync(user, command.ClientAddress, now, cancellationToken);
 
         var currentPassword = command.CurrentPassword ?? string.Empty;
         if (!passwordHasher.Verify(user.PasswordHash, currentPassword))
         {
-            var failedAttempts = await users.RegisterFailedLoginAsync(user.Id, cancellationToken);
-            if (User.ShouldLock(failedAttempts))
-            {
-                await users.LockAsync(user.Id, now + User.LockoutDuration, cancellationToken);
-            }
-
+            await guard.RegisterFailureAsync(user, command.ClientAddress, now, cancellationToken);
             throw new DomainException(ApplicationErrorCodes.InvalidCurrentPassword, "The current password is not correct.");
         }
 
@@ -72,6 +67,9 @@ public sealed class ChangePasswordHandler(
         {
             throw new ConflictException(ApplicationErrorCodes.ConcurrencyConflict, "The password was changed by another request. Try again.");
         }
+
+        // Whoever was guessing the old password has nothing left to guess: the blocks of every address go with it.
+        await guard.ForgetAllAsync(user.Id, cancellationToken);
 
         // Anyone who had a session with the old password (a stolen refresh token included) is signed out; this device gets a new one.
         await refreshTokens.RevokeAllForUserAsync(user.Id, now, cancellationToken);

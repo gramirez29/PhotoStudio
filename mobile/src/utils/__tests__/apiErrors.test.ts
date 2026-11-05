@@ -23,7 +23,7 @@ describe('loginErrorMessage', () => {
 
   it('explains a locked account and the sign-in rate limit', () => {
     expect(loginErrorMessage(new ApiError(429, 'x', 'auth.account_locked'))).toBe(
-      'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.',
+      'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo, o recupera tu contraseña con "¿Olvidaste tu contraseña?".',
     );
     expect(loginErrorMessage(new ApiError(429, 'x', 'rate_limit.exceeded'))).toBe(
       'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.',

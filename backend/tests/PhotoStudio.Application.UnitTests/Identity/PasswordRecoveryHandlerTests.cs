@@ -146,6 +146,7 @@ public sealed class PasswordRecoveryHandlerTests
         response.ShouldBe(new PasswordResetResponse());
         await _fixture.Users.Received(1).ChangePasswordAsync(user.Id, user.PasswordHash, "hashed-password", Arg.Any<CancellationToken>());
         await _codes.Received(1).DeleteAsync(user.Id, Arg.Any<CancellationToken>());
+        await _fixture.LoginFailures.Received(1).DeleteAllForUserAsync(user.Id, Arg.Any<CancellationToken>());
         await _fixture.RefreshTokens.Received(1).RevokeAllForUserAsync(user.Id, IdentityFixture.Now, Arg.Any<CancellationToken>());
         await _fixture.StudioSessions.Received(1).DeleteAllForUserAsync(user.Id, Arg.Any<CancellationToken>());
         await _fixture.StudioDevices.Received(1).DeleteAllForUserAsync(user.Id, Arg.Any<CancellationToken>());
@@ -345,5 +346,5 @@ public sealed class PasswordRecoveryHandlerTests
     /// </summary>
     /// <returns>The handler.</returns>
     private ConfirmPasswordResetHandler NewConfirmHandler() =>
-        new(_fixture.Users, _codes, _fixture.CodeService, _fixture.PasswordHasher, _fixture.RefreshTokens, _fixture.StudioAccess, _fixture.Email, _fixture.Clock, NullLogger<ConfirmPasswordResetHandler>.Instance);
+        new(_fixture.Users, _codes, _fixture.CodeService, _fixture.PasswordHasher, _fixture.RefreshTokens, _fixture.StudioAccess, _fixture.Guard, _fixture.Email, _fixture.Clock, NullLogger<ConfirmPasswordResetHandler>.Instance);
 }

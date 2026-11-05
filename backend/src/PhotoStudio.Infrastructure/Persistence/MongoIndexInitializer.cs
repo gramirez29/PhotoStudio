@@ -244,6 +244,16 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<PasswordResetDocument>.IndexKeys.Ascending(code => code.ExpiresAt),
             new CreateIndexOptions { Name = "ix_password_reset_retention", ExpireAfter = TimeSpan.FromHours(1) });
 
+        var loginFailures = database.GetCollection<LoginFailureDocument>(MongoLoginFailureRepository.CollectionName);
+
+        // Forgets the failed logins of an address when their record expires, and finds the records of an account to clear them all.
+        var loginFailureRetentionIndex = new CreateIndexModel<LoginFailureDocument>(
+            Builders<LoginFailureDocument>.IndexKeys.Ascending(failure => failure.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_login_failure_retention", ExpireAfter = TimeSpan.Zero });
+        var loginFailureUserIndex = new CreateIndexModel<LoginFailureDocument>(
+            Builders<LoginFailureDocument>.IndexKeys.Ascending(failure => failure.UserId),
+            new CreateIndexOptions { Name = "ix_login_failure_user" });
+
         var pushDevices = database.GetCollection<PushDeviceDocument>(MongoPushDeviceRepository.CollectionName);
 
         // Serves the push: the phones of a photographer. The token is the document id, so it is unique without an index.
@@ -257,6 +267,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             await portalOtps.Indexes.CreateManyAsync([otpRetentionIndex], cancellationToken: cancellationToken);
             await emailVerifications.Indexes.CreateManyAsync([emailVerificationRetentionIndex], cancellationToken: cancellationToken);
             await passwordResets.Indexes.CreateManyAsync([passwordResetRetentionIndex], cancellationToken: cancellationToken);
+            await loginFailures.Indexes.CreateManyAsync([loginFailureRetentionIndex, loginFailureUserIndex], cancellationToken: cancellationToken);
             await pushDevices.Indexes.CreateManyAsync([pushPhotographerIndex], cancellationToken: cancellationToken);
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, photographerCreatedIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);

@@ -97,6 +97,46 @@ public sealed class EmailVerificationDocument
 }
 
 /// <summary>
+/// MongoDB data model of the failed logins of one account from one network address (collection <c>login_failures</c>). The document
+/// is identified by the account and the address, so there is one per pair. The address is stored only as a keyed hash.
+/// </summary>
+public sealed class LoginFailureDocument
+{
+    /// <summary>Gets or sets the document identifier, built from the account and the address key.</summary>
+    [BsonId]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the account the failures are against.</summary>
+    [BsonElement("userId")]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
+    public Guid UserId { get; set; }
+
+    /// <summary>Gets or sets the keyed hash of the address.</summary>
+    [BsonElement("addressKey")]
+    public string AddressKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the consecutive failures since the last success or block.</summary>
+    [BsonElement("attempts")]
+    public int Attempts { get; set; }
+
+    /// <summary>Gets or sets the instant the block ends (UTC), or null when the address is not blocked.</summary>
+    [BsonElement("blockedUntil")]
+    public DateTime? BlockedUntil { get; set; }
+
+    /// <summary>Gets or sets the instant the record can be forgotten (UTC); drives the retention index.</summary>
+    [BsonElement("expiresAt")]
+    public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    /// Builds the identifier of the document of an account and an address.
+    /// </summary>
+    /// <param name="userId">Account.</param>
+    /// <param name="addressKey">Keyed hash of the address.</param>
+    /// <returns>The identifier.</returns>
+    public static string IdOf(Guid userId, string addressKey) => $"{userId:N}:{addressKey}";
+}
+
+/// <summary>
 /// MongoDB data model of the code to choose a new password (collection <c>password_resets</c>). The document id is the user, so there
 /// is at most one code per user. Only a keyed hash of the code is stored.
 /// </summary>

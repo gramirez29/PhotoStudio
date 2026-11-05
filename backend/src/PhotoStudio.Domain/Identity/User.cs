@@ -10,9 +10,15 @@ namespace PhotoStudio.Domain.Identity;
 public sealed class User : AggregateRoot<Guid>
 {
     /// <summary>
-    /// Consecutive failed logins that lock the user.
+    /// Consecutive failed logins from one network address that block that address for the user.
     /// </summary>
     public const int MaxFailedLoginAttempts = 5;
+
+    /// <summary>
+    /// Failed logins, from any addresses together, that lock the user for every address. It is several times
+    /// <see cref="MaxFailedLoginAttempts"/> on purpose: one address is blocked first, so reaching it takes several addresses.
+    /// </summary>
+    public const int MaxFailedLoginAttemptsAcrossAddresses = 20;
 
     /// <summary>
     /// Shortest accepted username.
@@ -316,11 +322,18 @@ public sealed class User : AggregateRoot<Guid>
     public bool IsLockedAt(DateTimeOffset now) => LockedUntil is { } until && now < until;
 
     /// <summary>
-    /// Indicates whether a number of consecutive failed logins locks the user.
+    /// Indicates whether a number of consecutive failed logins from one address blocks that address for the user.
     /// </summary>
-    /// <param name="failedAttempts">Consecutive failed logins, including the latest.</param>
+    /// <param name="failedAttempts">Consecutive failed logins from the address, including the latest.</param>
     /// <returns><see langword="true"/> when the limit was reached.</returns>
     public static bool ShouldLock(int failedAttempts) => failedAttempts >= MaxFailedLoginAttempts;
+
+    /// <summary>
+    /// Indicates whether a number of consecutive failed logins, from all addresses together, locks the user for every address.
+    /// </summary>
+    /// <param name="failedAttempts">Consecutive failed logins of the account, including the latest.</param>
+    /// <returns><see langword="true"/> when the limit was reached.</returns>
+    public static bool ShouldLockAcrossAddresses(int failedAttempts) => failedAttempts >= MaxFailedLoginAttemptsAcrossAddresses;
 
     /// <summary>
     /// Indicates whether a character is an ASCII letter or digit (lower case once normalized).

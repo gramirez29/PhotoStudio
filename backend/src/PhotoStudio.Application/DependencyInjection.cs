@@ -216,6 +216,7 @@ public static class DependencyInjection
         services.AddScoped<ICommandHandler<ConfirmPasswordResetCommand, PasswordResetResponse>, ConfirmPasswordResetHandler>();
 
         // The web area of the photographer: password plus a code by email in a browser that is not remembered.
+        services.AddScoped<LoginAttemptGuard>();
         services.AddScoped<CredentialChecker>();
         services.AddScoped<StudioSessionIssuer>();
         services.AddScoped<StudioAccessRevoker>();

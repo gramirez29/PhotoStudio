@@ -69,11 +69,12 @@ public static class AuthRequestMappings
     /// Maps the login request to its command.
     /// </summary>
     /// <param name="request">HTTP body.</param>
+    /// <param name="clientAddress">Network address the request came from, if known.</param>
     /// <returns>The command.</returns>
-    public static LoginCommand ToCommand(this LoginRequest request)
+    public static LoginCommand ToCommand(this LoginRequest request, string? clientAddress = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return new LoginCommand(request.Username, request.Password);
+        return new LoginCommand(request.Username, request.Password, clientAddress);
     }
 
     /// <summary>

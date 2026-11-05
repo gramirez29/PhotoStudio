@@ -7,24 +7,26 @@ namespace PhotoStudio.Application.Identity;
 /// <summary>
 /// Checks a username and a password, for every way of signing in. A wrong password, an unknown username and an invalid username
 /// all produce the same <see cref="AuthenticationFailedException"/>, after the same amount of hashing work, so the answer does not
-/// reveal which usernames exist. Consecutive failures lock the user for <see cref="User.LockoutDuration"/>, and the count is the
-/// same whichever way the user tries to sign in.
+/// reveal which usernames exist. The guesses are limited by <see cref="LoginAttemptGuard"/> (per account and network address, and
+/// for the account as a whole), and the count is the same whichever way the user tries to sign in.
 /// </summary>
 /// <param name="users">User repository.</param>
 /// <param name="passwordHasher">Password hashing.</param>
-public sealed class CredentialChecker(IUserRepository users, IPasswordHasher passwordHasher)
+/// <param name="guard">Limits the guesses.</param>
+public sealed class CredentialChecker(IUserRepository users, IPasswordHasher passwordHasher, LoginAttemptGuard guard)
 {
     /// <summary>
     /// Verifies the credentials.
     /// </summary>
     /// <param name="username">Username as typed.</param>
     /// <param name="password">Password as typed.</param>
+    /// <param name="address">Network address of the caller, if known.</param>
     /// <param name="now">Current instant.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The user, with their failed attempts cleared.</returns>
     /// <exception cref="AuthenticationFailedException">When the credentials are not accepted.</exception>
-    /// <exception cref="AccountLockedException">When the user is locked by too many failed attempts.</exception>
-    public async Task<User> VerifyAsync(string? username, string? password, DateTimeOffset now, CancellationToken cancellationToken)
+    /// <exception cref="AccountLockedException">When the user is locked, or this address is blocked for it, by too many failed attempts.</exception>
+    public async Task<User> VerifyAsync(string? username, string? password, string? address, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var typedPassword = password ?? string.Empty;
         var normalized = User.TryNormalizeUsername(username);
@@ -36,27 +38,15 @@ public sealed class CredentialChecker(IUserRepository users, IPasswordHasher pas
             throw InvalidCredentials();
         }
 
-        if (user.IsLockedAt(now))
-        {
-            throw new AccountLockedException(user.LockedUntil!.Value - now);
-        }
+        await guard.EnsureAllowedAsync(user, address, now, cancellationToken);
 
         if (!passwordHasher.Verify(user.PasswordHash, typedPassword))
         {
-            var failedAttempts = await users.RegisterFailedLoginAsync(user.Id, cancellationToken);
-            if (User.ShouldLock(failedAttempts))
-            {
-                await users.LockAsync(user.Id, now + User.LockoutDuration, cancellationToken);
-            }
-
+            await guard.RegisterFailureAsync(user, address, now, cancellationToken);
             throw InvalidCredentials();
         }
 
-        if (user.FailedLoginAttempts > 0 || user.LockedUntil is not null)
-        {
-            await users.ResetFailedLoginsAsync(user.Id, cancellationToken);
-        }
-
+        await guard.RegisterSuccessAsync(user, address, cancellationToken);
         return user;
     }
 

@@ -44,7 +44,7 @@ public sealed class StudioLoginHandler(
         ArgumentNullException.ThrowIfNull(command);
 
         var now = timeProvider.GetUtcNow();
-        var user = await credentials.VerifyAsync(command.Username, command.Password, now, cancellationToken);
+        var user = await credentials.VerifyAsync(command.Username, command.Password, command.ClientAddress, now, cancellationToken);
         if (user.Email.Length == 0 || !user.IsEmailVerified)
         {
             throw new StudioAccessDeniedException(ApplicationErrorCodes.StudioEmailRequired, "The web area needs an account with a verified email.");

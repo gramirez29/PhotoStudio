@@ -231,13 +231,15 @@ Cualquiera que llegue a la API, mientras el registro esté abierto (por defecto 
 3. si user == null:
        SpendVerificationTime(password)                 // gasta el mismo tiempo que una verificación real
        → 401 auth.invalid_credentials
-4. si el usuario está bloqueado ahora:
+4. si la cuenta está bloqueada para todas las direcciones, o ESTA dirección está bloqueada para la cuenta:
        → 429 auth.account_locked  (+ Retry-After)      // sin verificar la contraseña
 5. si Verify(hash, password) falla:
-       intentos = RegisterFailedLoginAsync(id)         // $inc atómico en Mongo
-       si intentos >= 5: LockAsync(id, ahora + 15 min) // además reinicia el contador
+       desde esta dirección = RegisterFailureAsync(id, dirección)   // $inc atómico por (cuenta, dirección)
+       si >= 5: BlockAsync(id, dirección, ahora + 15 min)           // bloquea SOLO esa dirección
+       en total = RegisterFailedLoginAsync(id)                       // $inc atómico de la cuenta
+       si en total >= 20: LockAsync(id, ahora + 15 min)             // bloquea la cuenta para todos
        → 401 auth.invalid_credentials
-6. si había fallos o bloqueo previos: ResetFailedLoginsAsync(id)
+6. se olvidan los fallos de esta dirección y, si había fallos o bloqueo de la cuenta, ResetFailedLoginsAsync(id)
 7. sesión = nueva familia + access token + refresh token; guarda el hash del refresh token
 8. → 200 con la sesión
 ```
@@ -246,7 +248,7 @@ Decisiones de seguridad:
 
 - **No se revela si el usuario existe.** Usuario inexistente, usuario con formato inválido y contraseña incorrecta responden con el mismo estado, el mismo `code` y el mismo `detail`. El caso "usuario desconocido" ejecuta además una verificación de hash señuelo (`SpendVerificationTime`) para que el **tiempo de respuesta** tampoco lo delate. (El *registro* sí revela que un nombre está ocupado: es inherente a poder elegir nombre.)
 - **El contador de fallos es atómico.** Si se cargara el usuario, se incrementara y se guardara con concurrencia optimista, un atacante que enviara 100 intentos en paralelo haría que casi todas las escrituras chocaran y el contador apenas avanzara, burlando el bloqueo. Con `$inc` cada intento cuenta (hay una prueba con 25 intentos paralelos que exige que el contador llegue a exactamente 25).
-- **Bloqueo temporal, no permanente:** 5 fallos seguidos bloquean 15 minutos.
+- **Bloqueo temporal, no permanente, y por cuenta Y dirección** (`LoginAttemptGuard`, §18.3): 5 fallos seguidos **desde una misma dirección** contra una cuenta bloquean **esa dirección para esa cuenta** durante 15 minutos; el dueño que entra desde otra dirección no se entera. La cuenta se bloquea **para todas las direcciones** solo con 20 fallos entre varias (una sola dirección nunca llega: la bloquean a los 5, y lo que intenta mientras está bloqueada se rechaza sin contarse). La dirección es la del último salto del proxy (`X-Forwarded-For`), con las IPv6 agrupadas por su red /64, y se guarda solo como **hash con clave** (HMAC ligado a la cuenta), nunca en claro. Las mismas reglas valen para el login de la app, el de la web y la contraseña actual del cambio de contraseña. Recuperar o cambiar la contraseña olvida todos los fallos.
 - **Cada login crea su propia familia** de refresh tokens.
 
 Respuesta de registro y de login (`AuthSessionResponse`):
@@ -364,7 +366,7 @@ var booking = await repository.GetOwnedAsync(command.BookingId, command.Photogra
 | `passwordHash` | Hash PBKDF2 con sal y parámetros (formato del hasher de ASP.NET Core). **Nunca la contraseña.** |
 | `name`, `phone` | Nombre y teléfono, ya normalizados. |
 | `version`, `createdAt` | Versión y alta. |
-| `failedLoginAttempts`, `lockedUntil` | Fallos seguidos y fin del bloqueo. |
+| `failedLoginAttempts`, `lockedUntil` | Fallos seguidos **de la cuenta entre todas las direcciones** y fin de su bloqueo total (los fallos por dirección están en `login_failures`). |
 
 ### `refresh_tokens`
 
@@ -541,7 +543,7 @@ Si la API no arranca con `'JWT_SIGNING_KEY' is the development key`, copiaste la
 | Crear cuentas en masa (spam, llenar la base) | 5 registros/hora/IP e interruptor `AUTH_REGISTRATION_ENABLED` para cerrarlo | Prueba del límite por IP y de registro cerrado → 403. **Riesgo residual:** sin verificación de correo, un atacante con muchas IPs puede crear cuentas |
 | Dos personas toman el mismo usuario o correo a la vez | Índices únicos `ix_user_username` e `ix_user_email` (no "buscar y luego insertar") | Prueba con 4 registros paralelos: 1 creado, 3 conflictos; prueba de correo repetido con otras mayúsculas |
 | Descubrir qué correos están registrados | **No se evita:** el registro dice `user.email_taken`, igual que dice `user.username_taken`; es inherente a exigir unicidad. El login sí es opaco (no distingue usuario inexistente de contraseña mala) y no acepta el correo para entrar | — |
-| Adivinar contraseñas (fuerza bruta) | Bloqueo (5 fallos → 15 min) con contador atómico + 10 intentos/min por IP | Pruebas de bloqueo, de 25 intentos paralelos y de límite por IP |
+| Adivinar contraseñas (fuerza bruta) | Bloqueo por cuenta y dirección (5 fallos → 15 min esa dirección; 20 entre varias → la cuenta) con contadores atómicos + 10 intentos/min por IP | Pruebas de bloqueo, de 25 intentos paralelos y de límite por IP |
 | Descubrir qué usuarios existen al iniciar sesión | Misma respuesta y mismo tiempo para usuario desconocido y contraseña mala | Prueba que compara `code` y `detail`; verificación señuelo |
 | Robo de la base de datos | Contraseñas solo como hash PBKDF2; refresh tokens solo como hash | Prueba que revisa que la base no contiene la contraseña |
 | Robo de un refresh token | Rotación de un solo uso + revocación de toda la familia al reusarlo | Pruebas de reuso |
@@ -578,7 +580,7 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 
 1. ~~**Sin recuperación de contraseña.**~~ **Resuelta** (§22), solo para cuentas con el correo verificado. El teléfono se pide y se guarda, pero **no se verifica**.
 2. ~~**`/api/maintenance/run` es trabajo global**~~ **Resuelto:** exige el rol de sistema (§19). Queda que el rol es un booleano en el usuario, sin gestión de roles más fina.
-3. **Un atacante que conozca tu usuario puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por usuario). Mitigación futura: bloquear por (usuario, IP) o retardos progresivos.
+3. ~~**Un atacante que conozca tu usuario puede bloquearte**~~ **Mitigado** (PR del bloqueo por dirección). El bloqueo es por (cuenta, dirección): quien solo conoce el usuario bloquea su propia dirección, no a ti. Queda el caso **distribuido**: quien controle al menos 4 direcciones (o un /64 distinto cada una) puede llegar a los 20 fallos y bloquear la cuenta 15 minutos para todos; la salida del dueño es **recuperar la contraseña por correo** (§22), que quita todos los bloqueos. Detrás del NAT de una red móvil, varias personas comparten dirección y por tanto su cuenta de fallos: es el costo de contar por dirección. No se hizo un registro de "direcciones conocidas" del dueño que se salte el bloqueo de la cuenta.
 4. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión). Es el precio de no consultar la base en cada petición.
 5. **La IP real depende de `X-Forwarded-For`.** Se confía en el último salto del proxy; si el contenedor fuera alcanzable sin pasar por Railway, alguien podría falsear la IP y evitar los límites *por IP* (no el bloqueo de usuario).
 6. ~~**Sin cambio de contraseña desde la app.**~~ **Resuelto** (§19). La *recuperación* si se olvida se resolvió en §22.
@@ -604,8 +606,8 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 
 `POST /api/account/password` con `{ currentPassword, newPassword }` (Bearer):
 
-1. Carga al usuario del token; si está bloqueado → 429 `auth.account_locked`.
-2. Verifica la contraseña actual. Si es incorrecta cuenta como **intento fallido de login** (mismo contador y bloqueo de 5 fallos / 15 min) y responde **422** `user.invalid_current_password` (no 401: la sesión es válida y un 401 haría que la app intentara renovarla).
+1. Carga al usuario del token; si la cuenta está bloqueada, o esta dirección lo está para ella → 429 `auth.account_locked`.
+2. Verifica la contraseña actual. Si es incorrecta cuenta como **intento fallido de login** (mismos contadores y bloqueos que el login: por dirección y de la cuenta) y responde **422** `user.invalid_current_password` (no 401: la sesión es válida y un 401 haría que la app intentara renovarla).
 3. Valida la nueva (8–128 caracteres, distinta de la actual → `user.weak_password`).
 4. Reemplaza el hash **solo si el hash guardado sigue siendo el verificado** (`ChangePasswordAsync`, condicional): dos cambios simultáneos no pisan; el segundo recibe 409 `concurrency.conflict`. También limpia fallos y bloqueo.
 5. Revoca **todos** los refresh tokens del usuario (`RevokeAllForUserAsync`) y emite una sesión nueva (familia nueva) para este dispositivo, que la app adopta.
@@ -694,7 +696,7 @@ Solo lo que está en `/api/web`: iniciar y cerrar sesión, y **leer sus galería
 | Contraseña robada | Segundo factor por correo en cada navegador nuevo; la cookie de desafío ata el código al navegador |
 | Cookie de sesión copiada | Se busca en el servidor: cerrar sesión, cambiar la contraseña o bloquear la cuenta la matan; 2 h sin uso y 12 h máximo |
 | Cookie de dispositivo copiada | Rota en cada uso; solo salta el código, no la contraseña; solo de su usuario |
-| Fuerza bruta de la contraseña | El mismo bloqueo que la app (5 fallos, 15 min) y 10 peticiones por minuto por IP |
+| Fuerza bruta de la contraseña | El mismo bloqueo que la app (por cuenta y dirección, §18.3) y 10 peticiones por minuto por IP |
 | Fuerza bruta del código | 5 intentos por código contados de forma atómica; el código vive 10 min; un millón de valores, con la clave del servidor |
 | Enumeración de usuarios | La misma respuesta y el mismo tiempo para usuario inexistente y contraseña mala |
 | Código usado desde otro navegador | Se rechaza: va atado a la cookie de desafío |
@@ -747,3 +749,18 @@ Cuerpo `{ identifier, code, newPassword }` → **204**. El orden importa:
 - **Cuentas con el correo sin verificar** no pueden recuperar por correo. Con `AUTH_EMAIL_VERIFICATION_REQUIRED=false` hay cuentas que usan la app sin verificar, y esas tampoco: se sigue necesitando un operador (§14).
 - Pruebas: `PasswordResetCodeTests` (dominio), `PasswordRecoveryHandlerTests` (27 casos) y `PasswordRecoveryApiTests` (9, de punta a punta: flujo completo, código de un solo uso, cuenta inexistente que responde igual, cuenta sin verificar, cinco intentos, contraseña débil, espera, desbloqueo y código de otra cuenta).
 - **La app:** en el inicio de sesión, "¿Olvidaste tu contraseña?" abre dos pasos (`RecoverPasswordForm`, `useRecoverPasswordForm`): la cuenta, y después el código y la contraseña nueva dos veces, con "Enviar un código nuevo" (espera de 60 s) y "Usar otra cuenta". Al terminar vuelve al inicio de sesión con un aviso. El mensaje tras pedir el código no afirma que la cuenta exista.
+
+## 23. Límite de intentos por cuenta y dirección
+
+Resumen de cómo se limitan las contraseñas adivinadas (la mecánica está en §6 y §18.3):
+
+| Nivel | Se cuenta | Umbral | Efecto | Se borra con |
+|---|---|---|---|---|
+| Dirección | Fallos seguidos de una cuenta desde una dirección (`login_failures`, un documento por cuenta y dirección) | 5 | Esa dirección queda bloqueada **para esa cuenta** 15 min (429 `auth.account_locked` con `Retry-After`) | Un login correcto desde esa dirección; cambiar o recuperar la contraseña; vence solo un día después (índice TTL) |
+| Cuenta | Fallos seguidos de la cuenta entre todas las direcciones (`users.failedLoginAttempts`) | 20 | La cuenta se bloquea para todas las direcciones 15 min | Un login correcto; cambiar o recuperar la contraseña |
+| Dirección (red) | Todas las peticiones de login | 10 por minuto | 429 `rate_limit.exceeded` | Pasa el minuto |
+
+- **La dirección** viene de `X-Forwarded-For` (último salto, como el resto del límite por IP), las IPv6 se agrupan por /64 y se guarda como HMAC con la clave de firma ligado a la cuenta (`login-address:` + dirección): la base de datos no guarda direcciones IP. Una petición sin dirección conocida cae en una cubeta común.
+- **Un intento de una dirección bloqueada** se rechaza antes de mirar la contraseña y **no se cuenta**: por eso una sola dirección nunca llega a los 20 de la cuenta.
+- **Los access tokens siguen durando 15 minutos y no se revocan antes** (decisión del 2026-11-05: revocarlos exigiría consultar la base en cada petición; el riesgo ya lo acota la vida corta y la rotación del refresh token; ver §18.4).
+- Pruebas: `LoginHandlerTests` y `ChangePasswordHandlerTests` (unitarias), `MongoLoginFailureRepositoryTests` (conteo paralelo, bloqueo, aislamiento por cuenta y dirección, índices), `ClientAddressTests` y `LoginLockoutApiTests` (de punta a punta: un extraño no bloquea al dueño, varias direcciones sí bloquean la cuenta, insistir bloqueado no la bloquea, IPv6 de la misma red, cambio de contraseña).
