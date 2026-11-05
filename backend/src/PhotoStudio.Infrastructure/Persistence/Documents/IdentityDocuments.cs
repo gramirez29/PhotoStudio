@@ -97,6 +97,42 @@ public sealed class EmailVerificationDocument
 }
 
 /// <summary>
+/// MongoDB data model of the code to choose a new password (collection <c>password_resets</c>). The document id is the user, so there
+/// is at most one code per user. Only a keyed hash of the code is stored.
+/// </summary>
+public sealed class PasswordResetDocument
+{
+    /// <summary>Gets or sets the user identifier, which is also the document identifier.</summary>
+    [BsonId]
+    [BsonGuidRepresentation(GuidRepresentation.Standard)]
+    public Guid UserId { get; set; }
+
+    /// <summary>Gets or sets the keyed hash of the code.</summary>
+    [BsonElement("codeHash")]
+    public string CodeHash { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the expiry instant (UTC); drives the retention index.</summary>
+    [BsonElement("expiresAt")]
+    public DateTime ExpiresAt { get; set; }
+
+    /// <summary>Gets or sets the instant the code was sent (UTC).</summary>
+    [BsonElement("sentAt")]
+    public DateTime SentAt { get; set; }
+
+    /// <summary>Gets or sets the wrong guesses counted so far.</summary>
+    [BsonElement("failedAttempts")]
+    public int FailedAttempts { get; set; }
+
+    /// <summary>Gets or sets the codes sent in the current window.</summary>
+    [BsonElement("sendCount")]
+    public int SendCount { get; set; }
+
+    /// <summary>Gets or sets the start of the current sending window (UTC).</summary>
+    [BsonElement("windowStartedAt")]
+    public DateTime WindowStartedAt { get; set; }
+}
+
+/// <summary>
 /// MongoDB data model of a refresh token. Only the hash of the secret is stored.
 /// </summary>
 public sealed class RefreshTokenDocument

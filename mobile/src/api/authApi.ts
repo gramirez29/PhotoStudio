@@ -38,5 +38,7 @@ export function createAuthApi(client: HttpClient): AuthApi {
     refresh: (refreshToken, signal) => client.post('/api/auth/refresh', { refreshToken }, parseAuthSession, signal),
     logout: (refreshToken, signal) =>
       client.post('/api/auth/logout', { refreshToken }, () => undefined, signal),
+    requestPasswordReset: (request, signal) => client.post('/api/auth/password-reset/request', request, () => undefined, signal),
+    confirmPasswordReset: (request, signal) => client.post('/api/auth/password-reset/confirm', request, () => undefined, signal),
   };
 }

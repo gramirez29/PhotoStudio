@@ -42,6 +42,22 @@ export interface EmailVerificationSentResponse {
   readonly expiresAt: string;
 }
 
+/** Body to ask for the code that lets a user who forgot their password choose a new one (backend `PasswordResetRequest`). */
+export interface PasswordResetRequest {
+  /** Username or email of the account. */
+  readonly identifier: string;
+}
+
+/** Body to choose a new password with the code that was sent to the email (backend `PasswordResetConfirmRequest`). */
+export interface PasswordResetConfirmRequest {
+  /** Username or email of the account. */
+  readonly identifier: string;
+  /** The six digits of the code. */
+  readonly code: string;
+  /** Password the user wants: 8 to 128 characters. */
+  readonly newPassword: string;
+}
+
 /** Body to change the password (backend `ChangePasswordRequest`). */
 export interface ChangePasswordRequest {
   /** Password the user has now. */

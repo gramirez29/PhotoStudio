@@ -1,5 +1,6 @@
 using PhotoStudio.Application.Identity.Login;
 using PhotoStudio.Application.Identity.Logout;
+using PhotoStudio.Application.Identity.RecoverPassword;
 using PhotoStudio.Application.Identity.RefreshSession;
 using PhotoStudio.Application.Identity.Register;
 
@@ -35,6 +36,20 @@ public sealed record RefreshRequest(string RefreshToken);
 public sealed record LogoutRequest(string RefreshToken);
 
 /// <summary>
+/// HTTP body to ask for the code that lets a user who forgot their password choose a new one.
+/// </summary>
+/// <param name="Identifier">Username or email of the account.</param>
+public sealed record PasswordResetRequest(string Identifier);
+
+/// <summary>
+/// HTTP body to choose a new password with the code that was sent to the email of the account.
+/// </summary>
+/// <param name="Identifier">Username or email of the account.</param>
+/// <param name="Code">The six digits of the code.</param>
+/// <param name="NewPassword">The password the user wants: 8 to 128 characters.</param>
+public sealed record PasswordResetConfirmRequest(string Identifier, string Code, string NewPassword);
+
+/// <summary>
 /// Maps the authentication request DTOs to application commands.
 /// </summary>
 public static class AuthRequestMappings
@@ -59,6 +74,28 @@ public static class AuthRequestMappings
     {
         ArgumentNullException.ThrowIfNull(request);
         return new LoginCommand(request.Username, request.Password);
+    }
+
+    /// <summary>
+    /// Maps the request for a password reset code to its command.
+    /// </summary>
+    /// <param name="request">HTTP body.</param>
+    /// <returns>The command.</returns>
+    public static RequestPasswordResetCommand ToCommand(this PasswordResetRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return new RequestPasswordResetCommand(request.Identifier);
+    }
+
+    /// <summary>
+    /// Maps the confirmation of a password reset to its command.
+    /// </summary>
+    /// <param name="request">HTTP body.</param>
+    /// <returns>The command.</returns>
+    public static ConfirmPasswordResetCommand ToCommand(this PasswordResetConfirmRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return new ConfirmPasswordResetCommand(request.Identifier, request.Code, request.NewPassword);
     }
 
     /// <summary>

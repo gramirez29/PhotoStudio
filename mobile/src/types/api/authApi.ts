@@ -1,4 +1,4 @@
-import type { AuthSessionResponse, RegisterRequest } from './auth';
+import type { AuthSessionResponse, PasswordResetConfirmRequest, PasswordResetRequest, RegisterRequest } from './auth';
 
 /** Authentication endpoints. They need no access token, so they use a client without session handling. */
 export interface AuthApi {
@@ -34,4 +34,21 @@ export interface AuthApi {
    * @returns A promise that resolves when the backend answered.
    */
   logout(refreshToken: string, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Asks for the code that lets a user who forgot their password choose a new one. The backend answers the same whether or not the
+   * account exists, and sends the code only to a verified email.
+   * @param request Username or email of the account.
+   * @param signal Optional signal to cancel the request.
+   * @returns A promise that resolves when the backend answered.
+   */
+  requestPasswordReset(request: PasswordResetRequest, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Chooses a new password with the code that was sent. Every session of the account is closed; nothing is signed in.
+   * @param request Account, code and new password.
+   * @param signal Optional signal to cancel the request.
+   * @returns A promise that resolves when the password was changed.
+   */
+  confirmPasswordReset(request: PasswordResetConfirmRequest, signal?: AbortSignal): Promise<void>;
 }

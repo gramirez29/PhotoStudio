@@ -3,6 +3,7 @@ import { createQueryWrapper } from '../../hooks/__fixtures__/queryWrapper';
 import { AuthPanel } from '../AuthPanel';
 
 jest.mock('../../session/sessionManager', () => ({ signIn: jest.fn(), register: jest.fn() }));
+jest.mock('../../api/authClient', () => ({ authApi: { requestPasswordReset: jest.fn(), confirmPasswordReset: jest.fn() } }));
 
 describe('AuthPanel', () => {
   const { client, Wrapper } = createQueryWrapper();
@@ -54,5 +55,34 @@ describe('AuthPanel', () => {
     expect(screen.getByText('Escribe tu nombre.')).toBeTruthy();
     expect(screen.getByText('Escribe tu correo.')).toBeTruthy();
     expect(screen.getByText('Escribe un teléfono válido (8 dígitos o con código de país).')).toBeTruthy();
+  });
+
+  it('offers to recover a forgotten password and shows its first step', () => {
+    render(<AuthPanel />, { wrapper: Wrapper });
+
+    fireEvent.press(screen.getByText('¿Olvidaste tu contraseña?'));
+
+    expect(screen.getByText('Recupera el acceso a tu cuenta.')).toBeTruthy();
+    expect(screen.getByLabelText('Usuario o correo')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Enviar código' })).toBeTruthy();
+    expect(screen.queryByLabelText('Contraseña')).toBeNull();
+  });
+
+  it('goes back to the login from the recovery', () => {
+    render(<AuthPanel />, { wrapper: Wrapper });
+    fireEvent.press(screen.getByText('¿Olvidaste tu contraseña?'));
+
+    fireEvent.press(screen.getByText('Volver a iniciar sesión'));
+
+    expect(screen.getByRole('button', { name: 'Iniciar sesión' })).toBeTruthy();
+    expect(screen.queryByLabelText('Usuario o correo')).toBeNull();
+  });
+
+  it('does not offer the recovery on the account creation form', () => {
+    render(<AuthPanel />, { wrapper: Wrapper });
+
+    fireEvent.press(screen.getByText('¿No tienes cuenta? Crear cuenta'));
+
+    expect(screen.queryByText('¿Olvidaste tu contraseña?')).toBeNull();
   });
 });
