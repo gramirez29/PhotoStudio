@@ -62,6 +62,9 @@ public static class ApplicationErrorCodes
     /// <summary>The code to verify the email of an account is wrong, expired or spent (the response never says which).</summary>
     public const string InvalidEmailCode = "auth.invalid_email_code";
 
+    /// <summary>The code to choose a new password is wrong, expired or spent, or the account cannot recover its password (the response never says which).</summary>
+    public const string InvalidPasswordResetCode = "auth.invalid_reset_code";
+
     /// <summary>The email of the account was already verified, so there is nothing to send.</summary>
     public const string EmailAlreadyVerified = "auth.email_already_verified";
 

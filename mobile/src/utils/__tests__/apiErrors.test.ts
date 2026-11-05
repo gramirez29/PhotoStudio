@@ -12,6 +12,8 @@ import {
   resendEmailCodeErrorMessage,
   verifyEmailErrorMessage,
   changeEmailErrorMessage,
+  confirmPasswordResetErrorMessage,
+  requestPasswordResetErrorMessage,
 } from '../apiErrors';
 
 describe('loginErrorMessage', () => {
@@ -201,6 +203,30 @@ describe('resendEmailCodeErrorMessage', () => {
   it('explains a lost connection and an error nobody planned for', () => {
     expect(resendEmailCodeErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
     expect(resendEmailCodeErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo enviar el código/);
+  });
+});
+
+describe('requestPasswordResetErrorMessage', () => {
+  it('explains the rate limit, a lost connection and anything else', () => {
+    expect(requestPasswordResetErrorMessage(new ApiError(429, 'x', 'rate_limit.exceeded'))).toMatch(/demasiadas solicitudes/);
+    expect(requestPasswordResetErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(requestPasswordResetErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo enviar la solicitud/);
+  });
+});
+
+describe('confirmPasswordResetErrorMessage', () => {
+  it.each([
+    ['auth.invalid_reset_code', /El código no es correcto o ya venció/],
+    ['user.weak_password', /entre 8 y 128 caracteres/],
+    ['concurrency.conflict', /cambió mientras la editabas/],
+    ['rate_limit.exceeded', /Espera un minuto/],
+  ])('explains %s', (code, message) => {
+    expect(confirmPasswordResetErrorMessage(new ApiError(422, 'x', code))).toMatch(message);
+  });
+
+  it('explains a lost connection and an error nobody planned for', () => {
+    expect(confirmPasswordResetErrorMessage(new Error('offline'))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(confirmPasswordResetErrorMessage(new ApiError(500, 'x', null))).toMatch(/No se pudo cambiar la contraseña/);
   });
 });
 

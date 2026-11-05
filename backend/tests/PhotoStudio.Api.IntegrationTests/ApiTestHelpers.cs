@@ -29,6 +29,16 @@ internal static class ApiTestHelpers
         client.PostAsJsonAsync("/api/auth/login", new { username, password }, TestContext.Current.CancellationToken);
 
     /// <summary>
+    /// Posts a JSON body without credentials, as the endpoints of someone who is not signed in are called.
+    /// </summary>
+    /// <param name="client">HTTP client.</param>
+    /// <param name="path">Path of the endpoint.</param>
+    /// <param name="body">Object sent as the JSON body.</param>
+    /// <returns>The response.</returns>
+    public static Task<HttpResponseMessage> PostJsonAsync(this HttpClient client, string path, object body) =>
+        client.PostAsJsonAsync(path, body, TestContext.Current.CancellationToken);
+
+    /// <summary>
     /// Signs in with the right credentials and returns the session.
     /// </summary>
     /// <param name="client">HTTP client.</param>

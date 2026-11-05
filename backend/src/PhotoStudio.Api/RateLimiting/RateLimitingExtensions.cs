@@ -27,6 +27,12 @@ public static class RateLimitingExtensions
     public const string RegisterPolicy = "register";
 
     /// <summary>
+    /// Name of the policy of the endpoint that sends the code to choose a new password: 8 requests per hour per client address. It
+    /// sends an email to an address that is not the caller's, so it is as strict as the sign-up.
+    /// </summary>
+    public const string PasswordResetPolicy = "password-reset";
+
+    /// <summary>
     /// Name of the policy of the portal endpoint that reads a booking: 60 calls per minute per client address.
     /// </summary>
     public const string PortalReadPolicy = "portal-read";
@@ -83,6 +89,14 @@ public static class RateLimitingExtensions
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 5,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                }));
+            options.AddPolicy(PasswordResetPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 8,
                     Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
                 }));

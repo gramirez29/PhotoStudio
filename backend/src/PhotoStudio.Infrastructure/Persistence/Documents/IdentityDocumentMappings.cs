@@ -57,6 +57,44 @@ public static class IdentityDocumentMappings
     }
 
     /// <summary>
+    /// Maps the code to choose a new password to its document.
+    /// </summary>
+    /// <param name="code">Record to map.</param>
+    /// <returns>The document.</returns>
+    public static PasswordResetDocument ToDocument(this PasswordResetCode code)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+        return new PasswordResetDocument
+        {
+            UserId = code.UserId,
+            CodeHash = code.CodeHash,
+            ExpiresAt = code.ExpiresAt.UtcDateTime,
+            SentAt = code.SentAt.UtcDateTime,
+            FailedAttempts = code.FailedAttempts,
+            SendCount = code.SendCount,
+            WindowStartedAt = code.WindowStartedAt.UtcDateTime,
+        };
+    }
+
+    /// <summary>
+    /// Maps a document of the code to choose a new password to the domain record.
+    /// </summary>
+    /// <param name="document">Document to map.</param>
+    /// <returns>The record.</returns>
+    public static PasswordResetCode ToDomain(this PasswordResetDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return new PasswordResetCode(
+            document.UserId,
+            document.CodeHash,
+            ToOffset(document.ExpiresAt),
+            ToOffset(document.SentAt),
+            document.FailedAttempts,
+            document.SendCount,
+            ToOffset(document.WindowStartedAt));
+    }
+
+    /// <summary>
     /// Maps the code that verifies an email to its document.
     /// </summary>
     /// <param name="verification">Record to map.</param>

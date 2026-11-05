@@ -42,6 +42,16 @@ public sealed class MongoUserRepository(IMongoDatabase database) : IUserReposito
     }
 
     /// <inheritdoc />
+    public async Task<User?> GetByEmailAsync(string normalizedEmail, CancellationToken cancellationToken)
+    {
+        var document = await _collection
+            .Find(user => user.Email == normalizedEmail)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return document?.ToDomain();
+    }
+
+    /// <inheritdoc />
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var document = await _collection

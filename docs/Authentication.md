@@ -516,7 +516,7 @@ Si la API no arranca con `'JWT_SIGNING_KEY' is the development key`, copiaste la
 
 **Detrás del proxy de Railway:** la API usa `X-Forwarded-For` para saber la IP real del cliente (necesaria para los límites por IP); ya está configurado.
 
-> **Si olvidas tu contraseña no hay recuperación automática** (no hay correo configurado). Opciones: crear otra cuenta y pasarle tus reservas con `migrate-tenant.js` (`fromId` = tu `users._id` anterior), o, con acceso a Mongo, borrar tu documento de `users` y volver a registrarte. Es una limitación asumida; ver §18.
+> **Si olvidas tu contraseña**, usa "¿Olvidaste tu contraseña?" en la app (§22); funciona solo si el correo de la cuenta está verificado. Para una cuenta sin correo verificado no hay recuperación automática. Opciones: crear otra cuenta y pasarle tus reservas con `migrate-tenant.js` (`fromId` = tu `users._id` anterior), o, con acceso a Mongo, borrar tu documento de `users` y volver a registrarte. Es una limitación asumida; ver §18.
 
 ---
 
@@ -576,16 +576,16 @@ App (`cd mobile && npm run verify`): `forms/__tests__/registerForm.test.ts` y `l
 
 ## 18. Límites conocidos y siguientes pasos
 
-1. **Sin recuperación de contraseña.** El correo de la cuenta ya se verifica con un código (§20), así que ya hay una dirección en la que apoyarla, pero el flujo de recuperación todavía no existe. El teléfono se pide y se guarda, pero **no se verifica**.
+1. ~~**Sin recuperación de contraseña.**~~ **Resuelta** (§22), solo para cuentas con el correo verificado. El teléfono se pide y se guarda, pero **no se verifica**.
 2. ~~**`/api/maintenance/run` es trabajo global**~~ **Resuelto:** exige el rol de sistema (§19). Queda que el rol es un booleano en el usuario, sin gestión de roles más fina.
 3. **Un atacante que conozca tu usuario puede bloquearte** el login 15 minutos enviando contraseñas malas (el bloqueo es por usuario). Mitigación futura: bloquear por (usuario, IP) o retardos progresivos.
 4. **El access token no se puede revocar antes de tiempo** (hasta 15 min tras cerrar sesión). Es el precio de no consultar la base en cada petición.
 5. **La IP real depende de `X-Forwarded-For`.** Se confía en el último salto del proxy; si el contenedor fuera alcanzable sin pasar por Railway, alguien podría falsear la IP y evitar los límites *por IP* (no el bloqueo de usuario).
-6. ~~**Sin cambio de contraseña desde la app.**~~ **Resuelto** (§19). Sigue sin haber *recuperación* de contraseña si se olvida (necesita correo verificado).
+6. ~~**Sin cambio de contraseña desde la app.**~~ **Resuelto** (§19). La *recuperación* si se olvida se resolvió en §22.
 7. **Un usuario = un fotógrafo = un tenant.** Para estudios con varios fotógrafos habría que separar "cuenta" de "tenant" y añadir roles.
 8. **Cerrar sesión sin conexión** deja vivo el refresh token en el servidor hasta que expire (30 días), aunque el teléfono ya lo olvidó.
 9. **Rotar `JWT_SIGNING_KEY`** invalida los access tokens vigentes (la app los renueva sola); no invalida los refresh tokens.
-10. ~~**Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.~~ **Resuelto** en el backend con un mecanismo aparte (token de enlace guardado como hash y código por correo; ver `ClientPortal.md`). La verificación de correo y la recuperación de contraseña **del fotógrafo** siguen pendientes (punto 1).
+10. ~~**Pendiente (otro mecanismo):** acceso del **cliente** al portal con token de enlace (guardado como hash) y OTP.~~ **Resuelto** en el backend con un mecanismo aparte (token de enlace guardado como hash y código por correo; ver `ClientPortal.md`). La verificación de correo (§20) y la recuperación de contraseña (§22) **del fotógrafo** ya están hechas.
 
 ---
 
@@ -655,7 +655,7 @@ Quien se equivoca al escribir el correo al registrarse no recibe el código y, s
 5. Envía el código nuevo **a la dirección nueva**; el registro del código se reemplaza, así que el código enviado a la dirección equivocada deja de servir. No toca sesiones: el token no lleva el correo.
 
 También sirve a una cuenta antigua sin correo: puede ponerse uno y verificarlo. La app lo ofrece en la pantalla de verificación ("¿Te equivocaste de correo? Cámbialo", con la dirección actual para editar). Pruebas: `ChangeUnverifiedEmailHandlerTests` (9) y 4 de punta a punta en `EmailVerificationApiTests`.
-- **Recuperación de contraseña** sigue pendiente, pero ahora ya hay un correo verificado en el que apoyarla.
+- La recuperación de contraseña se apoya en este correo verificado (§22).
 
 ## 21. La web del fotógrafo (cookie y segundo factor)
 
@@ -710,5 +710,40 @@ Colecciones `studio_sessions`, `studio_devices` y `studio_challenges` (esta con 
 ### 21.7 Lo que no se hizo
 - Ver o cerrar desde la app las sesiones web abiertas.
 - App autenticadora (TOTP): el segundo factor es el correo, que protege contra la contraseña robada pero no contra el correo robado.
-- Recuperación de contraseña (no existe tampoco para la app).
+- Recuperación de contraseña desde la web: la recuperación existe en la app (§22) y la web no tiene su propia pantalla.
 - El correo con el código es de texto simple, sin la imagen de marca; lo unificará el PR de los correos de la galería.
+
+## 22. Recuperar una contraseña olvidada
+
+Quien olvidó su contraseña elige una nueva con un **código de 6 dígitos que llega al correo verificado de la cuenta**. Son dos endpoints públicos (`/api/auth/*`, sin token):
+
+### 22.1 Pedir el código: `POST /api/auth/password-reset/request`
+
+Cuerpo `{ identifier }` (usuario **o** correo; un `@` lo hace correo). Responde **siempre 202 sin cuerpo**, exista o no la cuenta, tenga o no el correo verificado, se haya enviado o no el correo, esté o no en espera. Así no sirve para averiguar qué usuarios o correos están registrados. Solo se envía si:
+
+- la cuenta existe **y su correo está verificado** (una dirección que nadie probó no prueba quién es la persona: quien escribió mal su correo en el registro no puede recuperar por ahí, y por eso §20 permite corregirlo);
+- no se envió otro código hace menos de un minuto ni van cinco en la última hora (los mismos límites que el código de verificación, **en silencio**: un 429 aquí diría que la cuenta existe).
+
+Un fallo del proveedor de correo se registra como advertencia y tampoco se le dice a quien llama (un fallo que solo ocurre con cuentas reales las delataría). Además hay un límite **por dirección IP: 8 solicitudes por hora** (`PasswordResetPolicy`, 429 `rate_limit.exceeded`), porque el endpoint envía correo a una dirección que no es la de quien llama.
+
+### 22.2 Elegir la contraseña: `POST /api/auth/password-reset/confirm`
+
+Cuerpo `{ identifier, code, newPassword }` → **204**. El orden importa:
+
+1. Valida la contraseña nueva (8 a 128 caracteres, 422 `user.weak_password`) y que el código sean 6 dígitos, **antes** de contar ningún intento: una contraseña corta no gasta una oportunidad.
+2. Busca la cuenta con la misma regla de arriba. Cuenta desconocida, sin correo verificado, sin código, código vencido, gastado o equivocado → **el mismo 422 `auth.invalid_reset_code`**, que no dice cuál fue la causa.
+3. Cuenta el intento con un `$inc` atómico **antes** de comparar; el quinto intento fallido borra el código. Un código sirve una sola vez y vive 10 minutos.
+4. Cambia el hash con `ChangePasswordAsync` condicionado al hash que se leyó (dos confirmaciones simultáneas no se pisan; la segunda recibe 409 `concurrency.conflict`). Eso también **limpia el contador de fallos y el bloqueo de 15 minutos** del login: recuperar la cuenta quita el bloqueo (y es la salida para quien olvidó su contraseña y se bloqueó probándolas).
+5. Borra el código, **revoca todos los refresh tokens**, corta la web del fotógrafo (sesiones, navegadores recordados y código pendiente) y envía un **aviso por correo** de que la contraseña cambió ("si no fuiste tú…"; si falla, se registra y no se deshace nada).
+
+**No inicia sesión**: no devuelve ninguna sesión; la persona entra con la contraseña nueva. Los access tokens ya emitidos siguen valiendo hasta 15 minutos (§18.4).
+
+### 22.3 Decisiones y límites
+
+- **Colección propia `password_resets`** (un documento por usuario, índice TTL de 1 hora tras vencer) y hash HMAC del código con el prefijo `password-reset:`, aparte del código de verificación del correo: un código hecho para un fin no sirve para el otro.
+- 1 000 000 de códigos posibles con 5 intentos por código y 5 códigos por hora y cuenta (25 intentos por hora): la probabilidad de acertar a ciegas es del orden de 0,0025 % por hora, y cada pedido de código le llega al dueño real del correo.
+- Quien conozca el usuario o el correo de otra persona puede **hacerle llegar hasta 5 correos por hora** con el código (es el costo de no revelar si la cuenta existe); no puede usarlos sin el correo.
+- Si alguien controla el correo de la cuenta, controla la cuenta: es el modelo de casi toda recuperación por correo. El aviso de "tu contraseña cambió" existe para que el dueño lo note.
+- **Cuentas con el correo sin verificar** no pueden recuperar por correo. Con `AUTH_EMAIL_VERIFICATION_REQUIRED=false` hay cuentas que usan la app sin verificar, y esas tampoco: se sigue necesitando un operador (§14).
+- Pruebas: `PasswordResetCodeTests` (dominio), `PasswordRecoveryHandlerTests` (27 casos) y `PasswordRecoveryApiTests` (9, de punta a punta: flujo completo, código de un solo uso, cuenta inexistente que responde igual, cuenta sin verificar, cinco intentos, contraseña débil, espera, desbloqueo y código de otra cuenta).
+- **La app:** en el inicio de sesión, "¿Olvidaste tu contraseña?" abre dos pasos (`RecoverPasswordForm`, `useRecoverPasswordForm`): la cuenta, y después el código y la contraseña nueva dos veces, con "Enviar un código nuevo" (espera de 60 s) y "Usar otra cuenta". Al terminar vuelve al inicio de sesión con un aviso. El mensaje tras pedir el código no afirma que la cuenta exista.

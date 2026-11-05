@@ -319,6 +319,46 @@ export function resendEmailCodeErrorMessage(error: Error): string {
 }
 
 /**
+ * Converts the error of a failed request for the code to choose a new password into a message for the user. The backend never says
+ * whether the account exists, so there is nothing to say about that.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function requestPasswordResetErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  return error.code === 'rate_limit.exceeded'
+    ? 'Hiciste demasiadas solicitudes. Espera un rato e inténtalo de nuevo.'
+    : 'No se pudo enviar la solicitud. Inténtalo de nuevo.';
+}
+
+/**
+ * Converts the error of a failed change of password by code into a message for the user.
+ * @param error Error of the mutation.
+ * @returns The message in Spanish.
+ */
+export function confirmPasswordResetErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) {
+    return NETWORK_ERROR_MESSAGE;
+  }
+
+  switch (error.code) {
+    case 'auth.invalid_reset_code':
+      return 'El código no es correcto o ya venció. Revísalo en tu correo o pide uno nuevo.';
+    case 'user.weak_password':
+      return 'La contraseña debe tener entre 8 y 128 caracteres.';
+    case 'concurrency.conflict':
+      return 'La contraseña cambió mientras la editabas. Inténtalo de nuevo.';
+    case 'rate_limit.exceeded':
+      return 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    default:
+      return 'No se pudo cambiar la contraseña. Inténtalo de nuevo.';
+  }
+}
+
+/**
  * Converts the error of a failed correction of the email of the account into a message for the user.
  * @param error Error of the mutation.
  * @returns The message in Spanish.

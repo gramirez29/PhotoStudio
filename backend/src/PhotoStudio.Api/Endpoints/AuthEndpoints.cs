@@ -4,6 +4,7 @@ using PhotoStudio.Application.Abstractions;
 using PhotoStudio.Application.Identity;
 using PhotoStudio.Application.Identity.Login;
 using PhotoStudio.Application.Identity.Logout;
+using PhotoStudio.Application.Identity.RecoverPassword;
 using PhotoStudio.Application.Identity.RefreshSession;
 using PhotoStudio.Application.Identity.Register;
 
@@ -30,6 +31,8 @@ public static class AuthEndpoints
         group.MapPost("/login", LoginAsync).WithName("Login").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
         group.MapPost("/refresh", RefreshAsync).WithName("RefreshSession").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
         group.MapPost("/logout", LogoutAsync).WithName("Logout").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
+        group.MapPost("/password-reset/request", RequestPasswordResetAsync).WithName("RequestPasswordReset").RequireRateLimiting(RateLimitingExtensions.PasswordResetPolicy);
+        group.MapPost("/password-reset/confirm", ConfirmPasswordResetAsync).WithName("ConfirmPasswordReset").RequireRateLimiting(RateLimitingExtensions.AuthPolicy);
 
         return endpoints;
     }
@@ -59,6 +62,39 @@ public static class AuthEndpoints
         ICommandHandler<LoginCommand, AuthSessionResponse> handler,
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await handler.HandleAsync(request.ToCommand(), cancellationToken));
+
+    /// <summary>
+    /// Sends the code to choose a new password to the verified email of the account, if there is one. The answer is the same whether
+    /// or not the account exists, so it does not reveal which usernames or emails are registered.
+    /// </summary>
+    /// <param name="request">What the user remembers of the account.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>202 with no content; 429 when the rate limit is hit.</returns>
+    private static async Task<Accepted> RequestPasswordResetAsync(
+        PasswordResetRequest request,
+        ICommandHandler<RequestPasswordResetCommand, PasswordResetRequestedResponse> handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(request.ToCommand(), cancellationToken);
+        return TypedResults.Accepted((string?)null);
+    }
+
+    /// <summary>
+    /// Chooses a new password with the code that was sent. Every session of the account is closed; the user signs in again.
+    /// </summary>
+    /// <param name="request">Account, code and new password.</param>
+    /// <param name="handler">Command handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>204 with no content; 422 <c>auth.invalid_reset_code</c> when the code is not accepted, or <c>user.weak_password</c>; 429 when the rate limit is hit.</returns>
+    private static async Task<NoContent> ConfirmPasswordResetAsync(
+        PasswordResetConfirmRequest request,
+        ICommandHandler<ConfirmPasswordResetCommand, PasswordResetResponse> handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(request.ToCommand(), cancellationToken);
+        return TypedResults.NoContent();
+    }
 
     /// <summary>
     /// Exchanges a refresh token for a new session. The refresh token is single-use: the response carries its replacement.

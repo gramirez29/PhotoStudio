@@ -237,6 +237,13 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             Builders<EmailVerificationDocument>.IndexKeys.Ascending(verification => verification.ExpiresAt),
             new CreateIndexOptions { Name = "ix_email_verification_retention", ExpireAfter = TimeSpan.FromHours(1) });
 
+        var passwordResets = database.GetCollection<PasswordResetDocument>(MongoPasswordResetRepository.CollectionName);
+
+        // Removes the code to choose a new password an hour after it expires, like the other short-lived codes.
+        var passwordResetRetentionIndex = new CreateIndexModel<PasswordResetDocument>(
+            Builders<PasswordResetDocument>.IndexKeys.Ascending(code => code.ExpiresAt),
+            new CreateIndexOptions { Name = "ix_password_reset_retention", ExpireAfter = TimeSpan.FromHours(1) });
+
         var pushDevices = database.GetCollection<PushDeviceDocument>(MongoPushDeviceRepository.CollectionName);
 
         // Serves the push: the phones of a photographer. The token is the document id, so it is unique without an index.
@@ -249,6 +256,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             await links.Indexes.CreateManyAsync([linkHashIndex, linkBookingIndex, linkRetentionIndex], cancellationToken: cancellationToken);
             await portalOtps.Indexes.CreateManyAsync([otpRetentionIndex], cancellationToken: cancellationToken);
             await emailVerifications.Indexes.CreateManyAsync([emailVerificationRetentionIndex], cancellationToken: cancellationToken);
+            await passwordResets.Indexes.CreateManyAsync([passwordResetRetentionIndex], cancellationToken: cancellationToken);
             await pushDevices.Indexes.CreateManyAsync([pushPhotographerIndex], cancellationToken: cancellationToken);
             await bookings.Indexes.CreateManyAsync([photographerSlotIndex, photographerCreatedIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);

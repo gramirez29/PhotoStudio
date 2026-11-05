@@ -21,6 +21,14 @@ public interface IUserRepository
     Task<User?> GetByUsernameAsync(string normalizedUsername, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Loads a user by its normalized email.
+    /// </summary>
+    /// <param name="normalizedEmail">Email already trimmed and in lower case.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The user, or <see langword="null"/> when no user uses that email.</returns>
+    Task<User?> GetByEmailAsync(string normalizedEmail, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Loads a user by its identifier.
     /// </summary>
     /// <param name="id">Photographer identifier.</param>

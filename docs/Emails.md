@@ -8,6 +8,8 @@ Todos los correos que envía PhotoSense Studio tienen **la misma apariencia**: b
 |---|---|---|---|
 | Código de verificación | Cliente | Tu código de verificación de PhotoSense Studio | Pide el código en su enlace (`/b/{token}`): firmar, pagar, ver sus fotos |
 | Verifica tu correo | Fotógrafo | Verifica tu correo de PhotoSense Studio | Al crear la cuenta |
+| Cambia tu contraseña | Fotógrafo | Código para cambiar tu contraseña de PhotoSense Studio | Pide recuperar la contraseña (solo si el correo está verificado) |
+| Tu contraseña cambió | Fotógrafo | Tu contraseña de PhotoSense Studio cambió | Al elegir la contraseña nueva con el código |
 | Código para entrar | Fotógrafo | Tu código para entrar a PhotoSense Studio | Segundo factor del inicio de sesión en `/studio` |
 | Contrato firmado | Cliente | Tu contrato firmado con PhotoSense Studio | Al firmar: el texto exacto que firmó |
 | Pruebas listas | Cliente | Tus fotos de prueba ya están listas | Al publicar las pruebas |
