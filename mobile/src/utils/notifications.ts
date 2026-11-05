@@ -32,6 +32,13 @@ export function describeNotification(notification: NotificationResponse): Notifi
     };
   }
 
+  if (notification.type === 'DeliveryDeadlineApproaching' && notification.deliveryDeadline !== null) {
+    return {
+      title: 'Entrega próxima',
+      detail: `Las fotos de ${notification.clientName} (${notification.packageName}) deben entregarse antes del ${formatDate(new Date(notification.deliveryDeadline))}.`,
+    };
+  }
+
   if (notification.type === 'GalleryArchiveDue') {
     return {
       title: 'Galería lista para liberar',

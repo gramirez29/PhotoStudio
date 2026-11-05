@@ -26,7 +26,8 @@ export function NotificationListItem({
   const unread = notification.readAt === null;
   const isProof = notification.type === 'PaymentProofSubmitted';
   const isArchive = notification.type === 'GalleryArchiveDue';
-  const opensBooking = isProof || isArchive;
+  const isDeadline = notification.type === 'DeliveryDeadlineApproaching';
+  const opensBooking = isProof || isArchive || isDeadline;
 
   return (
     <AppCard style={[styles.card, unread && styles.unreadCard]}>

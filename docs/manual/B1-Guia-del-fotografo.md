@@ -188,6 +188,7 @@ Las fotos de una galería ocupan espacio en la nube. Cuando ya tienes todo respa
 - **En la web** puedes **Descargar a una carpeta** (Chrome o Edge): eliges una carpeta y se guardan los finales, comprobando que cada archivo llegó con el tamaño correcto. El botón de liberar aparece solo después de una descarga sin fallos, o si marcas "Ya tengo estas fotos respaldadas".
 - **Liberar espacio** pide confirmación y **borra de forma definitiva** pruebas, miniaturas, finales y ZIP. La galería queda **archivada** y el cliente ya no puede descargar. No se puede deshacer.
 - **Aviso:** a los **90 días** de entregada te llega **un** aviso "Galería lista para liberar" (no se repite).
+- **Plazo de entrega:** tienes **21 días** (por defecto) desde que el cliente envía su selección para publicar las fotos finales. **3 días antes** te llega el aviso **"Entrega próxima"** con la fecha; si ya las publicaste, no llega. Es un recordatorio tuyo: no cobra ni penaliza nada, y no figura en el contrato.
 - **Automático:** si nunca la liberas, a los **180 días** se archiva sola.
 
 ## 13. Cosas que NO hace la app (todavía)

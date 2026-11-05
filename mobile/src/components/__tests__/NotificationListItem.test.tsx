@@ -20,6 +20,7 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
     proofAmount: null,
     selectedPhotos: null,
     extraPhotos: null,
+    deliveryDeadline: null,
     deliveredAt: '2026-10-16T21:00:00+00:00',
     readAt: null,
     ...overrides,
@@ -88,5 +89,25 @@ describe('NotificationListItem', () => {
 
     expect(screen.getByText('Saldo pendiente')).toBeTruthy();
     expect(screen.getByText(/debe ₡/)).toBeTruthy();
+  });
+
+  it('offers to open the booking and its gallery, not to message the client, in a delivery deadline notice', () => {
+    const onOpenBooking = jest.fn();
+    const onSendWhatsApp = jest.fn();
+    render(
+      <NotificationListItem
+        notification={notification({ type: 'DeliveryDeadlineApproaching', deliveryDeadline: '2026-11-20T20:00:00+00:00' })}
+        onSendWhatsApp={onSendWhatsApp}
+        onOpenBooking={onOpenBooking}
+        onMarkRead={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Entrega próxima')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Enviar por WhatsApp' })).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Abrir la reserva y su galería' }));
+
+    expect(onOpenBooking).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1' }));
+    expect(onSendWhatsApp).not.toHaveBeenCalled();
   });
 });

@@ -26,6 +26,7 @@ function notification(overrides: Partial<NotificationResponse> = {}): Notificati
     proofAmount: null,
     selectedPhotos: null,
     extraPhotos: null,
+    deliveryDeadline: null,
     deliveredAt: '2026-10-16T21:00:00+00:00',
     readAt: null,
     ...overrides,
@@ -55,6 +56,22 @@ describe('the notice of a selection', () => {
     expect(message).toContain('Hola María');
     expect(message).toContain('recibí tu selección de 12 fotos (2 extra)');
     expect(message).toContain('Ya empiezo con la edición');
+  });
+});
+
+describe('the notice of the delivery deadline', () => {
+  const deadline = notification({ type: 'DeliveryDeadlineApproaching', deliveryDeadline: '2026-11-20T20:00:00+00:00' });
+
+  it('says whose photos are due and by when', () => {
+    const text = describeNotification(deadline);
+
+    expect(text.title).toBe('Entrega próxima');
+    expect(text.detail).toContain('Las fotos de María Pérez Solano (Retrato Familiar) deben entregarse antes del');
+    expect(text.detail).toContain('2026');
+  });
+
+  it('falls back to the plain reminder wording when the backend sent no deadline', () => {
+    expect(describeNotification(notification({ type: 'DeliveryDeadlineApproaching', deliveryDeadline: null })).title).toBe('Sesión próxima');
   });
 });
 

@@ -15,6 +15,7 @@ const reminder = {
   proofAmount: null,
   selectedPhotos: null,
   extraPhotos: null,
+  deliveryDeadline: null,
   deliveredAt: '2026-10-16T21:00:00+00:00',
   readAt: null,
 } as const;
@@ -35,6 +36,11 @@ describe('parseNotification', () => {
   });
 
   it('parses a selection notice with its counts', () => {
+    expect(parseNotification({ ...reminder, type: 'DeliveryDeadlineApproaching', deliveryDeadline: '2026-11-20T20:00:00+00:00' })).toMatchObject({
+      type: 'DeliveryDeadlineApproaching',
+      deliveryDeadline: '2026-11-20T20:00:00+00:00',
+    });
+    expect(parseNotification(reminder).deliveryDeadline).toBeNull();
     expect(parseNotification({ ...reminder, type: 'SelectionSubmitted', selectedPhotos: 12, extraPhotos: 2 })).toMatchObject({
       type: 'SelectionSubmitted',
       selectedPhotos: 12,

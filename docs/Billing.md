@@ -10,16 +10,18 @@ Salen de `CLAUDE.md` §8.11 y §8.13 (defaults de la política). Las calcula `Se
 
 | Cómo terminó la reserva | Se retiene | Se devuelve |
 |---|---|---|
-| Cancela el **fotógrafo** (en cualquier estado) | Nada | Todo lo pagado |
+| Cancela el **fotógrafo** (en cualquier estado) | Nada (con la política por defecto) | Todo lo pagado (`PhotographerCancellationRefund`, 100 %) |
 | Cancela el cliente una reserva **tentativa** | Nada | Todo lo pagado |
 | Cancela el cliente una reserva **confirmada** con aviso ≥ `FreeCancellationWindowHours` (72 h) | Nada | Todo lo pagado |
-| Cancela el cliente una reserva **confirmada** con menos aviso | El anticipo (100 %) | Lo pagado por encima del anticipo |
+| Cancela el cliente una reserva **confirmada** con menos aviso | El anticipo × `LateCancellationRetention` (100 %) | Lo pagado menos lo retenido |
 | La reserva **vence** (`Expired`) con dinero pagado | Nada | Todo lo pagado |
-| El cliente **no se presenta** (`ClientAbsent`) | El anticipo (100 %) | Lo pagado por encima del anticipo |
+| El cliente **no se presenta** (`ClientAbsent`) | El anticipo × `ClientAbsentRetention` (100 %) | Lo pagado menos lo retenido |
 | Se **revierte** la ausencia (vuelve a `Confirmed`) | Se anula la retención | Un reembolso aún pendiente se anula |
 
 - "Anticipo" = `PackagePrice × DepositPercentage` de la política congelada en la reserva; nunca se retiene más de lo que se pagó.
-- Los porcentajes de retención (100 %) son constantes de `SettlementCalculator` (`LateCancellationRetention`, `ClientAbsentRetention`); a futuro serán configurables por fotógrafo.
+- **Los porcentajes salen de la política congelada en la reserva** (`BookingPolicy`, ver `CLAUDE.md` §8.11), no de constantes: `LateCancellationRetention` y `ClientAbsentRetention` (parte del **anticipo** que se retiene, 0 a 1) y `PhotographerCancellationRefund` (parte de **todo lo pagado** que se devuelve si cancela el fotógrafo, 0 a 1). Valen 100 % por defecto, se configuran con `BOOKING_LATE_CANCELLATION_RETENTION`, `BOOKING_CLIENT_ABSENT_RETENTION` y `BOOKING_PHOTOGRAPHER_CANCELLATION_REFUND` (decimales con punto: `0.5`), y cambiarlos **no afecta a las reservas ya creadas**. Las reservas guardadas antes de esto no tienen los valores y se leen con los 100 % que siempre se aplicaron, así que su liquidación no cambia.
+- **El contrato lo dice igual:** las cláusulas 5 y 6 se arman con esos valores (`ContractRenderer`). Con los valores por defecto el texto es palabra por palabra el de siempre; con otros dice, por ejemplo, "retiene el 50% del adelanto y devuelve todo lo demás que haya pagado", o frases separadas si cancelar tarde y no presentarse retienen distinto.
+- **Que el fotógrafo devuelva menos del 100 % al cancelar es posible pero poco defendible** (se queda con dinero de una sesión que no hizo): el sistema lo permite porque es política suya y queda escrito en el contrato, pero no es un valor que recomendemos.
 - Una reserva que terminó **sin dinero pagado** no genera liquidación.
 - `Completed` no se liquida: cancelar después de completar no existe (disputas = reembolso manual, decisión abierta §8.13-5).
 
@@ -81,4 +83,4 @@ Una liquidación aparece cuando el outbox entrega el evento: normalmente en segu
 - La app registra que devolviste el dinero; **no mueve dinero**. La transferencia la haces tú por SINPE o en efectivo.
 - Las cancelaciones del cliente no se pueden hacer todavía desde la app (llegarán con el portal), así que hoy los casos de retención llegan por **cliente ausente**; la retención por cancelación tardía está implementada y probada en el dominio.
 - No hay aviso en la bandeja cuando aparece un reembolso; el botón rojo del inicio cumple ese papel. Un `NotificationType.RefundDue` sería el siguiente paso natural.
-- Porcentajes de retención fijos (100 %); un reembolso ya completado no se corrige si luego se revierte la ausencia.
+- Un reembolso ya completado no se corrige si luego se revierte la ausencia.

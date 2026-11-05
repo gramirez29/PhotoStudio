@@ -98,6 +98,10 @@ public static class BookingDocumentMappings
         MaxReschedules = policy.MaxReschedules,
         ClientAbsentToleranceMinutes = policy.ClientAbsentToleranceMinutes,
         ClientAbsentRevertWindowDays = policy.ClientAbsentRevertWindowDays,
+        LateCancellationRetention = policy.LateCancellationRetention,
+        ClientAbsentRetention = policy.ClientAbsentRetention,
+        PhotographerCancellationRefund = policy.PhotographerCancellationRefund,
+        DeliveryDeadlineDays = policy.DeliveryDeadlineDays,
     };
 
     /// <summary>
@@ -112,7 +116,11 @@ public static class BookingDocumentMappings
         document.RescheduleMinNoticeHours,
         document.MaxReschedules,
         document.ClientAbsentToleranceMinutes,
-        document.ClientAbsentRevertWindowDays);
+        document.ClientAbsentRevertWindowDays,
+        document.LateCancellationRetention,
+        document.ClientAbsentRetention,
+        document.PhotographerCancellationRefund,
+        document.DeliveryDeadlineDays);
 
     /// <summary>
     /// Maps a contract signature to its document.

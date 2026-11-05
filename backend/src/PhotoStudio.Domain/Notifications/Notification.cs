@@ -14,6 +14,7 @@ namespace PhotoStudio.Domain.Notifications;
 /// <param name="ProofAmount">Amount the client declared in the proof of payment; set only for <see cref="NotificationType.PaymentProofSubmitted"/>.</param>
 /// <param name="SelectedPhotos">How many photos the client chose; set only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
 /// <param name="ExtraPhotos">How many of them go beyond what the package includes; set only for <see cref="NotificationType.SelectionSubmitted"/>.</param>
+/// <param name="DeliveryDeadline">Instant by which the final photos should be published (UTC); set only for <see cref="NotificationType.DeliveryDeadlineApproaching"/>.</param>
 public sealed record NotificationDetails(
     string ClientName,
     string ClientPhone,
@@ -22,7 +23,8 @@ public sealed record NotificationDetails(
     Money? Balance,
     Money? ProofAmount = null,
     int? SelectedPhotos = null,
-    int? ExtraPhotos = null);
+    int? ExtraPhotos = null,
+    DateTimeOffset? DeliveryDeadline = null);
 
 /// <summary>
 /// A notice for the photographer about one of their bookings. It is created <see cref="NotificationStatus.Scheduled"/> for a
@@ -162,6 +164,17 @@ public sealed class Notification : AggregateRoot<Guid>
     /// <param name="galleryId">Gallery that can be released.</param>
     /// <returns>The key.</returns>
     public static string GalleryArchiveDueKey(Guid galleryId) => $"{NotificationType.GalleryArchiveDue}:{galleryId:N}";
+
+    /// <summary>
+    /// Builds the key that identifies the notice that the delivery deadline is near: one per selection sent, so the same selection
+    /// delivered twice by the outbox is one notice, and a selection sent again after the photographer reopened it, which restarts the
+    /// deadline, is another. The instant is taken in milliseconds, like <see cref="SelectionSubmittedKey"/>.
+    /// </summary>
+    /// <param name="galleryId">Gallery whose selection was sent.</param>
+    /// <param name="submittedAt">Instant the client sent the selection.</param>
+    /// <returns>The key.</returns>
+    public static string DeliveryDeadlineKey(Guid galleryId, DateTimeOffset submittedAt) =>
+        $"{NotificationType.DeliveryDeadlineApproaching}:{galleryId:N}:{submittedAt.ToUnixTimeMilliseconds()}";
 
     /// <summary>
     /// Builds the key that identifies the notice of a selection: one per selection sent, so the same selection delivered twice by

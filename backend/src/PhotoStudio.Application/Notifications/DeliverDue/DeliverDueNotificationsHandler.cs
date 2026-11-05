@@ -45,7 +45,7 @@ public sealed class DeliverDueNotificationsHandler(
         foreach (var notification in due)
         {
             var booking = await bookings.GetByIdAsync(notification.BookingId, cancellationToken);
-            var gallery = notification.Type is NotificationType.SelectionSubmitted or NotificationType.GalleryArchiveDue && booking is not null
+            var gallery = notification.Type is NotificationType.SelectionSubmitted or NotificationType.GalleryArchiveDue or NotificationType.DeliveryDeadlineApproaching && booking is not null
                 ? await galleries.GetByBookingIdAsync(booking.Id, cancellationToken)
                 : null;
             var details = DetailsIfRelevant(notification, booking, gallery, now);
@@ -138,6 +138,14 @@ public sealed class DeliverDueNotificationsHandler(
             case NotificationType.GalleryArchiveDue:
                 // Relevant while the gallery is still delivered: once it was released the notice has nothing left to ask.
                 return gallery is { Status: GalleryStatus.Delivered } ? Snapshot(booking, balance: null) : null;
+
+            case NotificationType.DeliveryDeadlineApproaching:
+                // Relevant while the photos are still being edited for this very selection: publishing them, or the photographer
+                // reopening the selection (which restarts the deadline with a new key), makes the warning stale.
+                return gallery is { Status: GalleryStatus.InEditing, SelectionSubmittedAt: { } sentAt }
+                    && Notification.DeliveryDeadlineKey(gallery.Id, sentAt) == notification.DedupKey
+                    ? Snapshot(booking, balance: null) with { DeliveryDeadline = sentAt.AddDays(booking.Policy.DeliveryDeadlineDays) }
+                    : null;
 
             default:
                 return null;

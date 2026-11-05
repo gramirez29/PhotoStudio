@@ -28,6 +28,7 @@ export function parseNotification(value: unknown, path = 'notification'): Notifi
     proofAmount: proofAmount === null || proofAmount === undefined ? null : parseMoney(proofAmount, `${path}.proofAmount`),
     selectedPhotos: readOptionalCount(record, 'selectedPhotos', path),
     extraPhotos: readOptionalCount(record, 'extraPhotos', path),
+    deliveryDeadline: record.deliveryDeadline === null || record.deliveryDeadline === undefined ? null : readString(record, 'deliveryDeadline', path),
     deliveredAt: readString(record, 'deliveredAt', path),
     readAt: readNullableString(record, 'readAt', path),
   };

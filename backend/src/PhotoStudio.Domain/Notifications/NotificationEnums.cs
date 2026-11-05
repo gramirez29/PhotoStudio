@@ -19,6 +19,9 @@ public enum NotificationType
 
     /// <summary>A gallery was delivered long enough ago to free its space: the photographer decides whether to release it.</summary>
     GalleryArchiveDue,
+
+    /// <summary>The photographer is close to the deadline to publish the final photos of a selection the client sent.</summary>
+    DeliveryDeadlineApproaching,
 }
 
 /// <summary>

@@ -9,6 +9,7 @@ Bandeja de avisos ("Avisos") para el fotógrafo dentro de la app, con un botón 
 | **Recordatorio de sesión** (`SessionReminder`) | 24 h antes del inicio de la sesión | La reserva sigue `Confirmed`, la sesión sigue siendo la misma (no se reprogramó) y aún no empieza |
 | **Saldo pendiente** (`BalanceDue`) | 24 h después de completar la sesión | La reserva está `Completed` y el saldo es mayor que cero |
 | **Comprobante por verificar** (`PaymentProofSubmitted`) | De inmediato: en la misma pasada de mantenimiento que despacha el evento `PaymentSubmitted` | El pago sigue `PendingVerification` y la reserva no está cancelada, vencida ni con cliente ausente |
+| **Entrega próxima** (`DeliveryDeadlineApproaching`) | 3 días antes del plazo de entrega: `SelectionSubmitted` + `DeliveryDeadlineDays` (21 por defecto, de la política congelada en la reserva). Si el plazo ya está más cerca que eso, de inmediato | La galería sigue `InEditing` **con esa misma selección** (publicar las finales, o reabrir la selección —que reinicia el plazo con otra clave—, la deja obsoleta) |
 
 El fotógrafo ve los avisos en la pantalla **Avisos** (contador de no leídos en el inicio). El aviso de comprobante no ofrece WhatsApp: su acción principal es **Revisar comprobante**, que abre la reserva, donde ya están verificar y rechazar (`PendingPaymentsCard`). Los demás avisos ofrecen **Enviar por WhatsApp** (abre WhatsApp con el mensaje; marca el aviso como leído), **Ver reserva** y **Marcar como leído**. Además, **Marcar todo como leído**.
 

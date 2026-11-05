@@ -94,10 +94,12 @@ Las fotos que el cliente elige por encima del paquete **no se cargan solas al sa
 | Reprogramaciones del cliente | 1 | `BOOKING_MAX_RESCHEDULES` |
 | Tolerancia para marcar ausente | 30 min | `BOOKING_CLIENT_ABSENT_TOLERANCE_MINUTES` |
 | Ventana para revertir ausencia | 7 días | `BOOKING_CLIENT_ABSENT_REVERT_WINDOW_DAYS` |
-| Retención por cancelación tardía / ausencia | 100 % del anticipo | (fija por ahora) |
-| Reembolso si cancela el fotógrafo | 100 % de lo pagado | (fija por ahora) |
+| Retención por cancelación tardía | 100 % del anticipo | `BOOKING_LATE_CANCELLATION_RETENTION` (0 a 1) |
+| Retención por cliente ausente | 100 % del anticipo | `BOOKING_CLIENT_ABSENT_RETENTION` (0 a 1) |
+| Reembolso si cancela el fotógrafo | 100 % de lo pagado | `BOOKING_PHOTOGRAPHER_CANCELLATION_REFUND` (0 a 1) |
+| Plazo para entregar las fotos finales | 21 días desde que el cliente envía su selección | `BOOKING_DELIVERY_DEADLINE_DAYS` (1 a 365) |
 
-Hoy la política sale de variables de entorno; a futuro será configurable por fotógrafo.
+Hoy la política sale de variables de entorno; a futuro será configurable por fotógrafo. **Se congela en cada reserva al crearla**: cambiarla después no afecta a las reservas existentes, y el contrato que firma el cliente dice lo mismo que se aplicará (cláusulas 5 y 6).
 
 ## 5. La galería
 
@@ -136,6 +138,7 @@ La selección se bloquea al enviar; el fotógrafo solo edita lo elegido; no se e
 | Saldo pendiente | 24 h después de completar | El saldo ya es cero |
 | Comprobante por verificar | De inmediato al subirlo el cliente | — |
 | Selección recibida | De inmediato al enviarla el cliente | El fotógrafo reabrió la selección |
+| Entrega próxima | 3 días antes de que venza el plazo de entrega (21 días desde que el cliente envió su selección; si el plazo es más corto, de inmediato) | Ya se publicaron las fotos finales, o se reabrió la selección (el plazo se reinicia con la nueva) |
 | Galería lista para liberar | A los 90 días de entregada, **una vez** | Ya fue liberada |
 
 Cada aviso llega a la bandeja y como push. El texto lo redacta la app; el push tiene texto fijo en el backend.

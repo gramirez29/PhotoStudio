@@ -28,6 +28,8 @@ export interface NotificationResponse {
   readonly selectedPhotos: number | null;
   /** How many of the chosen photos are extra (beyond what the package includes); present only for selection notices. */
   readonly extraPhotos: number | null;
+  /** Instant the final photos should be published, ISO 8601; present only for delivery deadline notices. */
+  readonly deliveryDeadline: string | null;
   /** Instant the notification reached the inbox, ISO 8601. */
   readonly deliveredAt: string;
   /** Instant the photographer read it, ISO 8601, or null while it is unread. */

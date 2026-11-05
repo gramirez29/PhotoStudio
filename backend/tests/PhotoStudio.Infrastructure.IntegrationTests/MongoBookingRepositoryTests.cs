@@ -784,6 +784,57 @@ public sealed class MongoBookingRepositoryTests(MongoFixture fixture) : IClassFi
     }
 
     /// <summary>
+    /// The policy frozen in a booking, with its shares and its delivery deadline, is stored and read back as it was.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [Fact]
+    public async Task AddAsync_StoresTheFrozenPolicyWithItsShares()
+    {
+        Assert.SkipUnless(fixture.IsAvailable, "MongoDB is not reachable; run 'docker compose up -d' in the backend folder.");
+        var policy = BookingPolicy.Create(48, 0.5m, 72, 48, 1, 30, 7, 0.5m, 0.25m, 0.9m, 14);
+        var booking = Booking.Create(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            ClientContact.Create("María Pérez", "+506 8888-8888"),
+            "Retrato familiar",
+            Money.Create(100_000m, "CRC"),
+            TimeSlot.Create(SessionStart, SessionStart.AddHours(2)),
+            policy,
+            Now);
+        var repository = NewRepository();
+
+        await repository.AddAsync(booking, TestContext.Current.CancellationToken);
+
+        var stored = (await repository.GetByIdAsync(booking.Id, TestContext.Current.CancellationToken))!;
+        stored.Policy.ShouldBe(policy);
+    }
+
+    /// <summary>
+    /// A booking stored before these shares and the deadline were part of the policy has none of them in its document, and is read with
+    /// the values the business always applied: keep the whole deposit, return everything when the photographer cancels, 21 days.
+    /// </summary>
+    [Fact]
+    public void PolicyDocument_FromBeforeTheSharesExisted_ReadsTheValuesAlwaysApplied()
+    {
+        var legacy = new MongoDB.Bson.BsonDocument
+        {
+            { "tentativeHoldHours", 48 },
+            { "depositPercentage", MongoDB.Bson.BsonDecimal128.Create(0.5m) },
+            { "freeCancellationWindowHours", 72 },
+            { "rescheduleMinNoticeHours", 48 },
+            { "maxReschedules", 1 },
+            { "clientAbsentToleranceMinutes", 30 },
+            { "clientAbsentRevertWindowDays", 7 },
+        };
+
+        var document = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<PhotoStudio.Infrastructure.Persistence.Documents.BookingPolicyDocument>(legacy);
+        var booking = NewBooking(Guid.CreateVersion7(), SessionStart, SessionStart.AddHours(2)).ToDocument(0);
+        booking.Policy = document;
+
+        booking.ToDomain().Policy.ShouldBe(BookingPolicy.Default);
+    }
+
+    /// <summary>
     /// Creates a tentative booking for the slot.
     /// </summary>
     /// <param name="photographerId">Photographer (tenant) identifier.</param>

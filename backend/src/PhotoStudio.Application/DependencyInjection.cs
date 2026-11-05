@@ -120,6 +120,7 @@ public static class DependencyInjection
         services.AddScoped<IDomainEventHandler<SessionCompleted>, SessionCompletedNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<PaymentSubmitted>, PaymentNotificationsHandler>();
         services.AddScoped<IDomainEventHandler<SelectionSubmitted>, SelectionNotificationsHandler>();
+        services.AddScoped<IDomainEventHandler<SelectionSubmitted>, DeliveryDeadlineNotificationsHandler>();
 
         // Contracts: the client gets an email copy of the contract they signed through the portal.
         services.AddScoped<IDomainEventHandler<ContractSigned>, ContractCopyHandler>();
