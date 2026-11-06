@@ -103,7 +103,7 @@ Sin `RESEND_API_KEY`/`EMAIL_FROM` en producción el correo responde 503 `email.d
 ### En otras plataformas
 - **Cloudflare Pages:** `VITE_ENVIRONMENT=develop` (muestra la franja "Ambiente de pruebas").
 - **EAS:** variable de archivo `GOOGLE_SERVICES_JSON` (el `google-services.json` de Firebase, que **no** está en git).
-- **App móvil:** `EXPO_PUBLIC_API_URL` en `mobile/.env` (todo `EXPO_PUBLIC_*` va dentro del paquete: nunca secretos).
+- **App móvil:** `EXPO_PUBLIC_API_URL` en `mobile/.env` y, opcional, `EXPO_PUBLIC_STUDIO_URL` (la dirección de la web del fotógrafo, por ejemplo `https://develop.photosensestudio.com/studio`; sin ella no aparece el enlace «Abrir la web del fotógrafo» de Inicio). Todo `EXPO_PUBLIC_*` va dentro del paquete: nunca secretos, y cambiarlo exige reiniciar Metro con `npx expo start --clear`.
 
 ## 6. Montar todo desde cero
 
