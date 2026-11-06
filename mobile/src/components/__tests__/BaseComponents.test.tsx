@@ -47,6 +47,24 @@ describe('the base components', () => {
       expect(screen.getByText('Escribe un correo válido.')).toBeTruthy();
     });
 
+    it('hides a password and shows it, and hides it again, with the eye', () => {
+      render(<FormInput label="Contraseña" value="secreto" onChangeText={jest.fn()} secureTextEntry />);
+      expect(screen.getByLabelText('Contraseña').props.secureTextEntry).toBe(true);
+
+      fireEvent.press(screen.getByLabelText('Mostrar contraseña'));
+      expect(screen.getByLabelText('Contraseña').props.secureTextEntry).toBe(false);
+
+      fireEvent.press(screen.getByLabelText('Ocultar contraseña'));
+      expect(screen.getByLabelText('Contraseña').props.secureTextEntry).toBe(true);
+    });
+
+    it('has no eye on a field that is not a password', () => {
+      render(<FormInput label="Cliente" value="María" onChangeText={jest.fn()} />);
+
+      expect(screen.queryByLabelText(/^Mostrar /)).toBeNull();
+      expect(screen.getByLabelText('Cliente').props.secureTextEntry).toBeFalsy();
+    });
+
     it('shows no message when the field is valid', () => {
       render(<FormInput label="Correo" value="" onChangeText={jest.fn()} />);
 
