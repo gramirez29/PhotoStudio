@@ -14,3 +14,13 @@ export function normalizeApiUrl(raw: string | undefined): string {
 
   return value.replace(/\/+$/, '');
 }
+
+/**
+ * Normalizes an address that the app can do without: trims it and drops it when it is empty or is not a web address.
+ * @param raw Value of the environment variable, if any.
+ * @returns The address, or `null` when there is none or it does not start with http:// or https://.
+ */
+export function normalizeOptionalUrl(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  return value !== undefined && /^https?:\/\//i.test(value) ? value : null;
+}

@@ -7,7 +7,6 @@ import { spacing } from '../theme/tokens';
 import { ApiStatus } from './ApiStatus';
 import { AppCard } from './AppCard';
 import { ChangePasswordButton } from './ChangePasswordButton';
-import { HomeScreenSelector } from './HomeScreenSelector';
 import { MaintenanceButton } from './MaintenanceButton';
 import { ThemeSelector } from './ThemeSelector';
 
@@ -26,9 +25,6 @@ export function SettingsList(): ReactElement {
     <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.md + bottomInset }]}>
       <AppCard style={styles.card}>
         <ThemeSelector />
-      </AppCard>
-      <AppCard style={styles.card}>
-        <HomeScreenSelector />
       </AppCard>
       <AppCard style={styles.card}>
         <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>

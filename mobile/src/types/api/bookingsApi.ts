@@ -15,6 +15,7 @@ import type {
 } from './booking';
 import type { QueryRange } from '../utils/agenda.types';
 import type { CalendarResponse } from './calendar';
+import type { BookingStatsResponse } from './stats';
 
 /** Booking endpoints used by the photographer app. */
 export interface BookingsApi {
@@ -132,6 +133,15 @@ export interface BookingsApi {
    * @returns The bookings of the range, and whether the backend left some out for being too many.
    */
   getCalendar(range: QueryRange, includeEnded: boolean, signal?: AbortSignal): Promise<CalendarResponse>;
+
+  /**
+   * Counts the bookings of the signed-in photographer by status, for the chart of the home screen. A booking belongs to a period by the
+   * day its session starts.
+   * @param range The period, as ISO 8601 instants; the end is not included. `null` counts all the bookings.
+   * @param signal Optional signal to cancel the request.
+   * @returns The total and one count per status, zero included.
+   */
+  getStats(range: QueryRange | null, signal?: AbortSignal): Promise<BookingStatsResponse>;
 
   /**
    * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.

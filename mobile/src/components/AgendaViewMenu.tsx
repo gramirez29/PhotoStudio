@@ -1,19 +1,19 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import type { ReactElement } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
-import { changeAgendaShowAll, changeAgendaView } from '../agenda/agendaManager';
-import { useAgendaStore } from '../agenda/agendaStore';
-import { AGENDA_VIEWS } from '../constants/agenda';
-import { useAppTheme } from '../hooks/useAppTheme';
-import { useTopInset } from '../hooks/useTopInset';
-import { FONT_FAMILIES } from '../theme/fonts';
-import { makeStyles } from '../theme/makeStyles';
-import { radius, spacing } from '../theme/tokens';
-import type { AgendaViewMenuProps } from '../types/components/agenda.types';
-import { AGENDA_VIEW_LABELS } from '../utils/agenda/labels';
-import { effectiveAgendaView, isViewImplemented } from '../utils/agenda/views';
-import { withAlpha } from '../utils/color';
-import { ToggleRow } from './ToggleRow';
+import { MaterialIcons } from "@expo/vector-icons";
+import type { ReactElement } from "react";
+import { Modal, Pressable, Text, View } from "react-native";
+import { changeAgendaShowAll, changeAgendaView } from "../agenda/agendaManager";
+import { useAgendaStore } from "../agenda/agendaStore";
+import { AGENDA_VIEWS } from "../constants/agenda";
+import { useAppTheme } from "../hooks/useAppTheme";
+import { useTopInset } from "../hooks/useTopInset";
+import { FONT_FAMILIES } from "../theme/fonts";
+import { makeStyles } from "../theme/makeStyles";
+import { radius, spacing } from "../theme/tokens";
+import type { AgendaViewMenuProps } from "../types/components/agenda.types";
+import { AGENDA_VIEW_LABELS } from "../utils/agenda/labels";
+import { effectiveAgendaView, isViewImplemented } from "../utils/agenda/views";
+import { withAlpha } from "../utils/color";
+import { ToggleRow } from "./ToggleRow";
 
 /** Height of the bar of the header, so the menu opens right under it. */
 const HEADER_HEIGHT = 56;
@@ -31,7 +31,10 @@ const ICON_SIZE = 22;
  * @param props Component props.
  * @returns The menu, which draws nothing while it is closed.
  */
-export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): ReactElement {
+export function AgendaViewMenu({
+  visible,
+  onClose,
+}: AgendaViewMenuProps): ReactElement {
   const styles = useStyles();
   const { palette } = useAppTheme();
   const topInset = useTopInset();
@@ -39,12 +42,24 @@ export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): React
   const showAll = useAgendaStore((state) => state.showAll);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Cerrar el menú de vistas"
         onPress={onClose}
-        style={[styles.backdrop, { backgroundColor: withAlpha(palette.scrim, DIMMING), paddingTop: topInset + HEADER_HEIGHT }]}
+        style={[
+          styles.backdrop,
+          {
+            backgroundColor: withAlpha(palette.scrim, DIMMING),
+            paddingTop: topInset + HEADER_HEIGHT,
+          },
+        ]}
       >
         {/* A tap on the card must not reach the backdrop behind it, which would close the menu. */}
         <Pressable accessible={false} style={styles.card}>
@@ -59,17 +74,37 @@ export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): React
               <Pressable
                 key={option}
                 accessibilityRole="menuitem"
-                accessibilityLabel={available ? AGENDA_VIEW_LABELS[option] : `${AGENDA_VIEW_LABELS[option]}, todavía no disponible`}
+                accessibilityLabel={
+                  available
+                    ? AGENDA_VIEW_LABELS[option]
+                    : `${AGENDA_VIEW_LABELS[option]}, todavía no disponible`
+                }
                 accessibilityState={{ selected, disabled: !available }}
                 disabled={!available}
                 onPress={() => {
                   void changeAgendaView(option);
                   onClose();
                 }}
-                style={({ pressed }) => [styles.item, pressed && styles.pressed, !available && styles.unavailable]}
+                style={({ pressed }) => [
+                  styles.item,
+                  pressed && styles.pressed,
+                  !available && styles.unavailable,
+                ]}
               >
-                <Text style={[styles.itemLabel, selected && styles.selectedLabel]}>{AGENDA_VIEW_LABELS[option]}</Text>
-                {selected && <MaterialIcons name="check" size={ICON_SIZE} color={palette.primary} accessible={false} importantForAccessibility="no" />}
+                <Text
+                  style={[styles.itemLabel, selected && styles.selectedLabel]}
+                >
+                  {AGENDA_VIEW_LABELS[option]}
+                </Text>
+                {selected && (
+                  <MaterialIcons
+                    name="check"
+                    size={ICON_SIZE}
+                    color={palette.primary}
+                    accessible={false}
+                    importantForAccessibility="no"
+                  />
+                )}
               </Pressable>
             );
           })}
@@ -89,7 +124,7 @@ export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): React
 /** Styles of the menu: the colors come from the theme. */
 const useStyles = makeStyles((palette) => ({
   backdrop: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     flex: 1,
     paddingHorizontal: spacing.sm,
   },
@@ -99,21 +134,21 @@ const useStyles = makeStyles((palette) => ({
     borderRadius: radius.md,
     borderWidth: 1,
     minWidth: 260,
-    overflow: 'hidden',
+    overflow: "hidden",
     paddingVertical: spacing.xs,
   },
   heading: {
     color: palette.onSurfaceVariant,
     fontFamily: FONT_FAMILIES.bodyMedium,
-    fontSize: 15,
+    fontSize: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   item: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },

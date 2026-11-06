@@ -6,21 +6,23 @@ import { useMenuCounters } from '../../hooks/useMenuCounters';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useRefunds } from '../../hooks/useRefunds';
 import { useMenuStore } from '../../menu/menuStore';
-import { openHomeScreen, openNotifications, openRefunds, openSettings } from '../../navigation/appNavigation';
+import { openAgenda, openAllBookings, openHome, openNotifications, openRefunds, openSettings } from '../../navigation/appNavigation';
 import { signOutOfDevice } from '../../push/pushSignOut';
 import { useSessionStore } from '../../session/sessionStore';
 import { LIGHT_PALETTE } from '../../theme/palettes';
 import { AppMenu } from '../AppMenu';
-import { useCurrentHomeScreen } from '../../hooks/useCurrentHomeScreen';
+import { useCurrentMainScreen } from '../../hooks/useCurrentMainScreen';
 import { AppThemeProvider } from '../AppThemeProvider';
 import { MenuButton } from '../MenuButton';
 
 jest.mock('../../hooks/useNotifications');
 jest.mock('../../hooks/useRefunds');
-jest.mock('../../hooks/useCurrentHomeScreen');
+jest.mock('../../hooks/useCurrentMainScreen');
 jest.mock('../../push/pushSignOut', () => ({ signOutOfDevice: jest.fn() }));
 jest.mock('../../navigation/appNavigation', () => ({
-  openHomeScreen: jest.fn(),
+  openAgenda: jest.fn(),
+  openAllBookings: jest.fn(),
+  openHome: jest.fn(),
   openNotifications: jest.fn(),
   openRefunds: jest.fn(),
   openSettings: jest.fn(),
@@ -215,30 +217,29 @@ describe('the side menu', () => {
       expect(useMenuStore.getState().open).toBe(false);
     });
 
-    it('goes to the agenda from any other screen, and to the list of bookings, as the first screen', () => {
-      jest.mocked(useCurrentHomeScreen).mockReturnValue('bookings');
+    it.each([
+      ['Agenda', openAgenda],
+      ['Todas las reservas', openAllBookings],
+      ['Inicio', openHome],
+    ] as const)('opens %s from another screen and closes the menu', (label, destination) => {
+      jest.mocked(useCurrentMainScreen).mockReturnValue(null);
       useMenuStore.setState({ open: true });
       renderMenu();
 
-      fireEvent.press(screen.getByText('Agenda'));
-      expect(openHomeScreen).toHaveBeenLastCalledWith('agenda');
+      fireEvent.press(screen.getByText(label));
+
+      expect(destination).toHaveBeenCalledTimes(1);
       expect(useMenuStore.getState().open).toBe(false);
-
-      jest.mocked(useCurrentHomeScreen).mockReturnValue('agenda');
-      useMenuStore.setState({ open: true });
-      renderMenu();
-      fireEvent.press(screen.getByText('Todas las reservas'));
-      expect(openHomeScreen).toHaveBeenLastCalledWith('bookings');
     });
 
     it('only closes the menu from the screen the photographer is already on', () => {
-      jest.mocked(useCurrentHomeScreen).mockReturnValue('agenda');
+      jest.mocked(useCurrentMainScreen).mockReturnValue('agenda');
       useMenuStore.setState({ open: true });
       renderMenu();
 
       fireEvent.press(screen.getByText('Agenda'));
 
-      expect(openHomeScreen).not.toHaveBeenCalled();
+      expect(openAgenda).not.toHaveBeenCalled();
       expect(useMenuStore.getState().open).toBe(false);
       expect(openNotifications).not.toHaveBeenCalled();
       expect(openRefunds).not.toHaveBeenCalled();
