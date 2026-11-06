@@ -576,6 +576,7 @@ Se crean al arrancar la API o el worker. Si Mongo no responde, se registra un Wa
 | Colección | Índice | Claves | Para qué |
 |---|---|---|---|
 | `bookings` | `ix_photographer_slot` | `photographerId`, `slotStart` | (ya existía) listado por fotógrafo. |
+| `bookings` | `ix_photographer_slot_end` | `photographerId`, `slotEnd` | Agenda por rango (`GET /api/bookings/calendar`): junto al anterior, Mongo escoge el que más acote el rango. Una prueba exige `IXSCAN`. |
 | `bookings` | `ix_status_expires` | `status`, `expiresAt` | Consulta de expiración B7. |
 | `outbox_messages` | `ix_outbox_claim` | `status`, `occurredAt`, `_id` | Reclamo del mensaje pendiente más antiguo. Sigue el orden del `sort` del reclamo para que Mongo recorra los pendientes del más viejo al más nuevo y se detenga en el primero vencido (ver §18.3). |
 | `outbox_messages` | `ix_outbox_retention` | `processedAt` (TTL 30 días) | Borra solo los mensajes entregados. |

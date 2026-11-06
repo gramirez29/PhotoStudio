@@ -6,6 +6,7 @@ using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.GetBooking;
+using PhotoStudio.Application.Bookings.GetCalendar;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
@@ -39,6 +40,7 @@ public static class BookingEndpoints
 
         group.MapPost("/", CreateAsync).WithName("CreateBooking");
         group.MapGet("/", ListAsync).WithName("ListBookings");
+        group.MapGet("/calendar", CalendarAsync).WithName("GetBookingCalendar");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
         group.MapPost("/{id:guid}/details", EditDetailsAsync).WithName("EditBookingDetails");
         group.MapGet("/{id:guid}/contract", GetContractAsync).WithName("GetBookingContract");
@@ -97,6 +99,39 @@ public static class BookingEndpoints
                 PageSizes.Resolve(limit),
                 BookingListFilter.From(ReadStatus(status), name)),
             cancellationToken));
+
+    /// <summary>
+    /// Lists the bookings whose session overlaps a range of time, for the calendar of the app: no pages, ordered by the start of the
+    /// session. By default only the tentative and the confirmed ones; <c>includeEnded=true</c> adds the ones that are over.
+    /// </summary>
+    /// <param name="user">Authenticated photographer.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <param name="from">Start of the range, ISO 8601 with its offset. Required.</param>
+    /// <param name="to">End of the range, exclusive, ISO 8601 with its offset. Required; after <paramref name="from"/> and at most 62 days from it.</param>
+    /// <param name="includeEnded">Also the completed, client-absent, cancelled and expired bookings; <see langword="false"/> by default.</param>
+    /// <returns>200 with the bookings of the range, and whether some were left out for being more than 500; 400 when the range is missing, inverted or too long.</returns>
+    /// <exception cref="BadHttpRequestException">The range is missing, empty, inverted or longer than the limit.</exception>
+    private static async Task<Ok<CalendarResponse>> CalendarAsync(
+        ClaimsPrincipal user,
+        IQueryHandler<GetCalendarQuery, CalendarResponse> handler,
+        CancellationToken cancellationToken,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null,
+        bool includeEnded = false)
+    {
+        if (from is null || to is null)
+        {
+            throw new BadHttpRequestException("The range needs 'from' and 'to'.");
+        }
+
+        if (to <= from || to - from > TimeSpan.FromDays(CalendarLimits.MaxRangeDays))
+        {
+            throw new BadHttpRequestException($"The range must be positive and at most {CalendarLimits.MaxRangeDays} days.");
+        }
+
+        return TypedResults.Ok(await handler.HandleAsync(new GetCalendarQuery(user.GetPhotographerId(), from.Value, to.Value, includeEnded), cancellationToken));
+    }
 
     /// <summary>
     /// Reads the status filter of the query string.

@@ -37,6 +37,26 @@ public interface IBookingRepository
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lists a photographer's bookings whose session overlaps a range of time, ordered by the start of the session, for the calendar.
+    /// A session overlaps the range when it starts before the end of the range and ends after the start of it, so one that ends exactly
+    /// when the range starts, or starts exactly when it ends, is not part of it.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="from">Start of the range.</param>
+    /// <param name="to">End of the range, exclusive.</param>
+    /// <param name="statuses">Only the bookings in one of these statuses, or <see langword="null"/> for any status.</param>
+    /// <param name="limit">Maximum number of bookings to return.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The bookings, possibly empty.</returns>
+    Task<IReadOnlyList<Booking>> ListInRangeAsync(
+        Guid photographerId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        IReadOnlyCollection<BookingStatus>? statuses,
+        int limit,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lists tentative bookings whose hold ended at or before the given instant, oldest hold first. Whether each one can
     /// really expire is decided by the domain (a pending proof of payment blocks it).
     /// </summary>

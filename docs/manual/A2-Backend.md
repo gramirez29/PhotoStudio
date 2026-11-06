@@ -20,6 +20,7 @@ Cada módulo tiene su parte en Domain, sus casos de uso en Application (una carp
 |---|---|
 | `POST /api/bookings` | Crea una reserva tentativa (B1). Acepta correo del cliente, extras y descuento |
 | `GET /api/bookings`, `GET /api/bookings/{id}` | Lista paginada (la más reciente primero) y detalle con `allowedActions` |
+| `GET /api/bookings/calendar?from&to&includeEnded` | Las reservas que tocan un rango de fechas, sin páginas y por hora de inicio, para la agenda de la app: máx. 62 días y 500 reservas (`truncated: true` si hay más); por defecto solo tentativas y confirmadas |
 | `POST /api/bookings/{id}/details` | Corrige datos del cliente; paquete, precio, extras y descuento solo antes de firmar y pagar |
 | `GET /api/bookings/{id}/contract` | El contrato con los datos de la reserva |
 | `POST .../contract/in-person` | Firma presencial (en el teléfono) o en papel |
