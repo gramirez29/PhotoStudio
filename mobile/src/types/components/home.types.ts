@@ -29,7 +29,7 @@ export interface HomePeriodSelectorProps {
 /** Props of the `HomeLinkRow` component. */
 export interface HomeLinkRowProps {
   /** Name of the icon of the row. */
-  readonly icon: 'event' | 'list-alt' | 'add-circle-outline' | 'notifications-none' | 'payments' | 'open-in-new';
+  readonly icon: 'event' | 'list-alt' | 'add-circle-outline' | 'notifications-none' | 'payments' | 'open-in-new' | 'receipt-long' | 'hourglass-bottom' | 'inventory-2';
   /** Text of the row. */
   readonly label: string;
   /** What the row says at the right, such as a count; nothing when omitted. */

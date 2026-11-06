@@ -179,7 +179,7 @@ export function AppMenu(): ReactElement | null {
               label="Todas las reservas"
               active={current === 'bookings'}
               icon={ICONS.bookings}
-              onPress={current === 'bookings' ? closeMenu : choose(openAllBookings)}
+              onPress={current === 'bookings' ? closeMenu : choose(() => openAllBookings())}
             />
             <Drawer.Item
               label="Avisos"

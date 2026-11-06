@@ -22,6 +22,7 @@ import type {
 } from '../types/api/booking';
 import type { BookingsApi } from '../types/api/bookingsApi';
 import type { CalendarResponse } from '../types/api/calendar';
+import type { BookingAttentionResponse } from '../types/api/attention';
 import type { BookingStatsResponse } from '../types/api/stats';
 import type { QueryRange } from '../types/utils/agenda.types';
 import type { HttpClient } from '../types/api/http';
@@ -267,6 +268,17 @@ export function parseBookingStats(value: unknown): BookingStatsResponse {
 }
 
 /**
+ * Validates what is waiting for the photographer.
+ * @param value Parsed JSON of the response.
+ * @returns The typed counts.
+ */
+export function parseBookingAttention(value: unknown): BookingAttentionResponse {
+  const path = 'attention';
+  const record = expectRecord(value, path);
+  return { pendingProofs: readNumber(record, 'pendingProofs', path), expiringSoon: readNumber(record, 'expiringSoon', path) };
+}
+
+/**
  * Builds the path that asks for the counts of the bookings of a period.
  * @param range The period, as ISO 8601 instants, or `null` for all the bookings.
  * @returns The path, with its query string when there is a period.
@@ -329,6 +341,7 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
     listBookings: (cursor, filter = NO_BOOKING_FILTER, signal) =>
       client.get(buildPagedPath('/api/bookings', cursor, buildFilterParams(filter)), parseBookingList, signal),
     getCalendar: (range, includeEnded, signal) => client.get(buildCalendarPath(range, includeEnded), parseCalendar, signal),
+    getAttention: (signal) => client.get('/api/bookings/attention', parseBookingAttention, signal),
     getStats: (range, signal) => client.get(buildStatsPath(range), parseBookingStats, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
     getContract: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}/contract`, parseBookingContract, signal),

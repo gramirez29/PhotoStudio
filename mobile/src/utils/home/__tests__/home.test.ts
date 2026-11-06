@@ -1,4 +1,4 @@
-import { buildStatsPath, parseBookingStats } from '../../../api/bookingsApi';
+import { buildStatsPath, parseBookingAttention, parseBookingStats } from '../../../api/bookingsApi';
 import type { BookingStatsResponse } from '../../../types/api/stats';
 import { normalizeOptionalUrl } from '../../envNormalizers';
 import { donutSegments, formatPercent } from '../donut';
@@ -95,5 +95,16 @@ describe('normalizeOptionalUrl', () => {
     expect(normalizeOptionalUrl('   ')).toBeNull();
     expect(normalizeOptionalUrl('javascript:alert(1)')).toBeNull();
     expect(normalizeOptionalUrl('photosensestudio.com')).toBeNull();
+  });
+});
+
+describe('attention API', () => {
+  it('reads the two counts the backend sends', () => {
+    expect(parseBookingAttention({ pendingProofs: 2, expiringSoon: 1 })).toEqual({ pendingProofs: 2, expiringSoon: 1 });
+  });
+
+  it('refuses an answer that is not what the backend promises', () => {
+    expect(() => parseBookingAttention({ pendingProofs: 2 })).toThrow();
+    expect(() => parseBookingAttention([])).toThrow();
   });
 });

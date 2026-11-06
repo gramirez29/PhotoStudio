@@ -28,6 +28,7 @@ function stubApi(booking: BookingResponse): BookingsApi {
     getContract: jest.fn(),
     getCalendar: jest.fn(),
     getStats: jest.fn(),
+    getAttention: jest.fn(),
   };
 }
 
