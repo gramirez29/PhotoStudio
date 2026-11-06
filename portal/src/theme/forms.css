@@ -47,6 +47,32 @@
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
+.field__toggle {
+  align-items: center;
+  background: var(--color-bg);
+  border: 2px solid var(--color-text-muted);
+  border-left: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  min-height: 52px;
+  min-width: 52px;
+  padding: 0;
+}
+
+.field__toggle:hover,
+.field__toggle[aria-pressed='true'] {
+  color: var(--color-text);
+}
+
+/* The button closes the field on the right, so the input leaves its right corners square. */
+.field input:has(+ .field__toggle) {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  border-right: 0;
+}
+
 .field__hint {
   color: var(--color-text-muted);
   font-size: 0.9rem;
