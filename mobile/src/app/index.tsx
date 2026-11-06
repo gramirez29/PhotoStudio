@@ -1,6 +1,9 @@
 import { useEffect, type ReactElement } from 'react';
 import { View } from 'react-native';
 import { restoreAgendaPreferences } from '../agenda/agendaManager';
+import { restoreHomeScreen } from '../home/homeManager';
+import { useHomeStore } from '../home/homeStore';
+import { replaceWithAllBookings } from '../navigation/appNavigation';
 import { useAgendaStore } from '../agenda/agendaStore';
 import { MonthView } from '../components/MonthView';
 import { NewBookingFab } from '../components/NewBookingFab';
@@ -20,20 +23,43 @@ export default function AgendaScreen(): ReactElement {
   const styles = useStyles();
   const view = useAgendaStore((state) => effectiveAgendaView(state.view));
   const anchor = useAgendaStore((state) => state.anchor);
+  const revision = useAgendaStore((state) => state.revision);
   const showAll = useAgendaStore((state) => state.showAll);
+  const homeLoaded = useHomeStore((state) => state.loaded);
 
   // The choices saved on the device apply as soon as they are read; until then the agenda shows the defaults.
   useEffect(() => {
     void restoreAgendaPreferences();
   }, []);
 
+  // The app opens on the screen the photographer chose in the settings. It goes there once per run, so coming back to the agenda from
+  // the menu later is not undone.
+  useEffect(() => {
+    if (useHomeStore.getState().loaded) {
+      return;
+    }
+
+    void restoreHomeScreen().then(() => {
+      const chosen = useHomeStore.getState();
+      if (chosen.screen === 'bookings' && !chosen.redirected) {
+        chosen.markRedirected();
+        replaceWithAllBookings();
+      }
+    });
+  }, []);
+
+  // Until it is known which screen the app opens on, nothing is drawn, so the agenda does not flash before the list.
+  if (!homeLoaded) {
+    return <View style={styles.screen} />;
+  }
+
   return (
     <View style={styles.screen}>
-      {view === 'schedule' && <ScheduleView key={anchor.getTime()} anchor={anchor} includeEnded={showAll} />}
+      {view === 'schedule' && <ScheduleView key={`${revision}-${anchor.getTime()}`} anchor={anchor} includeEnded={showAll} />}
       {(view === 'day' || view === 'threeDays' || view === 'week') && (
-        <TimeGridView key={`${view}-${anchor.getTime()}`} view={view} anchor={anchor} includeEnded={showAll} />
+        <TimeGridView key={`${view}-${revision}-${anchor.getTime()}`} view={view} anchor={anchor} includeEnded={showAll} />
       )}
-      {view === 'month' && <MonthView key={anchor.getTime()} anchor={anchor} includeEnded={showAll} />}
+      {view === 'month' && <MonthView key={`${revision}-${anchor.getTime()}`} anchor={anchor} includeEnded={showAll} />}
       <NewBookingFab />
     </View>
   );

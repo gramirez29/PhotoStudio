@@ -107,6 +107,13 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 - **Mini-mes**: tocar el título de la cabecera abre `MiniMonthPicker` (un mes con flechas, hoy con contorno, el día en pantalla relleno); elegir un día mueve la agenda ahí **en la vista que esté abierta**.
 - Ya no queda ninguna vista atenuada en el menú.
 
+### Ajustes tras probar la fase 5
+
+- Las celdas del mes miden como máximo 92 puntos (`MONTH_CELL_MAX_HEIGHT`); ya no se estiran para llenar la pantalla.
+- **Ir a hoy** ahora funciona aunque el ancla ya fuera hoy: el store tiene `revision`, que sube con `setAnchor` y `goToToday`, y la pantalla la usa en la `key` de la vista para reiniciarla.
+- **Pantalla principal** en Ajustes (`HomeScreenSelector`: Agenda o Todas las reservas; `src/home/`, guardada en `photostudio.homeScreen`). El cambio aplica al abrir la app la próxima vez: `AgendaScreen` espera la lectura (no dibuja nada antes) y, si se eligió la lista, hace `replace` a `/bookings` una sola vez por ejecución. En esa pantalla, sin pantalla atrás, la cabecera lleva el botón del menú.
+- El menú de vistas lleva una línea entre "Vista" y la primera opción.
+
 ## 5. Fases
 
 Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).

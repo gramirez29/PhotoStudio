@@ -1,5 +1,6 @@
 import { useMemo, type ReactElement } from 'react';
 import { Text, View } from 'react-native';
+import { MONTH_CELL_MAX_HEIGHT } from '../constants/agenda';
 import { useToday } from '../hooks/useToday';
 import { FONT_FAMILIES } from '../theme/fonts';
 import { makeStyles } from '../theme/makeStyles';
@@ -23,7 +24,7 @@ export function MonthPage({ month, bookings, width, height, onOpenDay }: MonthPa
   const today = useToday();
   const weeks = useMemo(() => buildMonthGrid(month, bookings, today), [month, bookings, today]);
   const cellWidth = width / 7;
-  const cellHeight = Math.max(0, (height - WEEKDAY_ROW_HEIGHT) / weeks.length);
+  const cellHeight = Math.min(MONTH_CELL_MAX_HEIGHT, Math.max(0, (height - WEEKDAY_ROW_HEIGHT) / weeks.length));
   const firstWeek = startOfWeek(month);
 
   return (

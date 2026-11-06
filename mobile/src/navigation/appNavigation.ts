@@ -14,6 +14,11 @@ export function openAllBookings(): void {
   router.push('/bookings');
 }
 
+/** Replaces the current screen with the list of all the bookings, so going back does not return to the one it replaced. */
+export function replaceWithAllBookings(): void {
+  router.replace('/bookings');
+}
+
 /** Opens the create-booking form. */
 export function openNewBooking(): void {
   router.push('/bookings/new');

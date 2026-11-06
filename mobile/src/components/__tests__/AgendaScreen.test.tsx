@@ -1,16 +1,21 @@
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import AgendaScreen from '../../app/index';
 import { restoreAgendaPreferences } from '../../agenda/agendaManager';
 import { useAgendaStore } from '../../agenda/agendaStore';
+import { restoreHomeScreen } from '../../home/homeManager';
+import { useHomeStore } from '../../home/homeStore';
 import { useAgendaRanges } from '../../hooks/useAgendaRanges';
+import { replaceWithAllBookings } from '../../navigation/appNavigation';
 
 jest.mock('../../agenda/agendaManager', () => ({ restoreAgendaPreferences: jest.fn(), changeAgendaView: jest.fn(), changeAgendaShowAll: jest.fn() }));
 jest.mock('../../hooks/useAgendaRanges');
-jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn() }));
+jest.mock('../../home/homeManager', () => ({ restoreHomeScreen: jest.fn() }));
+jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn(), replaceWithAllBookings: jest.fn() }));
 
 describe('AgendaScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useHomeStore.setState({ screen: 'agenda', loaded: true, redirected: false });
     jest.useFakeTimers().setSystemTime(new Date(2026, 10, 11, 10, 0));
     useAgendaStore.setState({ view: 'schedule', anchor: new Date(2026, 10, 11), visibleDate: new Date(2026, 10, 11), showAll: false });
     jest.mocked(useAgendaRanges).mockReturnValue({
@@ -56,5 +61,39 @@ describe('AgendaScreen', () => {
     render(<AgendaScreen />);
 
     expect(screen.getByLabelText('Agenda de reservas')).toBeTruthy();
+  });
+
+  it('draws nothing until it is known which screen the app opens on', () => {
+    useHomeStore.setState({ loaded: false });
+    jest.mocked(restoreHomeScreen).mockReturnValue(new Promise(() => undefined));
+
+    render(<AgendaScreen />);
+
+    expect(screen.queryByLabelText('Agenda de reservas')).toBeNull();
+  });
+
+  it('goes to the list of all the bookings once when that is the screen chosen', async () => {
+    useHomeStore.setState({ loaded: false });
+    jest.mocked(restoreHomeScreen).mockImplementation(async () => {
+      useHomeStore.setState({ screen: 'bookings', loaded: true });
+    });
+
+    render(<AgendaScreen />);
+    await act(async () => undefined);
+
+    expect(replaceWithAllBookings).toHaveBeenCalledTimes(1);
+    expect(useHomeStore.getState().redirected).toBe(true);
+  });
+
+  it('stays on the agenda when that is the screen chosen', async () => {
+    useHomeStore.setState({ loaded: false });
+    jest.mocked(restoreHomeScreen).mockImplementation(async () => {
+      useHomeStore.setState({ loaded: true });
+    });
+
+    render(<AgendaScreen />);
+    await act(async () => undefined);
+
+    expect(replaceWithAllBookings).not.toHaveBeenCalled();
   });
 });

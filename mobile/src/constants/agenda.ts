@@ -60,3 +60,6 @@ export const MONTH_CHIP_HEIGHT = 16;
 
 /** Points the number of the day takes at the top of its cell. */
 export const MONTH_CELL_HEADER = 26;
+
+/** Points a day cell of the month view is tall at most, so a month with few weeks does not stretch its cells to fill the screen. */
+export const MONTH_CELL_MAX_HEIGHT = 92;

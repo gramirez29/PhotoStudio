@@ -51,6 +51,7 @@ export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): React
           <Text accessibilityRole="header" style={styles.heading}>
             Vista
           </Text>
+          <View style={styles.divider} />
           {AGENDA_VIEWS.map((option) => {
             const available = isViewImplemented(option);
             const selected = option === view;
