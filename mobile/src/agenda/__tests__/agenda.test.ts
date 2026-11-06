@@ -43,6 +43,20 @@ describe('useAgendaStore', () => {
     useAgendaStore.getState().goToToday();
 
     expect(useAgendaStore.getState().anchor).toEqual(new Date(2026, 10, 11));
+    expect(useAgendaStore.getState().visibleDate).toEqual(new Date(2026, 10, 11));
+  });
+
+  it('looks at the day it was moved to', () => {
+    useAgendaStore.getState().setAnchor(new Date(2026, 11, 3, 19, 45));
+
+    expect(useAgendaStore.getState().visibleDate).toEqual(new Date(2026, 11, 3));
+  });
+
+  it('follows the scroll with the day it looks at, without moving the anchor', () => {
+    useAgendaStore.getState().setVisibleDate(new Date(2026, 11, 20, 8, 30));
+
+    expect(useAgendaStore.getState().visibleDate).toEqual(new Date(2026, 11, 20));
+    expect(useAgendaStore.getState().anchor).toEqual(new Date(2026, 10, 11));
   });
 
   it('shows and hides the bookings that are over', () => {

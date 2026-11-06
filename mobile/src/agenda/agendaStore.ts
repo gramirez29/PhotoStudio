@@ -11,9 +11,11 @@ import { startOfDay } from '../utils/agenda/dates';
 export const useAgendaStore = create<AgendaStore>((set) => ({
   view: DEFAULT_AGENDA_VIEW,
   anchor: startOfDay(new Date()),
+  visibleDate: startOfDay(new Date()),
   showAll: false,
   setView: (view) => set({ view }),
-  setAnchor: (anchor) => set({ anchor: startOfDay(anchor) }),
-  goToToday: () => set({ anchor: startOfDay(new Date()) }),
+  setAnchor: (anchor) => set({ anchor: startOfDay(anchor), visibleDate: startOfDay(anchor) }),
+  setVisibleDate: (visibleDate) => set({ visibleDate: startOfDay(visibleDate) }),
+  goToToday: () => set({ anchor: startOfDay(new Date()), visibleDate: startOfDay(new Date()) }),
   setShowAll: (showAll) => set({ showAll }),
 }));

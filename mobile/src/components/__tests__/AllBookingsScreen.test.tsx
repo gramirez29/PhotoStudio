@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import HomeScreen from '../../app/index';
+import AllBookingsScreen from '../../app/bookings/index';
 import { useBookings } from '../../hooks/useBookings';
 import { useSessionStore } from '../../session/sessionStore';
 
@@ -44,7 +44,7 @@ function bookingsAre(state: Partial<ReturnType<typeof useBookings>>): void {
   } as unknown as ReturnType<typeof useBookings>);
 }
 
-describe('HomeScreen', () => {
+describe('AllBookingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useSessionStore.setState({ session: null });
@@ -52,22 +52,22 @@ describe('HomeScreen', () => {
 
   it('keeps the button to create a booking within reach, as a floating button, in every state of the list', () => {
     bookingsAre({ isPending: true, data: undefined });
-    const { rerender } = render(<HomeScreen />);
+    const { rerender } = render(<AllBookingsScreen />);
     expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
 
     bookingsAre({ isError: true, data: undefined });
-    rerender(<HomeScreen />);
+    rerender(<AllBookingsScreen />);
     expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
 
     bookingsAre({ data: pagesOf() as never });
-    rerender(<HomeScreen />);
+    rerender(<AllBookingsScreen />);
     expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
   });
 
   it('says there are no bookings when there are none', () => {
     bookingsAre({ data: pagesOf() as never });
 
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
 
     expect(screen.getByText('Todavía no tienes reservas.')).toBeTruthy();
     expect(screen.getByText('Mis reservas')).toBeTruthy();
@@ -88,7 +88,7 @@ describe('HomeScreen', () => {
       },
     });
 
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
 
     expect(screen.queryByText(/Avisos/)).toBeNull();
     expect(screen.queryByText(/Reembolsos pendientes/)).toBeNull();
@@ -102,7 +102,7 @@ describe('HomeScreen', () => {
     const fetchNextPage = jest.fn();
     bookingsAre({ data: pagesOf('Ana Vargas', 'Luis Mora') as never, hasNextPage: true, fetchNextPage });
 
-    const { rerender } = render(<HomeScreen />);
+    const { rerender } = render(<AllBookingsScreen />);
 
     expect(screen.getByText('Ana Vargas')).toBeTruthy();
     expect(screen.getByText('Luis Mora')).toBeTruthy();
@@ -110,14 +110,14 @@ describe('HomeScreen', () => {
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
 
     bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: false });
-    rerender(<HomeScreen />);
+    rerender(<AllBookingsScreen />);
     expect(screen.queryByText('Ver más')).toBeNull();
   });
 
   it('says it is loading the next page while it comes', () => {
     bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: true, isFetchingNextPage: true });
 
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
 
     expect(screen.getByText('Cargando…')).toBeTruthy();
   });
@@ -125,7 +125,7 @@ describe('HomeScreen', () => {
   it('keeps what is shown and offers to try again when the next page fails', () => {
     bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: true, isFetchNextPageError: true });
 
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
 
     expect(screen.getByText('Ana Vargas')).toBeTruthy();
     expect(screen.getByText('Reintentar')).toBeTruthy();
@@ -133,7 +133,7 @@ describe('HomeScreen', () => {
 
   it('opens the filters from the funnel button, which has a name, and searches by status when a chip is chosen', () => {
     bookingsAre({ data: pagesOf('Ana Vargas') as never });
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
     expect(screen.queryByLabelText('Limpiar filtros')).toBeNull();
 
     fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
@@ -147,7 +147,7 @@ describe('HomeScreen', () => {
   it('searches by name after the pause in typing', () => {
     jest.useFakeTimers();
     bookingsAre({ data: pagesOf('Ana Vargas') as never });
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
 
     fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
     fireEvent.changeText(screen.getByLabelText('Buscar por nombre'), 'ana');
@@ -160,7 +160,7 @@ describe('HomeScreen', () => {
 
   it('shows the broom only while a filter is applied, and the broom takes every filter off', () => {
     bookingsAre({ data: pagesOf() as never });
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
     fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
     fireEvent.press(screen.getByText('Cancelada'));
 
@@ -175,7 +175,7 @@ describe('HomeScreen', () => {
   it('offers to retry when the bookings could not be loaded', () => {
     bookingsAre({ isError: true, data: undefined });
 
-    render(<HomeScreen />);
+    render(<AllBookingsScreen />);
 
     expect(screen.getByText(/No se pudieron cargar las reservas/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeTruthy();

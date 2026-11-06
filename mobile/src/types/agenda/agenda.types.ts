@@ -9,12 +9,19 @@ export interface AgendaStore {
   readonly view: AgendaView;
   /** A day of the period that is shown; each view turns it into the start of its own period. */
   readonly anchor: Date;
+  /**
+   * The day the photographer is looking at right now. It starts as the anchor and, in the list view, follows the scroll: the title of the
+   * header names its month, like the header of Google Calendar. Moving the anchor moves it too.
+   */
+  readonly visibleDate: Date;
   /** Whether the bookings that are over (completed, client absent, cancelled and expired) are shown too. */
   readonly showAll: boolean;
   /** Changes the view, keeping the day. */
   readonly setView: (view: AgendaView) => void;
   /** Moves the agenda to another day. */
   readonly setAnchor: (anchor: Date) => void;
+  /** Records the day the photographer is looking at, without moving the anchor. */
+  readonly setVisibleDate: (date: Date) => void;
   /** Moves the agenda to today. */
   readonly goToToday: () => void;
   /** Shows or hides the bookings that are over. */

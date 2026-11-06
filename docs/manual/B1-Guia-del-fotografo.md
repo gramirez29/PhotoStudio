@@ -41,7 +41,7 @@ En la computadora abre `/studio` del sitio. Pone tu usuario y contraseña; si el
 
 ## 3. Crear una reserva
 
-Inicio → botón **+** → **Agregar reserva**.
+Agenda (pantalla de inicio) → botón **+** → **Agregar reserva**.
 
 | Campo | Notas |
 |---|---|
@@ -68,8 +68,17 @@ Una reserva **Tentativa** vence cuando se cumple su plazo: **48 horas** desde qu
 - Al vencer se cancelan los recordatorios de esa sesión. **No se envía ningún aviso al cliente**: si quieres avisarle, hazlo tú por WhatsApp.
 - Un operador de sistema puede forzar la revisión desde Ajustes → **Liberar reservas vencidas**.
 
+### La agenda (pantalla de inicio)
+Al abrir la app ves tu **agenda**, parecida al calendario del teléfono: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
+
+- **Arriba:** el **mes** (cambia al deslizar), el botón **Ir a hoy** (el calendario con una marca) y el menú ⋮ para elegir la vista.
+- **Vistas:** hoy solo está **Agenda**; Día, 3 días, Semana y Mes aparecen atenuadas y llegan pronto.
+- **Qué reservas ves:** por defecto solo las **tentativas** y las **confirmadas**. En ⋮ → **Mostrar todas las reservas** agregas también las completadas, las de cliente ausente, las canceladas y las vencidas (la app recuerda tu elección).
+- **Más días:** desliza hacia abajo para ver lo que viene y hacia arriba para ver lo anterior; también están los botones "Ver reservas posteriores / anteriores". Arrastra hacia abajo desde arriba para recargar.
+- Para buscar por nombre o por estado, y ver el historial completo, abre ☰ → **Todas las reservas**.
+
 ### Buscar y filtrar tus reservas
-En el inicio, el botón **Filtrar** (ícono de embudo) abre el panel de filtros:
+En **Todas las reservas** (☰ → Todas las reservas), el botón **Filtrar** (ícono de embudo) abre el panel de filtros:
 
 - **Buscar por nombre:** escribe parte del nombre del cliente; la búsqueda se hace al dejar de teclear, sin distinguir mayúsculas.
 - **Estado:** toca un estado (Tentativa, Confirmada, Completada, Cancelada, **Vencida**, Cliente ausente); tócalo de nuevo para quitarlo.
