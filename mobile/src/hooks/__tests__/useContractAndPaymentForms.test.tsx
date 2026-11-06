@@ -11,6 +11,7 @@ import { usePaymentForm } from '../usePaymentForm';
 jest.mock('../../api/client', () => ({
   bookingsApi: {
     getContract: jest.fn(),
+    getCalendar: jest.fn(),
     signContractInPerson: jest.fn(),
     recordInPersonPayment: jest.fn(),
   },

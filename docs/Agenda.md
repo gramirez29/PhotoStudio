@@ -57,15 +57,33 @@ español, comentarios en inglés.
   "infinita" sin recargar listas.
 - **Accesibilidad:** cada bloque se lee, por ejemplo, "Reserva de María Pérez, Retrato Familiar, de 3:00 p. m. a 5:00 p. m., confirmada".
 
+### Lo que deja la fase 2 (ya en el código)
+
+Nada de esto se ve todavía en la app; es lo que las pantallas de las fases siguientes usan.
+
+- **API:** `bookingsApi.getCalendar(range, includeEnded)` y los parsers `parseCalendar` / `buildCalendarPath` (`src/api/bookingsApi.ts`); el tipo es `CalendarResponse` (`src/types/api/calendar.ts`).
+- **Datos:** `useAgendaRange(range, includeEnded)` (`src/hooks/useAgendaRange.ts`): TanStack Query, se refresca cada minuto y conserva lo anterior mientras carga el
+  rango nuevo. `usePrefetchAgenda(view, anchor, includeEnded)` carga de antemano el período anterior y el siguiente. **La clave de caché cuelga de
+  `['bookings', fotógrafo, 'agenda', …]`**, la misma de las reservas, así que todo lo que ya refresca las reservas (crear, editar, cancelar,
+  reprogramar, completar, el mantenimiento) refresca la agenda sin tocar esos hooks.
+- **Estado** (`src/agenda/`): `useAgendaStore` (vista, día ancla, "Mostrar todas") y `agendaManager` (restaura y guarda **solo la vista y el interruptor**; la
+  agenda siempre abre en hoy). Por defecto abre en la vista **Agenda** y con el interruptor apagado.
+- **Utilidades puras** (`src/utils/agenda/`), probadas en varias zonas horarias (UTC, Costa Rica, Nueva York, Londres, Auckland, con cambios de hora):
+  `dates` (aritmética por **días civiles**, no por milisegundos), `ranges` (rango visible, mover el período, cuántos períodos hay entre dos días, rangos
+  vecinos; nunca más de 62 días), `layout` (`layoutDay`: columnas lado a lado como Google, con altura mínima de 30 min y minutos **por la hora del reloj**,
+  también en los días del cambio de hora), `monthGrid`, `schedule` (agrupar por día; hoy siempre aparece), `titles` y `preferences`.
+- **Para las fases siguientes:** el paginador usa `shiftAnchor` y `periodsBetween` (índice de página relativo a un ancla, sin lista infinita real); el mes pide
+  su cuadrícula completa (4 a 6 semanas, máx. 42 días) y la lista pide trozos de 30 días.
+
 ## 5. Fases
 
 Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).
 
 | # | Fase | Tamaño | Estado |
 |---|---|---|---|
-| 0 | Este plan | — | En revisión |
-| 1 | **Backend:** `GET /api/bookings/calendar`, índice, pruebas y documentación | Pequeño | Pendiente |
-| 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | Pendiente |
+| 0 | Este plan | — | Hecho (#92) |
+| 1 | **Backend:** `GET /api/bookings/calendar`, índice, pruebas y documentación | Pequeño | En revisión (#93) |
+| 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | En revisión (este PR) |
 | 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú | Mediano | Pendiente |
 | 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | Pendiente |
 | 5 | **Mes + mini-mes** para saltar de fecha | Mediano | Pendiente |

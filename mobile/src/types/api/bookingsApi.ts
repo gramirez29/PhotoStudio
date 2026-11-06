@@ -13,6 +13,8 @@ import type {
   RevertClientAbsentRequest,
   SignContractInPersonRequest,
 } from './booking';
+import type { QueryRange } from '../utils/agenda.types';
+import type { CalendarResponse } from './calendar';
 
 /** Booking endpoints used by the photographer app. */
 export interface BookingsApi {
@@ -120,6 +122,16 @@ export interface BookingsApi {
    * @returns The page of booking summaries.
    */
   listBookings(cursor: string | null, filter?: BookingListFilter, signal?: AbortSignal): Promise<BookingListResponse>;
+
+  /**
+   * Loads the bookings of the signed-in photographer whose session overlaps a range of time, for the agenda: no pages, by start of the
+   * session, at most 62 days at a time.
+   * @param range The range, as ISO 8601 instants; the end is not included.
+   * @param includeEnded Whether to also bring the bookings that are over (completed, client absent, cancelled and expired); by default only the tentative and the confirmed ones.
+   * @param signal Optional signal to cancel the request.
+   * @returns The bookings of the range, and whether the backend left some out for being too many.
+   */
+  getCalendar(range: QueryRange, includeEnded: boolean, signal?: AbortSignal): Promise<CalendarResponse>;
 
   /**
    * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.
