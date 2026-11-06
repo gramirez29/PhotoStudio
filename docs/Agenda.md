@@ -87,9 +87,9 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
   interruptor **Mostrar todas las reservas** (apagado: solo tentativas y confirmadas), que recuerda su valor.
 - **Vista Agenda** (`ScheduleView`): los días que tienen reservas y siempre hoy ("Sin reservas" si no hay), con **día de la semana y número** (hoy en un círculo del color
   principal), un **banner al cambiar de mes**, y cada reserva como un **bloque del color de su estado** con cliente, horas, paquete y el nombre del estado
-  (la cancelada o vencida lleva el nombre tachado). Tocar un bloque abre la reserva. Abre en hoy; carga **30 días más** al acercarse a un extremo
-  **solo después de deslizar a mano** (así no cargue sola una lista corta), o con los botones "Ver reservas anteriores/posteriores"; mantiene lo que se ve
-  donde está al agregar días arriba; hasta 24 trozos de 30 días (unos dos años) a cada lado; deslizar hacia abajo recarga; avisa si el backend dejó reservas fuera.
+  (la cancelada o vencida lleva el nombre tachado). Tocar un bloque abre la reserva. Abre en hoy **con los próximos 90 días ya cargados** (tres trozos de 30
+  días, sin botones ni enlaces: la prueba en teléfono mostró que no gustaban); carga **30 días más** al acercarse a un extremo **solo después de deslizar
+  a mano** (así no cargue sola una lista corta), con un indicador de carga en ese extremo; mantiene lo que se ve donde está al agregar días arriba; hasta 24 trozos de 30 días (unos dos años) a cada lado; deslizar hacia abajo recarga; avisa si el backend dejó reservas fuera.
 - **Datos:** `useAgendaRanges` (varios rangos juntos con `useQueries`, sin repetir una reserva que cruza dos rangos) y `useToday` (el día de hoy, que solo cambia a
   la medianoche).
 

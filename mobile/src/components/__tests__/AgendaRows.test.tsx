@@ -3,7 +3,6 @@ import { formatTime } from '../../utils/format';
 import { atHour, novemberBooking } from '../../utils/agenda/__fixtures__/agendaFixtures';
 import { AgendaEventChip } from '../AgendaEventChip';
 import { ScheduleDayRow } from '../ScheduleDayRow';
-import { ScheduleEdgeButton } from '../ScheduleEdgeButton';
 import { ScheduleMonthBanner } from '../ScheduleMonthBanner';
 
 describe('AgendaEventChip', () => {
@@ -106,26 +105,5 @@ describe('ScheduleMonthBanner', () => {
 
     expect(screen.getByRole('header')).toBeTruthy();
     expect(screen.getByText('Diciembre 2027')).toBeTruthy();
-  });
-});
-
-describe('ScheduleEdgeButton', () => {
-  it('asks for more days when it is tapped', () => {
-    const onPress = jest.fn();
-    render(<ScheduleEdgeButton label="Ver reservas posteriores" onPress={onPress} loading={false} />);
-
-    fireEvent.press(screen.getByRole('button', { name: 'Ver reservas posteriores' }));
-
-    expect(onPress).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows a spinner instead of the label, and ignores taps, while it loads', () => {
-    const onPress = jest.fn();
-    render(<ScheduleEdgeButton label="Ver reservas posteriores" onPress={onPress} loading />);
-
-    expect(screen.queryByText('Ver reservas posteriores')).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: 'Ver reservas posteriores' }));
-
-    expect(onPress).not.toHaveBeenCalled();
   });
 });

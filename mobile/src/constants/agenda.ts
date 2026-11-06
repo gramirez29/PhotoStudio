@@ -30,3 +30,6 @@ export const SCHEDULE_MAX_CHUNKS_EACH_WAY = 24;
 
 /** Points from the edge of the list at which the next chunk of days starts loading, so it is there before the photographer arrives. */
 export const SCHEDULE_LOAD_THRESHOLD = 600;
+
+/** Chunks of 30 days the list view loads after the day it opens on, besides that day's own: three chunks, about 90 days ahead, are there when it opens. */
+export const SCHEDULE_INITIAL_CHUNKS_AFTER = 2;

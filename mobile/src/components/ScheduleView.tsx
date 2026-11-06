@@ -9,7 +9,7 @@ import {
   type ViewToken,
 } from 'react-native';
 import { useAgendaStore } from '../agenda/agendaStore';
-import { SCHEDULE_MAX_CHUNKS_EACH_WAY } from '../constants/agenda';
+import { SCHEDULE_INITIAL_CHUNKS_AFTER, SCHEDULE_MAX_CHUNKS_EACH_WAY } from '../constants/agenda';
 import { useAgendaRanges } from '../hooks/useAgendaRanges';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { useBottomInset } from '../hooks/useBottomInset';
@@ -25,7 +25,6 @@ import { groupByDay } from '../utils/agenda/schedule';
 import { buildScheduleRows, pageToLoad } from '../utils/agenda/scheduleRows';
 import { Placeholder } from './Placeholder';
 import { ScheduleDayRow } from './ScheduleDayRow';
-import { ScheduleEdgeButton } from './ScheduleEdgeButton';
 import { ScheduleMonthBanner } from './ScheduleMonthBanner';
 
 /** Room left at the end of the list so the floating button never hides the last booking. */
@@ -37,8 +36,8 @@ const VIEWABILITY: ViewabilityConfig = { itemVisiblePercentThreshold: 60 };
 /**
  * The list view of the agenda, like the "Schedule" view of Google Calendar: the days that have bookings, one under the other, each
  * with its weekday and number and its bookings as blocks of the color of their status, with a banner at each change of month, and
- * always today. It opens on the day it is given and loads the next or the previous 30 days as the photographer scrolls toward an end
- * (or taps the button at that end), keeping what is on screen where it is. The title of the header follows the month of the day at the
+ * always today. It opens on the day it is given with the next 90 days already loaded, and loads the next or the previous 30 days as
+ * the photographer scrolls toward an end, keeping what is on screen where it is; a spinner at that end says it is loading. The title of the header follows the month of the day at the
  * top. Pulling down reloads. Tapping a booking opens it.
  * @param props Component props.
  * @returns The list, or a spinner or a message while there is nothing to show.
@@ -50,7 +49,7 @@ export function ScheduleView({ anchor, includeEnded }: ScheduleViewProps): React
   const today = useToday();
   const setVisibleDate = useAgendaStore((state) => state.setVisibleDate);
   const [startOffset, setStartOffset] = useState(0);
-  const [endOffset, setEndOffset] = useState(0);
+  const [endOffset, setEndOffset] = useState(SCHEDULE_INITIAL_CHUNKS_AFTER);
   const [refreshing, setRefreshing] = useState(false);
   const dragged = useRef(false);
   const anchorTime = anchor.getTime();
@@ -142,8 +141,8 @@ export function ScheduleView({ anchor, includeEnded }: ScheduleViewProps): React
       }
       ListHeaderComponent={
         <>
-          {canLoadBefore && (
-            <ScheduleEdgeButton label="Ver reservas anteriores" onPress={loadBefore} loading={state.isFetching && startOffset < 0} />
+          {state.isFetching && startOffset < 0 && (
+            <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reservas anteriores" style={styles.edgeLoader} />
           )}
           {state.truncated && (
             <Text style={styles.notice}>
@@ -153,7 +152,9 @@ export function ScheduleView({ anchor, includeEnded }: ScheduleViewProps): React
         </>
       }
       ListFooterComponent={
-        canLoadAfter ? <ScheduleEdgeButton label="Ver reservas posteriores" onPress={loadAfter} loading={state.isFetching && endOffset > 0} /> : null
+        state.isFetching && endOffset > SCHEDULE_INITIAL_CHUNKS_AFTER ? (
+          <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reservas posteriores" style={styles.edgeLoader} />
+        ) : null
       }
       onScrollBeginDrag={() => {
         dragged.current = true;
@@ -177,6 +178,9 @@ const useStyles = makeStyles((palette) => ({
   },
   loader: {
     marginTop: spacing.lg,
+  },
+  edgeLoader: {
+    marginVertical: spacing.md,
   },
   notice: {
     color: palette.onSurfaceVariant,

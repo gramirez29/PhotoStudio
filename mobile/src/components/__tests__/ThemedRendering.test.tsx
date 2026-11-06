@@ -24,7 +24,6 @@ import { FormInput } from '../FormInput';
 import { HeaderBrand } from '../HeaderBrand';
 import { MenuButton } from '../MenuButton';
 import { ScheduleDayRow } from '../ScheduleDayRow';
-import { ScheduleEdgeButton } from '../ScheduleEdgeButton';
 import { ScheduleMonthBanner } from '../ScheduleMonthBanner';
 import { Placeholder } from '../Placeholder';
 import { ScreenLoader } from '../ScreenLoader';
@@ -116,7 +115,6 @@ const SCENES: Readonly<Record<string, () => ReactElement>> = {
       />
       <ScheduleDayRow section={{ date: new Date(2026, 10, 12), key: '2026-11-12', isToday: false, bookings: [] }} onOpenBooking={jest.fn()} />
       <AgendaEventChip booking={novemberBooking('x', 11, 9, 10, 'Cancelled')} onPress={jest.fn()} />
-      <ScheduleEdgeButton label="Ver reservas posteriores" onPress={jest.fn()} loading={false} />
     </>
   ),
   agendaMenu: () => <AgendaViewMenu visible onClose={jest.fn()} />,
