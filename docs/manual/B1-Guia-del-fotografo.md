@@ -69,7 +69,9 @@ Una reserva **Tentativa** vence cuando se cumple su plazo: **48 horas** desde qu
 - Un operador de sistema puede forzar la revisión desde Ajustes → **Liberar reservas vencidas**.
 
 ### La agenda (pantalla de inicio)
-Al abrir la app ves tu **agenda**, parecida al calendario del teléfono, en la vista **Semana**. En la vista **Agenda**: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
+Al abrir la app ves **Inicio**: una dona con tus citas por estado (este mes, mes pasado o todo), lo que tienes pendiente y accesos a la agenda, a todas las reservas, a crear una reserva y a la web del fotógrafo. Desde ahí, **Agenda** (menú o acceso) abre tu agenda, parecida al calendario del teléfono, en la vista **Semana**. En Inicio, el gesto de atrás pide confirmar antes de salir de la app.
+
+ En la vista **Agenda**: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
 
 - **Arriba:** el **mes** (cambia al deslizar), el botón **Ir a hoy** (el calendario con una marca) y el menú ⋮ para elegir la vista.
 - **Vistas:** **Semana** (la de inicio), **3 días**, **Día** y **Agenda** (la lista de días con reservas). **Mes** muestra cada día con sus reservas como barras de color (con "+2" si no caben todas); toca un día para abrirlo en la vista Día.

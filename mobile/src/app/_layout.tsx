@@ -68,14 +68,9 @@ export default function RootLayout(): ReactElement {
         }}
       >
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
-          <Stack.Screen
-            name="index"
-            options={{ title: 'Agenda', headerTitle: AgendaHeaderTitle, headerLeft: MenuButton, headerRight: AgendaHeaderActions }}
-          />
-          <Stack.Screen
-            name="bookings/index"
-            options={{ title: 'Todas las reservas', headerLeft: ({ canGoBack }) => (canGoBack ? undefined : <MenuButton />) }}
-          />
+          <Stack.Screen name="index" options={{ title: 'Inicio', headerLeft: MenuButton }} />
+          <Stack.Screen name="agenda" options={{ title: 'Agenda', headerTitle: AgendaHeaderTitle, headerRight: AgendaHeaderActions }} />
+          <Stack.Screen name="bookings/index" options={{ title: 'Todas las reservas' }} />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />

@@ -22,6 +22,7 @@ import type {
 } from '../types/api/booking';
 import type { BookingsApi } from '../types/api/bookingsApi';
 import type { CalendarResponse } from '../types/api/calendar';
+import type { BookingStatsResponse } from '../types/api/stats';
 import type { QueryRange } from '../types/utils/agenda.types';
 import type { HttpClient } from '../types/api/http';
 import { buildFilterParams, NO_BOOKING_FILTER } from '../utils/bookingFilters';
@@ -248,6 +249,33 @@ export function parseCalendar(value: unknown): CalendarResponse {
 }
 
 /**
+ * Validates the counts of the bookings by status.
+ * @param value Parsed JSON of the response.
+ * @returns The typed counts.
+ */
+export function parseBookingStats(value: unknown): BookingStatsResponse {
+  const path = 'stats';
+  const record = expectRecord(value, path);
+  return {
+    total: readNumber(record, 'total', path),
+    byStatus: readArray(record, 'byStatus', path).map((item, index) => {
+      const entryPath = `${path}.byStatus[${index}]`;
+      const entry = expectRecord(item, entryPath);
+      return { status: readLiteral(entry, 'status', BOOKING_STATUSES, entryPath), count: readNumber(entry, 'count', entryPath) };
+    }),
+  };
+}
+
+/**
+ * Builds the path that asks for the counts of the bookings of a period.
+ * @param range The period, as ISO 8601 instants, or `null` for all the bookings.
+ * @returns The path, with its query string when there is a period.
+ */
+export function buildStatsPath(range: QueryRange | null): string {
+  return range === null ? '/api/bookings/stats' : `/api/bookings/stats?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
+}
+
+/**
  * Builds the path that asks for the bookings of a range.
  * @param range The range, as ISO 8601 instants.
  * @param includeEnded Whether the bookings that are over are wanted too.
@@ -301,6 +329,7 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
     listBookings: (cursor, filter = NO_BOOKING_FILTER, signal) =>
       client.get(buildPagedPath('/api/bookings', cursor, buildFilterParams(filter)), parseBookingList, signal),
     getCalendar: (range, includeEnded, signal) => client.get(buildCalendarPath(range, includeEnded), parseCalendar, signal),
+    getStats: (range, signal) => client.get(buildStatsPath(range), parseBookingStats, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
     getContract: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}/contract`, parseBookingContract, signal),
   };

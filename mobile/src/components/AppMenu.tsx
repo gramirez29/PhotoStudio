@@ -4,13 +4,15 @@ import { Animated, Image, Modal, Pressable, StyleSheet, useWindowDimensions, Vie
 import { Badge, Divider, Drawer, Text, useTheme } from 'react-native-paper';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { useBottomInset } from '../hooks/useBottomInset';
-import { useCurrentHomeScreen } from '../hooks/useCurrentHomeScreen';
+import { useCurrentMainScreen } from '../hooks/useCurrentMainScreen';
 import { useMenuCounters } from '../hooks/useMenuCounters';
 import { useTopInset } from '../hooks/useTopInset';
 import { useMenuStore } from '../menu/menuStore';
 import {
+  openAgenda,
+  openAllBookings,
   openArchivableGalleries,
-  openHomeScreen,
+  openHome,
   openNotifications,
   openRefunds,
   openSettings,
@@ -54,6 +56,7 @@ function menuIcon(name: keyof typeof MaterialIcons.glyphMap): (props: MenuIconPr
 
 /** The icons of the items of the menu. */
 const ICONS = {
+  home: menuIcon('home'),
   agenda: menuIcon('event'),
   bookings: menuIcon('list-alt'),
   notices: menuIcon('notifications'),
@@ -92,7 +95,7 @@ export function AppMenu(): ReactElement | null {
   const closeMenu = useMenuStore((state) => state.closeMenu);
   const session = useSessionStore((state) => state.session);
   const { unreadCount, pendingRefunds } = useMenuCounters();
-  const current = useCurrentHomeScreen();
+  const current = useCurrentMainScreen();
   const topInset = useTopInset();
   const bottomInset = useBottomInset();
   const { width } = useWindowDimensions();
@@ -161,16 +164,22 @@ export function AppMenu(): ReactElement | null {
 
           <View style={[styles.items, { paddingBottom: bottomInset + spacing.md }]}>
             <Drawer.Item
+              label="Inicio"
+              active={current === 'home'}
+              icon={ICONS.home}
+              onPress={current === 'home' ? closeMenu : choose(openHome)}
+            />
+            <Drawer.Item
               label="Agenda"
               active={current === 'agenda'}
               icon={ICONS.agenda}
-              onPress={current === 'agenda' ? closeMenu : choose(() => openHomeScreen('agenda'))}
+              onPress={current === 'agenda' ? closeMenu : choose(openAgenda)}
             />
             <Drawer.Item
               label="Todas las reservas"
               active={current === 'bookings'}
               icon={ICONS.bookings}
-              onPress={current === 'bookings' ? closeMenu : choose(() => openHomeScreen('bookings'))}
+              onPress={current === 'bookings' ? closeMenu : choose(openAllBookings)}
             />
             <Drawer.Item
               label="Avisos"

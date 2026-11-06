@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { useApiHealth } from '../../hooks/useApiHealth';
-import { useChooseHomeScreen } from '../../hooks/useChooseHomeScreen';
 import { useSessionStore } from '../../session/sessionStore';
 import { openChangePassword } from '../../navigation/appNavigation';
 import { SettingsList } from '../SettingsList';
@@ -13,9 +12,7 @@ jest.mock('expo-secure-store', () => ({
 }));
 jest.mock('../../navigation/appNavigation', () => ({ openChangePassword: jest.fn() }));
 jest.mock('../../hooks/useApiHealth');
-jest.mock('../../hooks/useChooseHomeScreen');
 
-const chooseHome = jest.fn();
 
 /**
  * Makes the module of the maintenance button a stand-in that shows a text, so the test sees where it goes without its hooks.
@@ -47,19 +44,6 @@ describe('the settings', () => {
   });
 
   describe('SettingsList', () => {
-    beforeEach(() => {
-      chooseHome.mockClear();
-      jest.mocked(useChooseHomeScreen).mockReturnValue(chooseHome);
-    });
-
-    it('lets the photographer pick the main screen', () => {
-      render(<SettingsList />);
-
-      fireEvent.press(screen.getByLabelText('Pantalla principal: Todas las reservas'));
-
-      expect(chooseHome).toHaveBeenCalledWith('bookings');
-    });
-
     it('shows whether the server is connected, here and not on the home screen', () => {
       render(<SettingsList />);
 
