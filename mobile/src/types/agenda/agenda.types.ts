@@ -14,6 +14,8 @@ export interface AgendaStore {
    * header names its month, like the header of Google Calendar. Moving the anchor moves it too.
    */
   readonly visibleDate: Date;
+  /** Grows every time the agenda is moved to a day on purpose, so a view that is already on that day starts over there. */
+  readonly revision: number;
   /** Whether the bookings that are over (completed, client absent, cancelled and expired) are shown too. */
   readonly showAll: boolean;
   /** Changes the view, keeping the day. */

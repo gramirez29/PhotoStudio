@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Text,
+  View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ViewabilityConfig,
@@ -152,9 +153,12 @@ export function ScheduleView({ anchor, includeEnded }: ScheduleViewProps): React
         </>
       }
       ListFooterComponent={
-        state.isFetching && endOffset > SCHEDULE_INITIAL_CHUNKS_AFTER ? (
-          <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reservas posteriores" style={styles.edgeLoader} />
-        ) : null
+        <>
+          {state.isFetching && endOffset > SCHEDULE_INITIAL_CHUNKS_AFTER && (
+            <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reservas posteriores" style={styles.edgeLoader} />
+          )}
+          <View style={styles.endLine} />
+        </>
       }
       onScrollBeginDrag={() => {
         dragged.current = true;
@@ -181,6 +185,10 @@ const useStyles = makeStyles((palette) => ({
   },
   edgeLoader: {
     marginVertical: spacing.md,
+  },
+  endLine: {
+    backgroundColor: palette.outlineVariant,
+    height: 1,
   },
   notice: {
     color: palette.onSurfaceVariant,

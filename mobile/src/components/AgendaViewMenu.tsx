@@ -51,6 +51,7 @@ export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): React
           <Text accessibilityRole="header" style={styles.heading}>
             Vista
           </Text>
+          <View style={styles.divider} />
           {AGENDA_VIEWS.map((option) => {
             const available = isViewImplemented(option);
             const selected = option === view;
@@ -104,7 +105,7 @@ const useStyles = makeStyles((palette) => ({
   heading: {
     color: palette.onSurfaceVariant,
     fontFamily: FONT_FAMILIES.bodyMedium,
-    fontSize: 12,
+    fontSize: 15,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     textTransform: 'uppercase',

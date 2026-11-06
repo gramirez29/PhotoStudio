@@ -23,7 +23,7 @@ export const AGENDA_REFETCH_INTERVAL_MS = 60_000;
 export const AGENDA_STALE_TIME_MS = 30_000;
 
 /** The views that already have a screen. The menu of views lists the others as not available yet; a phase adds its views here. */
-export const IMPLEMENTED_AGENDA_VIEWS = ['schedule', 'day', 'threeDays', 'week'] as const;
+export const IMPLEMENTED_AGENDA_VIEWS = ['schedule', 'day', 'threeDays', 'week', 'month'] as const;
 
 /** Chunks of the list view that can be loaded on each side of the day it opened on: 24 of 30 days is about two years each way. */
 export const SCHEDULE_MAX_CHUNKS_EACH_WAY = 24;
@@ -51,3 +51,15 @@ export const GRID_DEFAULT_OPEN_MINUTES = 420;
 
 /** Milliseconds between two moves of the line that marks the current time. */
 export const NOW_LINE_INTERVAL_MS = 30_000;
+
+/** Months the photographer can swipe to on each side of the one the month view opened on: twenty years. */
+export const MONTH_PAGES_EACH_WAY = 240;
+
+/** Points a booking takes in the cell of a day of the month view, with the space under it. */
+export const MONTH_CHIP_HEIGHT = 16;
+
+/** Points the number of the day takes at the top of its cell. */
+export const MONTH_CELL_HEADER = 26;
+
+/** Points a day cell of the month view is tall at most, so a month with few weeks does not stretch its cells to fill the screen. */
+export const MONTH_CELL_MAX_HEIGHT = 92;

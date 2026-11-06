@@ -72,7 +72,10 @@ export default function RootLayout(): ReactElement {
             name="index"
             options={{ title: 'Agenda', headerTitle: AgendaHeaderTitle, headerLeft: MenuButton, headerRight: AgendaHeaderActions }}
           />
-          <Stack.Screen name="bookings/index" options={{ title: 'Todas las reservas' }} />
+          <Stack.Screen
+            name="bookings/index"
+            options={{ title: 'Todas las reservas', headerLeft: ({ canGoBack }) => (canGoBack ? undefined : <MenuButton />) }}
+          />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />

@@ -143,6 +143,8 @@ const useStyles = makeStyles((palette) => ({
     flex: 1,
   },
   lines: {
+    borderBottomColor: palette.outlineVariant,
+    borderBottomWidth: 1,
     position: 'absolute',
     left: 0,
     right: 0,

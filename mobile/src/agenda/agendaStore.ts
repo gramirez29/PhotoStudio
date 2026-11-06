@@ -12,10 +12,13 @@ export const useAgendaStore = create<AgendaStore>((set) => ({
   view: DEFAULT_AGENDA_VIEW,
   anchor: startOfDay(new Date()),
   visibleDate: startOfDay(new Date()),
+  revision: 0,
   showAll: false,
   setView: (view) => set({ view }),
-  setAnchor: (anchor) => set({ anchor: startOfDay(anchor), visibleDate: startOfDay(anchor) }),
+  setAnchor: (anchor) =>
+    set((state) => ({ anchor: startOfDay(anchor), visibleDate: startOfDay(anchor), revision: state.revision + 1 })),
   setVisibleDate: (visibleDate) => set({ visibleDate: startOfDay(visibleDate) }),
-  goToToday: () => set({ anchor: startOfDay(new Date()), visibleDate: startOfDay(new Date()) }),
+  goToToday: () =>
+    set((state) => ({ anchor: startOfDay(new Date()), visibleDate: startOfDay(new Date()), revision: state.revision + 1 })),
   setShowAll: (showAll) => set({ showAll }),
 }));

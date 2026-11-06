@@ -46,6 +46,14 @@ describe('useAgendaStore', () => {
     expect(useAgendaStore.getState().visibleDate).toEqual(new Date(2026, 10, 11));
   });
 
+  it('starts the views over when it goes to today even if the anchor was already today', () => {
+    const before = useAgendaStore.getState().revision;
+
+    useAgendaStore.getState().goToToday();
+
+    expect(useAgendaStore.getState().revision).toBe(before + 1);
+  });
+
   it('looks at the day it was moved to', () => {
     useAgendaStore.getState().setAnchor(new Date(2026, 11, 3, 19, 45));
 

@@ -4,12 +4,13 @@ import { Animated, Image, Modal, Pressable, StyleSheet, useWindowDimensions, Vie
 import { Badge, Divider, Drawer, Text, useTheme } from 'react-native-paper';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { useBottomInset } from '../hooks/useBottomInset';
+import { useCurrentHomeScreen } from '../hooks/useCurrentHomeScreen';
 import { useMenuCounters } from '../hooks/useMenuCounters';
 import { useTopInset } from '../hooks/useTopInset';
 import { useMenuStore } from '../menu/menuStore';
 import {
-  openAllBookings,
   openArchivableGalleries,
+  openHomeScreen,
   openNotifications,
   openRefunds,
   openSettings,
@@ -91,6 +92,7 @@ export function AppMenu(): ReactElement | null {
   const closeMenu = useMenuStore((state) => state.closeMenu);
   const session = useSessionStore((state) => state.session);
   const { unreadCount, pendingRefunds } = useMenuCounters();
+  const current = useCurrentHomeScreen();
   const topInset = useTopInset();
   const bottomInset = useBottomInset();
   const { width } = useWindowDimensions();
@@ -160,11 +162,16 @@ export function AppMenu(): ReactElement | null {
           <View style={[styles.items, { paddingBottom: bottomInset + spacing.md }]}>
             <Drawer.Item
               label="Agenda"
-              active
+              active={current === 'agenda'}
               icon={ICONS.agenda}
-              onPress={closeMenu}
+              onPress={current === 'agenda' ? closeMenu : choose(() => openHomeScreen('agenda'))}
             />
-            <Drawer.Item label="Todas las reservas" icon={ICONS.bookings} onPress={choose(openAllBookings)} />
+            <Drawer.Item
+              label="Todas las reservas"
+              active={current === 'bookings'}
+              icon={ICONS.bookings}
+              onPress={current === 'bookings' ? closeMenu : choose(() => openHomeScreen('bookings'))}
+            />
             <Drawer.Item
               label="Avisos"
               accessibilityLabel={inboxLabel(unreadCount)}
