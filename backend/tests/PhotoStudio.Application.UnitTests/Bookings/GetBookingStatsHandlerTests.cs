@@ -60,7 +60,7 @@ public sealed class GetBookingStatsHandlerTests
     {
         var handler = new GetBookingStatsHandler(_repository);
 
-        await Should.ThrowAsync<ArgumentException>(() => handler.HandleAsync(new GetBookingStatsQuery(Guid.CreateVersion7(), To, From), TestContext.Current.CancellationToken));
+        await Should.ThrowAsync<ArgumentException>(() => handler.HandleAsync(new GetBookingStatsQuery(Guid.CreateVersion7(), From: To, To: From), TestContext.Current.CancellationToken));
         await Should.ThrowAsync<ArgumentException>(() => handler.HandleAsync(new GetBookingStatsQuery(Guid.CreateVersion7(), From, From), TestContext.Current.CancellationToken));
     }
 }
