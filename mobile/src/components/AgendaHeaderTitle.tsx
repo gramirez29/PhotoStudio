@@ -7,14 +7,14 @@ import { agendaTitle } from '../utils/agenda/titles';
 import { effectiveAgendaView } from '../utils/agenda/views';
 
 /**
- * The title of the header of the agenda: the month of what the photographer is looking at, like the header of Google Calendar. In the
- * list view it follows the scroll, so it names the month of the day at the top; in the other views it names the month of the period.
+ * The title of the header of the agenda: the month of what the photographer is looking at, like the header of Google Calendar. It follows
+ * the scroll of the list and the swipes of the grid.
  * @returns The title.
  */
 export function AgendaHeaderTitle(): ReactElement {
   const styles = useStyles();
   const view = useAgendaStore((state) => effectiveAgendaView(state.view));
-  const date = useAgendaStore((state) => (view === 'schedule' ? state.visibleDate : state.anchor));
+  const date = useAgendaStore((state) => state.visibleDate);
 
   return (
     <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>

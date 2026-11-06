@@ -20,7 +20,10 @@ export async function restoreAgendaPreferences(): Promise<void> {
  * @returns A promise that resolves when the choice is kept.
  */
 export async function changeAgendaView(view: AgendaView): Promise<void> {
-  useAgendaStore.getState().setView(view);
+  const store = useAgendaStore.getState();
+  store.setView(view);
+  // The new view opens on the day that was on screen, not on the day the agenda opened on.
+  store.setAnchor(store.visibleDate);
   await saveAgendaPreferences({ view, showAll: useAgendaStore.getState().showAll });
 }
 

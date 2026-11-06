@@ -69,10 +69,11 @@ Una reserva **Tentativa** vence cuando se cumple su plazo: **48 horas** desde qu
 - Un operador de sistema puede forzar la revisión desde Ajustes → **Liberar reservas vencidas**.
 
 ### La agenda (pantalla de inicio)
-Al abrir la app ves tu **agenda**, parecida al calendario del teléfono: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
+Al abrir la app ves tu **agenda**, parecida al calendario del teléfono, en la vista **Semana**. En la vista **Agenda**: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
 
 - **Arriba:** el **mes** (cambia al deslizar), el botón **Ir a hoy** (el calendario con una marca) y el menú ⋮ para elegir la vista.
-- **Vistas:** hoy solo está **Agenda**; Día, 3 días, Semana y Mes aparecen atenuadas y llegan pronto.
+- **Vistas:** **Semana** (la de inicio), **3 días**, **Día** y **Agenda** (la lista de días con reservas). **Mes** aparece atenuada y llega pronto.
+- **Semana, 3 días y Día:** las horas del día van de arriba abajo en filas de media hora, y cada reserva es un bloque del alto de la sesión, con el color de su estado; si dos reservas coinciden, se ponen lado a lado. Una línea roja marca la hora actual. Desliza hacia los lados para cambiar de semana (o de día) y hacia arriba o abajo para ver otras horas. Toca un bloque para abrir la reserva.
 - **Qué reservas ves:** por defecto solo las **tentativas** y las **confirmadas**. En ⋮ → **Mostrar todas las reservas** agregas también las completadas, las de cliente ausente, las canceladas y las vencidas (la app recuerda tu elección).
 - **Más días:** al abrir ya están cargados los próximos 90 días. Desliza hacia abajo para ver lo que viene y hacia arriba para ver lo anterior; se cargan solos, con un indicador de carga. Arrastra hacia abajo desde arriba para recargar.
 - Para buscar por nombre o por estado, y ver el historial completo, abre ☰ → **Todas las reservas**.

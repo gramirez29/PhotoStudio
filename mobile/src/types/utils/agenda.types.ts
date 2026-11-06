@@ -78,3 +78,15 @@ export interface ScrollMetrics {
   /** Height of the whole content. */
   readonly content: number;
 }
+
+/** Where the block of a booking goes inside the column of its day, in points. */
+export interface EventFrame {
+  /** Distance from the top of the column. */
+  readonly top: number;
+  /** Height of the block. */
+  readonly height: number;
+  /** Distance from the left of the column. */
+  readonly left: number;
+  /** Width of the block. */
+  readonly width: number;
+}

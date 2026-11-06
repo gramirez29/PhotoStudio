@@ -97,7 +97,8 @@ describe('labels', () => {
 describe('views', () => {
   it('knows which views have a screen', () => {
     expect(isViewImplemented('schedule')).toBe(true);
-    expect(isViewImplemented('week')).toBe(false);
+    expect(isViewImplemented('week')).toBe(true);
+    expect(isViewImplemented('month')).toBe(false);
   });
 
   it('falls back to the list for a view that has no screen yet', () => {
