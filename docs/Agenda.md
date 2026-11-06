@@ -113,7 +113,8 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 - **Ir a hoy** ahora funciona aunque el ancla ya fuera hoy: el store tiene `revision`, que sube con `setAnchor` y `goToToday`, y la pantalla la usa en la `key` de la vista para reiniciarla.
 - **Pantalla principal** en Ajustes (`HomeScreenSelector`: Agenda o Todas las reservas; `src/home/`, guardada en `photostudio.homeScreen`). El cambio aplica al abrir la app la próxima vez: `AgendaScreen` espera la lectura (no dibuja nada antes) y, si se eligió la lista, hace `replace` a `/bookings` una sola vez por ejecución. En esa pantalla, sin pantalla atrás, la cabecera lleva el botón del menú.
 - El menú de vistas lleva una línea entre "Vista" y la primera opción.
-- Cambiar la pantalla principal en Ajustes se nota **al volver**: `useFollowHomeScreen` reemplaza en la pila la pantalla de abajo (agenda o lista) por la elegida, sin mover los Ajustes (`navigation/homeSwitch.ts`); una lista abierta encima de la agenda no se toca.
+- Cambiar la pantalla principal en Ajustes se nota **al volver**: `useChooseHomeScreen` guarda la elección y reinicia la pila con la pantalla elegida debajo de los Ajustes (`navigation/homeSwitch.ts`, `reset` conservando la ruta de arriba), sin importar lo que hubiera debajo.
+- Las opciones **Agenda** y **Todas las reservas** del menú lateral llevan a esa pantalla como primera de la pila (`openHomeScreen`) y marcan la que está abierta (`useCurrentHomeScreen`); antes "Agenda" solo cerraba el menú.
 - Todas las vistas cierran con una línea final (mes, horas del día y lista); el menú de vistas usa letra de 18 puntos.
 
 ## 5. Fases

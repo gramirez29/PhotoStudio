@@ -1,45 +1,43 @@
 import type { ReplaceableNavigation } from '../../types/navigation/homeSwitch.types';
-import { replaceScreenWithHome } from '../homeSwitch';
+import { putHomeUnderneath } from '../homeSwitch';
 
 /**
  * Builds a stand-in for the navigation of a screen.
  * @param names Names of the routes of the stack, from the first.
- * @returns The stand-in, with its dispatch as a mock.
+ * @returns The stand-in, with its reset as a mock.
  */
-function navigationOf(names: string[]): ReplaceableNavigation & { dispatch: jest.Mock } {
-  return { dispatch: jest.fn(), getState: () => ({ routes: names.map((name) => ({ name })) }) };
+function navigationOf(names: string[]): ReplaceableNavigation & { reset: jest.Mock } {
+  return { reset: jest.fn(), getState: () => ({ routes: names.map((name) => ({ name, key: `${name}-key` })) }) };
 }
 
-describe('replaceScreenWithHome', () => {
-  it('replaces the agenda under the settings with the list of bookings', () => {
-    const navigation = navigationOf(['index', 'settings']);
+describe('putHomeUnderneath', () => {
+  it('puts the list of bookings under the settings, whatever the stack had', () => {
+    const navigation = navigationOf(['index', 'bookings/index', 'settings']);
 
-    replaceScreenWithHome(navigation, 'agenda', 'bookings');
+    putHomeUnderneath(navigation, 'bookings');
 
-    expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'REPLACE', payload: { name: 'bookings/index' } });
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 1,
+      routes: [{ name: 'bookings/index' }, { name: 'settings', key: 'settings-key' }],
+    });
   });
 
-  it('replaces the list of bookings with the agenda when it is the first screen', () => {
+  it('puts the agenda under the settings', () => {
     const navigation = navigationOf(['bookings/index', 'settings']);
 
-    replaceScreenWithHome(navigation, 'bookings', 'agenda');
+    putHomeUnderneath(navigation, 'agenda');
 
-    expect(navigation.dispatch).toHaveBeenCalledWith({ type: 'REPLACE', payload: { name: 'index' } });
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 1,
+      routes: [{ name: 'index' }, { name: 'settings', key: 'settings-key' }],
+    });
   });
 
-  it('leaves alone a list of bookings that was opened on top of the agenda', () => {
-    const navigation = navigationOf(['index', 'bookings/index', 'settings']);
+  it('does nothing when there is no stack', () => {
+    const navigation = { reset: jest.fn(), getState: () => undefined };
 
-    replaceScreenWithHome(navigation, 'bookings', 'agenda');
+    putHomeUnderneath(navigation, 'agenda');
 
-    expect(navigation.dispatch).not.toHaveBeenCalled();
-  });
-
-  it('does not make a second copy of the target', () => {
-    const navigation = navigationOf(['index', 'bookings/index', 'settings']);
-
-    replaceScreenWithHome(navigation, 'agenda', 'bookings');
-
-    expect(navigation.dispatch).not.toHaveBeenCalled();
+    expect(navigation.reset).not.toHaveBeenCalled();
   });
 });

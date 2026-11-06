@@ -1,7 +1,15 @@
-/** The part of a screen's navigation object that moving a screen needs, so the code that does it can be tested with a stand-in. */
+/** A route of the stack, as much of it as moving the home screen needs. */
+export interface StackRoute {
+  /** Name of the route. */
+  readonly name: string;
+  /** Key that identifies the route while it is in the stack; a route that is kept keeps its screen as it is. */
+  readonly key?: string;
+}
+
+/** The part of a screen's navigation object that moving the home screen needs, so the code that does it can be tested with a stand-in. */
 export interface ReplaceableNavigation {
-  /** Sends an action to the navigator on behalf of the screen. */
-  readonly dispatch: (action: { readonly type: string; readonly payload?: { readonly name: string } }) => void;
   /** Reads the state of the navigator that holds the screen. */
-  readonly getState: () => { readonly routes: readonly { readonly name: string }[] } | undefined;
+  readonly getState: () => { readonly routes: readonly StackRoute[] } | undefined;
+  /** Replaces the whole stack. */
+  readonly reset: (state: { readonly index: number; readonly routes: readonly StackRoute[] }) => void;
 }

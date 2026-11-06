@@ -9,7 +9,6 @@ import { replaceWithAllBookings } from '../../navigation/appNavigation';
 
 jest.mock('../../agenda/agendaManager', () => ({ restoreAgendaPreferences: jest.fn(), changeAgendaView: jest.fn(), changeAgendaShowAll: jest.fn() }));
 jest.mock('../../hooks/useAgendaRanges');
-jest.mock('../../hooks/useFollowHomeScreen', () => ({ useFollowHomeScreen: jest.fn() }));
 jest.mock('../../home/homeManager', () => ({ restoreHomeScreen: jest.fn() }));
 jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn(), replaceWithAllBookings: jest.fn() }));
 

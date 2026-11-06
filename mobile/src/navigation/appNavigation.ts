@@ -9,9 +9,17 @@ export function openBooking(bookingId: string): void {
   router.push({ pathname: '/bookings/[id]', params: { id: bookingId } });
 }
 
-/** Opens the list of all the bookings, with its search and filters. */
-export function openAllBookings(): void {
-  router.push('/bookings');
+/**
+ * Goes to one of the two main screens as the first screen of the stack, as the options of the side menu do: whatever was open is
+ * left behind and going back from there leaves the app, instead of piling screens up.
+ * @param screen The agenda or the list of all the bookings, with its search and filters.
+ */
+export function openHomeScreen(screen: 'agenda' | 'bookings'): void {
+  if (router.canDismiss()) {
+    router.dismissAll();
+  }
+
+  router.replace(screen === 'agenda' ? '/' : '/bookings');
 }
 
 /** Replaces the current screen with the list of all the bookings, so going back does not return to the one it replaced. */

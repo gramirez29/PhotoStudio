@@ -8,23 +8,18 @@ const ROUTE_NAMES: Readonly<Record<HomeScreen, string>> = {
 };
 
 /**
- * Replaces a home screen with the other one in the stack, without moving the photographer: the screen on top (the settings) stays
- * where it is and, going back, the one below is the new one. It is done only when the stack has no other copy of the target, and, for
- * the list of bookings, only when it is the first screen of the stack, so one that was opened on top of the agenda is left alone.
- * @param navigation Navigation of the screen that is replaced.
- * @param own The screen that is replaced.
- * @param target The screen that takes its place.
+ * Makes a home screen the first one of the stack and keeps the screen on top exactly as it is. The settings use it when the
+ * photographer picks the main screen: the settings stay on the screen, and going back lands on the one that was picked, whatever
+ * the stack had underneath.
+ * @param navigation Navigation of the screen that is on top.
+ * @param target The home screen that goes to the bottom of the stack.
  */
-export function replaceScreenWithHome(navigation: ReplaceableNavigation, own: HomeScreen, target: HomeScreen): void {
+export function putHomeUnderneath(navigation: ReplaceableNavigation, target: HomeScreen): void {
   const routes = navigation.getState()?.routes ?? [];
-  const targetName = ROUTE_NAMES[target];
-  if (routes.some((route) => route.name === targetName)) {
+  const top = routes[routes.length - 1];
+  if (top === undefined) {
     return;
   }
 
-  if (own === 'bookings' && routes[0]?.name !== ROUTE_NAMES.bookings) {
-    return;
-  }
-
-  navigation.dispatch({ type: 'REPLACE', payload: { name: targetName } });
+  navigation.reset({ index: 1, routes: [{ name: ROUTE_NAMES[target] }, top] });
 }

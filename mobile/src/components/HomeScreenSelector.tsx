@@ -2,8 +2,8 @@ import type { ReactElement } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SegmentedButtons, Text, useTheme } from 'react-native-paper';
 import { HOME_SCREENS } from '../constants/home';
-import { changeHomeScreen } from '../home/homeManager';
 import { useHomeStore } from '../home/homeStore';
+import { useChooseHomeScreen } from '../hooks/useChooseHomeScreen';
 import { spacing } from '../theme/tokens';
 import { HOME_SCREEN_LABELS, isHomeScreen } from '../utils/home';
 
@@ -15,6 +15,7 @@ import { HOME_SCREEN_LABELS, isHomeScreen } from '../utils/home';
 export function HomeScreenSelector(): ReactElement {
   const theme = useTheme();
   const screen = useHomeStore((state) => state.screen);
+  const choose = useChooseHomeScreen();
 
   return (
     <View style={styles.container}>
@@ -25,7 +26,7 @@ export function HomeScreenSelector(): ReactElement {
         value={screen}
         onValueChange={(selected) => {
           if (isHomeScreen(selected)) {
-            void changeHomeScreen(selected);
+            choose(selected);
           }
         }}
         buttons={HOME_SCREENS.map((option) => ({
