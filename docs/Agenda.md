@@ -124,3 +124,21 @@ Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y
   mide con 200 reservas en un teléfono real antes de cerrar la fase 4.
 - **Zona horaria:** las reservas viajan en UTC y se pintan en la hora del teléfono. Costa Rica no tiene horario de verano; si el teléfono cambia de
   zona, la agenda cambia con él (igual que Google).
+
+## 8. Datos de prueba
+
+`backend/scripts/seed-agenda.mjs` llena una cuenta **local** con 35 reservas repartidas en unos tres meses para probar la agenda (la API local debe estar
+corriendo; con Docker, Mongo también):
+
+```
+node backend/scripts/seed-agenda.mjs            # crea la cuenta "agenda" (contraseña Agenda-12345) y sus reservas
+node backend/scripts/seed-agenda.mjs --reset    # borra las reservas de esa cuenta y las vuelve a crear
+```
+
+- Crea tentativas, confirmadas (contrato en papel y anticipo en efectivo) y canceladas, **a través de la API real**; marca el correo de la cuenta como verificado
+  directamente en Mongo (en Development el código solo sale en el log de la API). Se niega a correr contra `photosensestudio.com`.
+- Incluye los casos difíciles de ver a mano: hoy, un día con tres reservas, una sesión que cruza la medianoche, una de 4 horas y dos reservas canceladas cuyo horario
+  tomó otra (se solapan en pantalla con "Mostrar todas las reservas").
+- No hay completadas ni de cliente ausente (la API rechaza sesiones pasadas), y las tentativas vencen solas a las 48 horas: con `--reset` se recrean.
+- Opciones: `--api-url`, `--username`, `--email`, `--password`, `--container`, `--database`, `--reset`.
+
