@@ -93,6 +93,14 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 - **Datos:** `useAgendaRanges` (varios rangos juntos con `useQueries`, sin repetir una reserva que cruza dos rangos) y `useToday` (el día de hoy, que solo cambia a
   la medianoche).
 
+### Lo que deja la fase 4 (ya visible en la app)
+
+- **Semana es la vista por defecto** (decisión del 2026-11-06 tras probar la fase 3); Agenda, Día, 3 días y Semana ya existen, Mes sigue atenuada. `changeAgendaView` ahora conserva el día que se miraba al cambiar de vista, y el título de la cabecera sigue siempre a `visibleDate`.
+- `TimeGridView` (página por período, `FlatList` horizontal con `pagingEnabled`, ±400 páginas desde el día de apertura) → `TimeGridPage` (nombres de los días arriba y las 24 horas en un `ScrollView` vertical) → `TimeGridColumn` (un día, con la línea roja de "ahora" si es hoy) → `TimeGridEvent` (bloque del alto real de la sesión, mínimo 30 min, con el color del estado; solapes lado a lado con `layoutDay`). Cada hora tiene una línea y cada media hora una más tenue; `HOUR_HEIGHT` = 64 puntos.
+- Se piden la página en pantalla y sus dos vecinas (`useAgendaRanges`), así al deslizar ya están. Se abre una hora antes de la actual si la página tiene hoy, y a las 7:00 si no; las demás páginas aparecen donde el fotógrafo dejó las horas (una referencia compartida).
+- **Límite conocido:** la columna de horas es parte de cada página, así que se desliza con ella en vez de quedarse fija como en Google. Si el spike en un Android real muestra que hace falta fija, se separa en una fase de pulido (fase 6).
+- Falta, para la fase 6: tocar un hueco vacío para crear la reserva.
+
 ## 5. Fases
 
 Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).
@@ -102,8 +110,8 @@ Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y
 | 0 | Este plan | — | Hecho (#92) |
 | 1 | **Backend:** `GET /api/bookings/calendar`, índice, pruebas y documentación | Pequeño | Hecho (#93) |
 | 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | Hecho (#94) |
-| 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú. Incluye el interruptor "Mostrar todas las reservas" | Mediano | En revisión (este PR) |
-| 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | Pendiente |
+| 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú. Incluye el interruptor "Mostrar todas las reservas" | Mediano | Hecho (#95) |
+| 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | En revisión (este PR) |
 | 5 | **Mes + mini-mes** para saltar de fecha | Mediano | Pendiente |
 | 6 | **Crear desde un hueco** (el formulario acepta hora y duración iniciales), pulido y accesibilidad. El interruptor "Mostrar todas" ya llegó en la fase 3 | Mediano | Pendiente |
 | — | Prueba de todo el conjunto y PR de la rama a `develop` | — | Pendiente |

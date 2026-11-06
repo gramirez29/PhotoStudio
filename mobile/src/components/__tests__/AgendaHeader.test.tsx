@@ -90,10 +90,10 @@ describe('AgendaViewMenu', () => {
   it('dims the views that have no screen yet and does not let them be chosen', () => {
     render(<AgendaViewMenu visible onClose={jest.fn()} />);
 
-    const week = screen.getByRole('menuitem', { name: 'Semana, todavía no disponible' });
-    fireEvent.press(week);
+    const month = screen.getByRole('menuitem', { name: 'Mes, todavía no disponible' });
+    fireEvent.press(month);
 
-    expect(week.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(month.props.accessibilityState).toMatchObject({ disabled: true });
     expect(changeAgendaView).not.toHaveBeenCalled();
   });
 

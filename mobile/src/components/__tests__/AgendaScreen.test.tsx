@@ -51,7 +51,7 @@ describe('AgendaScreen', () => {
   });
 
   it('shows the list when the chosen view has no screen yet', () => {
-    useAgendaStore.setState({ view: 'week' });
+    useAgendaStore.setState({ view: 'month' });
 
     render(<AgendaScreen />);
 
