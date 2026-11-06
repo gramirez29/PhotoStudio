@@ -13,6 +13,7 @@ using PhotoStudio.Application.Bookings.ExpireTentativeBookings;
 using PhotoStudio.Application.Bookings.GetContract;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.GetCalendar;
+using PhotoStudio.Application.Bookings.GetStats;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Galleries;
 using PhotoStudio.Application.Galleries.EditTerms;
@@ -131,6 +132,7 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetBookingContractQuery, BookingContractResponse>, GetBookingContractHandler>();
         services.AddScoped<IQueryHandler<ListBookingsQuery, BookingListResponse>, ListBookingsHandler>();
         services.AddScoped<IQueryHandler<GetCalendarQuery, CalendarResponse>, GetCalendarHandler>();
+        services.AddScoped<IQueryHandler<GetBookingStatsQuery, BookingStatsResponse>, GetBookingStatsHandler>();
 
         // Galleries: created by the system when a session is completed, read and adjusted by the photographer.
         services.AddScoped<IDomainEventHandler<SessionCompleted>, GalleryCreationHandler>();

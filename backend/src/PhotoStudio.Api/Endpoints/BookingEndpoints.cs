@@ -7,6 +7,7 @@ using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.GetBooking;
 using PhotoStudio.Application.Bookings.GetCalendar;
+using PhotoStudio.Application.Bookings.GetStats;
 using PhotoStudio.Application.Bookings.ListBookings;
 using PhotoStudio.Application.Bookings.MarkClientAbsent;
 using PhotoStudio.Application.Bookings.RecordInPersonPayment;
@@ -41,6 +42,7 @@ public static class BookingEndpoints
         group.MapPost("/", CreateAsync).WithName("CreateBooking");
         group.MapGet("/", ListAsync).WithName("ListBookings");
         group.MapGet("/calendar", CalendarAsync).WithName("GetBookingCalendar");
+        group.MapGet("/stats", StatsAsync).WithName("GetBookingStats");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
         group.MapPost("/{id:guid}/details", EditDetailsAsync).WithName("EditBookingDetails");
         group.MapGet("/{id:guid}/contract", GetContractAsync).WithName("GetBookingContract");
@@ -131,6 +133,32 @@ public static class BookingEndpoints
         }
 
         return TypedResults.Ok(await handler.HandleAsync(new GetCalendarQuery(user.GetPhotographerId(), from.Value, to.Value, includeEnded), cancellationToken));
+    }
+
+    /// <summary>
+    /// Counts the bookings of the photographer by status, for the home screen. A booking belongs to a period by the start of its session.
+    /// Without <paramref name="from"/> and <paramref name="to"/> it counts all of them.
+    /// </summary>
+    /// <param name="user">Authenticated photographer.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <param name="from">Start of the period, ISO 8601 with its offset; optional.</param>
+    /// <param name="to">End of the period, exclusive, ISO 8601 with its offset; optional.</param>
+    /// <returns>200 with the total and one count per status, zero included; 400 when the period ends before it starts.</returns>
+    /// <exception cref="BadHttpRequestException">The period is empty or inverted.</exception>
+    private static async Task<Ok<BookingStatsResponse>> StatsAsync(
+        ClaimsPrincipal user,
+        IQueryHandler<GetBookingStatsQuery, BookingStatsResponse> handler,
+        CancellationToken cancellationToken,
+        DateTimeOffset? from = null,
+        DateTimeOffset? to = null)
+    {
+        if (from is not null && to is not null && to <= from)
+        {
+            throw new BadHttpRequestException("The period must end after it starts.");
+        }
+
+        return TypedResults.Ok(await handler.HandleAsync(new GetBookingStatsQuery(user.GetPhotographerId(), from, to), cancellationToken));
     }
 
     /// <summary>

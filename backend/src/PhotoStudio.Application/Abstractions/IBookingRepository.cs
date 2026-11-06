@@ -57,6 +57,21 @@ public interface IBookingRepository
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Counts a photographer's bookings by status, for the summary of the home screen. A booking belongs to a period by the start of its
+    /// session. Statuses without bookings are not in the answer.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="from">Only the sessions that start at or after this instant, or <see langword="null"/> for no lower limit.</param>
+    /// <param name="to">Only the sessions that start before this instant, or <see langword="null"/> for no upper limit.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The number of bookings in each status that has any.</returns>
+    Task<IReadOnlyDictionary<BookingStatus, int>> CountByStatusAsync(
+        Guid photographerId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lists tentative bookings whose hold ended at or before the given instant, oldest hold first. Whether each one can
     /// really expire is decided by the domain (a pending proof of payment blocks it).
     /// </summary>
