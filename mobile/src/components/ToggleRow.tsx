@@ -66,7 +66,7 @@ const useStyles = makeStyles((palette) => ({
     color: palette.onSurface,
     flex: 1,
     fontFamily: FONT_FAMILIES.body,
-    fontSize: 18,
+    fontSize: 16,
   },
   track: {
     alignItems: 'center',

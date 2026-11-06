@@ -115,7 +115,7 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 - El menú de vistas lleva una línea entre "Vista" y la primera opción.
 - Cambiar la pantalla principal en Ajustes se nota **al volver**: `useChooseHomeScreen` guarda la elección y reinicia la pila con la pantalla elegida debajo de los Ajustes (`navigation/homeSwitch.ts`, `reset` conservando la ruta de arriba), sin importar lo que hubiera debajo.
 - Las opciones **Agenda** y **Todas las reservas** del menú lateral llevan a esa pantalla como primera de la pila (`openHomeScreen`) y marcan la que está abierta (`useCurrentHomeScreen`); antes "Agenda" solo cerraba el menú.
-- Todas las vistas cierran con una línea final (mes, horas del día y lista); el menú de vistas usa letra de 18 puntos.
+- Todas las vistas cierran con una línea final (mes, horas del día y lista); el título "Vista" del menú de vistas usa letra de 15 puntos (las opciones siguen en 16).
 
 ## 5. Fases
 
