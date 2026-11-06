@@ -5,7 +5,12 @@ La app abre en **Home** (`mobile/src/app/index.tsx`), la primera pantalla de la 
 ## 1. Qué muestra
 
 - **Tus citas:** una dona (Skia) con las citas por estado, con el total en el centro y una leyenda (color, nombre del estado, cantidad y porcentaje). El periodo se elige con un selector: **Este mes** (por defecto), **Mes pasado** y **Todo**. Una cita pertenece al periodo por el día en que **empieza su sesión**, en la hora del teléfono.
-- **Pendientes:** avisos sin leer y reembolsos pendientes, cada uno una fila que abre su pantalla; si no hay nada lo dice.
+- **Pendientes:** cada fila aparece solo si tiene algo, con su cantidad, y abre donde se atiende; si no hay nada lo dice.
+  - **Avisos sin leer** → Avisos.
+  - **Comprobantes por verificar** (reservas con un comprobante SINPE sin verificar ni rechazar) → Avisos, donde cada comprobante tiene su aviso con «Revisar comprobante».
+  - **Tentativas por vencer en 24 h** (tentativas cuyo apartado termina en las próximas 24 horas y que pueden vencer de verdad: una con comprobante por revisar no vence) → Todas las reservas, ya filtradas por «Tentativa».
+  - **Reembolsos pendientes** → Reembolsos pendientes.
+  - **Galerías por archivar** (entregadas, con espacio por liberar) → Galerías por archivar.
 - **Ir a:** Agenda, Todas las reservas, Nueva reserva y, si la app conoce su dirección, **Abrir la web del fotógrafo** (`/studio`, en el navegador del teléfono).
 
 ## 2. Navegación
@@ -18,6 +23,8 @@ La app abre en **Home** (`mobile/src/app/index.tsx`), la primera pantalla de la 
 ## 3. Backend
 
 `GET /api/bookings/stats?from=&to=` (PR #101): `{ total, byStatus: [{ status, count }] }` con **los seis estados siempre**, cero incluido, en el orden de `BookingStatus`. `from` y `to` son opcionales (sin ellos cuenta todo; `to` exclusivo); un periodo vacío o invertido responde 400. Cuenta con `$match` + `$group` en MongoDB, solo del fotógrafo del token.
+
+`GET /api/bookings/attention`: `{ pendingProofs, expiringSoon }` (reservas con comprobante por revisar y tentativas que vencen en 24 horas, `AttentionLimits.ExpiringSoonHours`). Los dos conteos se hacen en MongoDB y solo del fotógrafo del token.
 
 ## 4. App
 

@@ -166,6 +166,29 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     }
 
     /// <inheritdoc />
+    public async Task<int> CountWithPendingProofAsync(Guid photographerId, CancellationToken cancellationToken)
+    {
+        var count = await _collection.CountDocumentsAsync(
+            booking => booking.PhotographerId == photographerId
+                && booking.Payments.Any(payment => payment.Status == nameof(PaymentStatus.PendingVerification)),
+            cancellationToken: cancellationToken);
+        return (int)count;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountExpiringTentativeAsync(Guid photographerId, DateTimeOffset holdEndsBy, CancellationToken cancellationToken)
+    {
+        // Same rule as the expiration job: a booking with a proof waiting for review cannot expire, so it is not about to.
+        var count = await _collection.CountDocumentsAsync(
+            booking => booking.PhotographerId == photographerId
+                && booking.Status == nameof(BookingStatus.Tentative)
+                && booking.ExpiresAt <= holdEndsBy.UtcDateTime
+                && !booking.Payments.Any(payment => payment.Status == nameof(PaymentStatus.PendingVerification)),
+            cancellationToken: cancellationToken);
+        return (int)count;
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Booking>> ListExpiredTentativeAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken)
     {
         // Served by the (status, expiresAt) index created at startup. Bookings with a proof of payment waiting for review are

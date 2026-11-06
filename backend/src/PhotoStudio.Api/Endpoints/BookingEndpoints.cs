@@ -6,6 +6,7 @@ using PhotoStudio.Application.Bookings.CancelBooking;
 using PhotoStudio.Application.Bookings.CompleteBooking;
 using PhotoStudio.Application.Bookings.CreateBooking;
 using PhotoStudio.Application.Bookings.GetBooking;
+using PhotoStudio.Application.Bookings.GetAttention;
 using PhotoStudio.Application.Bookings.GetCalendar;
 using PhotoStudio.Application.Bookings.GetStats;
 using PhotoStudio.Application.Bookings.ListBookings;
@@ -43,6 +44,7 @@ public static class BookingEndpoints
         group.MapGet("/", ListAsync).WithName("ListBookings");
         group.MapGet("/calendar", CalendarAsync).WithName("GetBookingCalendar");
         group.MapGet("/stats", StatsAsync).WithName("GetBookingStats");
+        group.MapGet("/attention", AttentionAsync).WithName("GetBookingAttention");
         group.MapGet("/{id:guid}", GetByIdAsync).WithName("GetBooking");
         group.MapPost("/{id:guid}/details", EditDetailsAsync).WithName("EditBookingDetails");
         group.MapGet("/{id:guid}/contract", GetContractAsync).WithName("GetBookingContract");
@@ -160,6 +162,20 @@ public static class BookingEndpoints
 
         return TypedResults.Ok(await handler.HandleAsync(new GetBookingStatsQuery(user.GetPhotographerId(), from, to), cancellationToken));
     }
+
+    /// <summary>
+    /// Counts what in the bookings of the photographer is waiting for them, for the home screen: bookings with a proof of payment to verify
+    /// and tentative bookings whose hold ends within 24 hours.
+    /// </summary>
+    /// <param name="user">Authenticated photographer.</param>
+    /// <param name="handler">Query handler.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
+    /// <returns>200 with the two counts.</returns>
+    private static async Task<Ok<BookingAttentionResponse>> AttentionAsync(
+        ClaimsPrincipal user,
+        IQueryHandler<GetBookingAttentionQuery, BookingAttentionResponse> handler,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await handler.HandleAsync(new GetBookingAttentionQuery(user.GetPhotographerId()), cancellationToken));
 
     /// <summary>
     /// Reads the status filter of the query string.

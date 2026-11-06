@@ -35,7 +35,7 @@ export function HomeShortcutsCard(): ReactElement {
         Ir a
       </Text>
       <HomeLinkRow icon="event" label="Agenda" onPress={openAgenda} />
-      <HomeLinkRow icon="list-alt" label="Todas las reservas" onPress={openAllBookings} />
+      <HomeLinkRow icon="list-alt" label="Todas las reservas" onPress={() => openAllBookings()} />
       <HomeLinkRow icon="add-circle-outline" label="Nueva reserva" onPress={openNewBooking} />
       {studioUrl !== null && (
         <HomeLinkRow icon="open-in-new" label="Abrir la web del fotógrafo" onPress={() => void openStudioWeb(studioUrl)} />

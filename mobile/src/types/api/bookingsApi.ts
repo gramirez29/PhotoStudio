@@ -15,6 +15,7 @@ import type {
 } from './booking';
 import type { QueryRange } from '../utils/agenda.types';
 import type { CalendarResponse } from './calendar';
+import type { BookingAttentionResponse } from './attention';
 import type { BookingStatsResponse } from './stats';
 
 /** Booking endpoints used by the photographer app. */
@@ -142,6 +143,14 @@ export interface BookingsApi {
    * @returns The total and one count per status, zero included.
    */
   getStats(range: QueryRange | null, signal?: AbortSignal): Promise<BookingStatsResponse>;
+
+  /**
+   * Counts what in the bookings of the signed-in photographer is waiting for them, for the home screen: bookings with a proof of payment
+   * to verify and tentative bookings whose hold ends within 24 hours.
+   * @param signal Optional signal to cancel the request.
+   * @returns The two counts.
+   */
+  getAttention(signal?: AbortSignal): Promise<BookingAttentionResponse>;
 
   /**
    * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.

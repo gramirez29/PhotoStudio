@@ -2,20 +2,32 @@ import { fireEvent, render, renderHook, screen } from '@testing-library/react-na
 import { Alert, BackHandler, Platform, ToastAndroid } from 'react-native';
 import HomeScreen from '../../app/index';
 import { env } from '../../config/env';
+import { useArchivableGalleries } from '../../hooks/useArchivableGalleries';
+import { useBookingAttention } from '../../hooks/useBookingAttention';
 import { useBookingStats } from '../../hooks/useBookingStats';
 import { useExitOnDoubleBack } from '../../hooks/useExitOnDoubleBack';
 import { useMenuCounters } from '../../hooks/useMenuCounters';
-import { openAgenda, openAllBookings, openNewBooking, openNotifications, openRefunds } from '../../navigation/appNavigation';
+import {
+  openAgenda,
+  openAllBookings,
+  openArchivableGalleries,
+  openNewBooking,
+  openNotifications,
+  openRefunds,
+} from '../../navigation/appNavigation';
 import { openExternalUrl } from '../../navigation/externalLinks';
 import type { BookingStatsResponse } from '../../types/api/stats';
 import { AppThemeProvider } from '../AppThemeProvider';
 
 jest.mock('../../hooks/useBookingStats');
+jest.mock('../../hooks/useBookingAttention');
+jest.mock('../../hooks/useArchivableGalleries');
 jest.mock('../../hooks/useMenuCounters');
 jest.mock('../../navigation/externalLinks', () => ({ openExternalUrl: jest.fn() }));
 jest.mock('../../navigation/appNavigation', () => ({
   openAgenda: jest.fn(),
   openAllBookings: jest.fn(),
+  openArchivableGalleries: jest.fn(),
   openNewBooking: jest.fn(),
   openNotifications: jest.fn(),
   openRefunds: jest.fn(),
@@ -50,6 +62,16 @@ function statsAre(result: Partial<ReturnType<typeof useBookingStats>>): void {
   jest.mocked(useBookingStats).mockReturnValue({ data: undefined, isError: false, refetch: jest.fn(), ...result } as ReturnType<typeof useBookingStats>);
 }
 
+/**
+ * Makes what is waiting for the photographer answer with what a test needs.
+ * @param attention The counts of proofs and holds about to end.
+ * @param archivable How many galleries could be archived.
+ */
+function waitingIs(attention: { pendingProofs: number; expiringSoon: number }, archivable: number): void {
+  jest.mocked(useBookingAttention).mockReturnValue({ data: attention } as ReturnType<typeof useBookingAttention>);
+  jest.mocked(useArchivableGalleries).mockReturnValue({ data: Array.from({ length: archivable }, () => ({})) } as unknown as ReturnType<typeof useArchivableGalleries>);
+}
+
 /** Renders the home screen inside the theme. */
 function renderHome(): void {
   render(
@@ -65,6 +87,7 @@ describe('HomeScreen', () => {
     jest.useFakeTimers().setSystemTime(new Date(2026, 10, 11, 10, 0));
     jest.mocked(useMenuCounters).mockReturnValue({ unreadCount: 0, pendingRefunds: 0, needsAttention: false });
     statsAre({ data: STATS });
+    waitingIs({ pendingProofs: 0, expiringSoon: 0 }, 0);
   });
 
   afterEach(() => {
@@ -133,6 +156,20 @@ describe('HomeScreen', () => {
     expect(openNotifications).toHaveBeenCalledTimes(1);
     expect(openRefunds).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('No tienes nada pendiente.')).toBeNull();
+  });
+
+  it('lists the proofs to verify, the bookings about to expire and the galleries to archive, each where it is dealt with', () => {
+    waitingIs({ pendingProofs: 2, expiringSoon: 3 }, 4);
+
+    renderHome();
+    expect(screen.queryByText('No tienes nada pendiente.')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Comprobantes por verificar (2)'));
+    fireEvent.press(screen.getByLabelText('Reservas tentativas por vencer en 24 horas (3)'));
+    fireEvent.press(screen.getByLabelText('Galerías por archivar (4)'));
+
+    expect(openNotifications).toHaveBeenCalledTimes(1);
+    expect(openAllBookings).toHaveBeenCalledWith('Tentative');
+    expect(openArchivableGalleries).toHaveBeenCalledTimes(1);
   });
 
   it('goes on to the agenda, all the bookings and a new booking', () => {

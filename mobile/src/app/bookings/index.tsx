@@ -8,6 +8,7 @@ import { ListSeparator } from '../../components/ListSeparator';
 import { LoadMoreFooter } from '../../components/LoadMoreFooter';
 import { NewBookingFab } from '../../components/NewBookingFab';
 import { Placeholder } from '../../components/Placeholder';
+import { useInitialBookingStatus } from '../../hooks/useInitialBookingStatus';
 import { useBookingFilters } from '../../hooks/useBookingFilters';
 import { useBookings } from '../../hooks/useBookings';
 import { openBooking } from '../../navigation/appNavigation';
@@ -33,7 +34,7 @@ export default function AllBookingsScreen(): ReactElement {
   const bottomInset = useBottomInset();
   const styles = useStyles();
   const { palette } = useAppTheme();
-  const filters = useBookingFilters();
+  const filters = useBookingFilters(useInitialBookingStatus());
   const query = useBookings(filters.filter);
   const bookings: readonly BookingSummaryResponse[] = flattenPages(query.data?.pages);
 
