@@ -101,6 +101,12 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 - **Límite conocido:** la columna de horas es parte de cada página, así que se desliza con ella en vez de quedarse fija como en Google. Si el spike en un Android real muestra que hace falta fija, se separa en una fase de pulido (fase 6).
 - Falta, para la fase 6: tocar un hueco vacío para crear la reserva.
 
+### Lo que deja la fase 5 (ya visible en la app)
+
+- **Mes**: `MonthView` (un `FlatList` horizontal paginado, ±240 meses) → `MonthPage` (nombres de los días y las semanas desde el domingo, cada una con el mismo alto) → `MonthDayCell` (número del día, hoy en círculo, reservas como barras del color de su estado con el nombre del cliente, "+n" cuando no caben). Se piden el mes en pantalla y sus vecinos. Tocar un día abre ese día en la vista **Día**.
+- **Mini-mes**: tocar el título de la cabecera abre `MiniMonthPicker` (un mes con flechas, hoy con contorno, el día en pantalla relleno); elegir un día mueve la agenda ahí **en la vista que esté abierta**.
+- Ya no queda ninguna vista atenuada en el menú.
+
 ## 5. Fases
 
 Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).
@@ -111,8 +117,8 @@ Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y
 | 1 | **Backend:** `GET /api/bookings/calendar`, índice, pruebas y documentación | Pequeño | Hecho (#93) |
 | 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | Hecho (#94) |
 | 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú. Incluye el interruptor "Mostrar todas las reservas" | Mediano | Hecho (#95) |
-| 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | En revisión (este PR) |
-| 5 | **Mes + mini-mes** para saltar de fecha | Mediano | Pendiente |
+| 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | Hecho (#99) |
+| 5 | **Mes + mini-mes** para saltar de fecha | Mediano | En revisión (este PR) |
 | 6 | **Crear desde un hueco** (el formulario acepta hora y duración iniciales), pulido y accesibilidad. El interruptor "Mostrar todas" ya llegó en la fase 3 | Mediano | Pendiente |
 | — | Prueba de todo el conjunto y PR de la rama a `develop` | — | Pendiente |
 

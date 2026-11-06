@@ -2,6 +2,7 @@ import { useEffect, type ReactElement } from 'react';
 import { View } from 'react-native';
 import { restoreAgendaPreferences } from '../agenda/agendaManager';
 import { useAgendaStore } from '../agenda/agendaStore';
+import { MonthView } from '../components/MonthView';
 import { NewBookingFab } from '../components/NewBookingFab';
 import { ScheduleView } from '../components/ScheduleView';
 import { TimeGridView } from '../components/TimeGridView';
@@ -32,6 +33,7 @@ export default function AgendaScreen(): ReactElement {
       {(view === 'day' || view === 'threeDays' || view === 'week') && (
         <TimeGridView key={`${view}-${anchor.getTime()}`} view={view} anchor={anchor} includeEnded={showAll} />
       )}
+      {view === 'month' && <MonthView key={anchor.getTime()} anchor={anchor} includeEnded={showAll} />}
       <NewBookingFab />
     </View>
   );

@@ -1,6 +1,6 @@
 import type { AgendaView } from '../agenda/agenda.types';
 import type { BookingSummaryResponse } from '../api/booking';
-import type { DaySection, PositionedEvent } from '../utils/agenda.types';
+import type { DaySection, MonthCell, PositionedEvent } from '../utils/agenda.types';
 
 /** Props of the `AgendaEventChip` component. */
 export interface AgendaEventChipProps {
@@ -86,4 +86,46 @@ export interface TimeGridEventProps {
   readonly columnWidth: number;
   /** Called with the id of the booking when it is touched. */
   readonly onPress: (bookingId: string) => void;
+}
+
+/** Props of the `MonthView` component. */
+export interface MonthViewProps {
+  /** A day of the month the view opens on. The view restarts when it changes. */
+  readonly anchor: Date;
+  /** Whether the bookings that are over are shown too. */
+  readonly includeEnded: boolean;
+}
+
+/** Props of the `MonthPage` component. */
+export interface MonthPageProps {
+  /** A day of the month of the page. */
+  readonly month: Date;
+  /** All the bookings loaded around the page. */
+  readonly bookings: readonly BookingSummaryResponse[];
+  /** Width of the page, in points. */
+  readonly width: number;
+  /** Height of the page, in points. */
+  readonly height: number;
+  /** Called with the day the photographer touches. */
+  readonly onOpenDay: (day: Date) => void;
+}
+
+/** Props of the `MonthDayCell` component. */
+export interface MonthDayCellProps {
+  /** The day with its bookings. */
+  readonly cell: MonthCell;
+  /** Width of the cell, in points. */
+  readonly width: number;
+  /** Height of the cell, in points. */
+  readonly height: number;
+  /** Called with the day when the cell is touched. */
+  readonly onPress: (day: Date) => void;
+}
+
+/** Props of the `MiniMonthPicker` component. */
+export interface MiniMonthPickerProps {
+  /** Whether the picker is open. */
+  readonly visible: boolean;
+  /** Called when the picker has to close. */
+  readonly onClose: () => void;
 }

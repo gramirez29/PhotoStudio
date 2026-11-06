@@ -87,14 +87,12 @@ describe('AgendaViewMenu', () => {
     expect(screen.getByRole('menuitem', { name: 'Agenda' }).props.accessibilityState).toMatchObject({ selected: true, disabled: false });
   });
 
-  it('dims the views that have no screen yet and does not let them be chosen', () => {
+  it('offers every view, all of them with a screen', () => {
     render(<AgendaViewMenu visible onClose={jest.fn()} />);
 
-    const month = screen.getByRole('menuitem', { name: 'Mes, todavía no disponible' });
-    fireEvent.press(month);
-
-    expect(month.props.accessibilityState).toMatchObject({ disabled: true });
-    expect(changeAgendaView).not.toHaveBeenCalled();
+    for (const name of ['Agenda', 'Día', '3 días', 'Semana', 'Mes']) {
+      expect(screen.getByRole('menuitem', { name }).props.accessibilityState).toMatchObject({ disabled: false });
+    }
   });
 
   it('changes the view and closes when one is chosen', () => {

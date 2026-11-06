@@ -98,11 +98,13 @@ describe('views', () => {
   it('knows which views have a screen', () => {
     expect(isViewImplemented('schedule')).toBe(true);
     expect(isViewImplemented('week')).toBe(true);
-    expect(isViewImplemented('month')).toBe(false);
+    expect(isViewImplemented('month')).toBe(true);
+    expect(isViewImplemented('bogus' as never)).toBe(false);
   });
 
   it('falls back to the list for a view that has no screen yet', () => {
     expect(effectiveAgendaView('schedule')).toBe('schedule');
-    expect(effectiveAgendaView('month')).toBe('schedule');
+    expect(effectiveAgendaView('month')).toBe('month');
+    expect(effectiveAgendaView('bogus' as never)).toBe('schedule');
   });
 });
