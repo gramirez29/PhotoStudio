@@ -23,16 +23,6 @@ export interface ScheduleMonthBannerProps {
   readonly label: string;
 }
 
-/** Props of the `ScheduleEdgeButton` component. */
-export interface ScheduleEdgeButtonProps {
-  /** What the button says. */
-  readonly label: string;
-  /** Called when it is tapped. */
-  readonly onPress: () => void;
-  /** Whether what it loads is loading right now. */
-  readonly loading: boolean;
-}
-
 /** Props of the `ScheduleView` component. */
 export interface ScheduleViewProps {
   /** The day the list opens on. The list restarts when it changes. */

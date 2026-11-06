@@ -74,7 +74,7 @@ Al abrir la app ves tu **agenda**, parecida al calendario del teléfono: los dí
 - **Arriba:** el **mes** (cambia al deslizar), el botón **Ir a hoy** (el calendario con una marca) y el menú ⋮ para elegir la vista.
 - **Vistas:** hoy solo está **Agenda**; Día, 3 días, Semana y Mes aparecen atenuadas y llegan pronto.
 - **Qué reservas ves:** por defecto solo las **tentativas** y las **confirmadas**. En ⋮ → **Mostrar todas las reservas** agregas también las completadas, las de cliente ausente, las canceladas y las vencidas (la app recuerda tu elección).
-- **Más días:** desliza hacia abajo para ver lo que viene y hacia arriba para ver lo anterior; también están los botones "Ver reservas posteriores / anteriores". Arrastra hacia abajo desde arriba para recargar.
+- **Más días:** al abrir ya están cargados los próximos 90 días. Desliza hacia abajo para ver lo que viene y hacia arriba para ver lo anterior; se cargan solos, con un indicador de carga. Arrastra hacia abajo desde arriba para recargar.
 - Para buscar por nombre o por estado, y ver el historial completo, abre ☰ → **Todas las reservas**.
 
 ### Buscar y filtrar tus reservas

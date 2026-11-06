@@ -102,15 +102,24 @@ describe('ScheduleView', () => {
     expect(openBooking).toHaveBeenCalledWith('a');
   });
 
-  it('asks for the 30 days from the day it opens on, and says whether the ended bookings are wanted', () => {
+  it('asks for the 90 days from the day it opens on, in chunks of 30, and says whether the ended bookings are wanted', () => {
     const mock = rangesAre({});
 
     renderList(true);
 
     const [ranges, includeEnded] = mock.mock.calls[0] ?? [];
     expect(includeEnded).toBe(true);
-    expect(ranges).toHaveLength(1);
+    expect(ranges).toHaveLength(3);
     expect(ranges?.[0]).toEqual({ from: new Date(2026, 10, 11), to: new Date(2026, 11, 11) });
+    expect(ranges?.[2]?.to).toEqual(new Date(2027, 1, 9));
+  });
+
+  it('has no links to ask for more days: it loads them by itself', () => {
+    rangesAre({});
+
+    renderList();
+
+    expect(screen.queryByText(/Ver reservas/)).toBeNull();
   });
 
   it('warns when the backend left some bookings out', () => {
@@ -119,29 +128,6 @@ describe('ScheduleView', () => {
     renderList();
 
     expect(screen.getByText(/Hay más reservas de las que se pueden mostrar/)).toBeTruthy();
-  });
-
-  it('loads the following 30 days from the button at the end, and the previous ones from the button at the top', () => {
-    rangesAre({});
-    renderList();
-    expect(askedRanges()).toBe(1);
-
-    fireEvent.press(screen.getByRole('button', { name: 'Ver reservas posteriores' }));
-    expect(askedRanges()).toBe(2);
-    expect(jest.mocked(useAgendaRanges).mock.calls.at(-1)?.[0][1]?.from).toEqual(new Date(2026, 11, 11));
-
-    fireEvent.press(screen.getByRole('button', { name: 'Ver reservas anteriores' }));
-    expect(askedRanges()).toBe(3);
-    expect(jest.mocked(useAgendaRanges).mock.calls.at(-1)?.[0][0]?.from).toEqual(new Date(2026, 9, 12));
-  });
-
-  it('does not load more while something is loading', () => {
-    rangesAre({ isFetching: true });
-    renderList();
-
-    fireEvent.press(screen.getByRole('button', { name: 'Ver reservas posteriores' }));
-
-    expect(askedRanges()).toBe(1);
   });
 
   describe('scrolling', () => {
@@ -153,7 +139,7 @@ describe('ScheduleView', () => {
 
       fireEvent.scroll(screen.getByLabelText('Agenda de reservas'), nearTheEnd);
 
-      expect(askedRanges()).toBe(1);
+      expect(askedRanges()).toBe(3);
     });
 
     it('loads the next days when the photographer scrolls near the end', () => {
@@ -164,7 +150,8 @@ describe('ScheduleView', () => {
       fireEvent(list, 'scrollBeginDrag');
       fireEvent.scroll(list, nearTheEnd);
 
-      expect(askedRanges()).toBe(2);
+      expect(askedRanges()).toBe(4);
+      expect(jest.mocked(useAgendaRanges).mock.calls.at(-1)?.[0][3]?.from).toEqual(new Date(2027, 1, 9));
     });
 
     it('loads the previous days when the photographer scrolls near the top', () => {
@@ -175,7 +162,7 @@ describe('ScheduleView', () => {
       fireEvent(list, 'scrollBeginDrag');
       fireEvent.scroll(list, { nativeEvent: { contentOffset: { y: 100 }, layoutMeasurement: { height: 600 }, contentSize: { height: 3000 } } });
 
-      expect(askedRanges()).toBe(2);
+      expect(askedRanges()).toBe(4);
       expect(jest.mocked(useAgendaRanges).mock.calls.at(-1)?.[0][0]?.from).toEqual(new Date(2026, 9, 12));
     });
 
@@ -187,7 +174,59 @@ describe('ScheduleView', () => {
       fireEvent(list, 'scrollBeginDrag');
       fireEvent.scroll(list, { nativeEvent: { contentOffset: { y: 1200 }, layoutMeasurement: { height: 600 }, contentSize: { height: 3000 } } });
 
-      expect(askedRanges()).toBe(1);
+      expect(askedRanges()).toBe(3);
+    });
+
+    it('does not ask for more while something is loading', () => {
+      rangesAre({ isFetching: true });
+      renderList();
+      const list = screen.getByLabelText('Agenda de reservas');
+
+      fireEvent(list, 'scrollBeginDrag');
+      fireEvent.scroll(list, nearTheEnd);
+
+      expect(askedRanges()).toBe(3);
+    });
+
+    it('shows a spinner at the end while the days after the first ones load, and none otherwise', () => {
+      rangesAre({});
+      const { rerender } = render(<ScheduleView anchor={TODAY} includeEnded={false} />);
+      const list = screen.getByLabelText('Agenda de reservas');
+      expect(screen.queryByLabelText('Cargando reservas posteriores')).toBeNull();
+
+      fireEvent(list, 'scrollBeginDrag');
+      fireEvent.scroll(list, nearTheEnd);
+      rangesAre({ isFetching: true });
+      rerender(<ScheduleView anchor={TODAY} includeEnded={false} />);
+
+      expect(screen.getByLabelText('Cargando reservas posteriores')).toBeTruthy();
+      expect(screen.queryByLabelText('Cargando reservas anteriores')).toBeNull();
+
+      rangesAre({ isFetching: false });
+      rerender(<ScheduleView anchor={TODAY} includeEnded={false} />);
+      expect(screen.queryByLabelText('Cargando reservas posteriores')).toBeNull();
+    });
+
+    it('shows a spinner at the top while the previous days load', () => {
+      rangesAre({});
+      const { rerender } = render(<ScheduleView anchor={TODAY} includeEnded={false} />);
+      const list = screen.getByLabelText('Agenda de reservas');
+
+      fireEvent(list, 'scrollBeginDrag');
+      fireEvent.scroll(list, { nativeEvent: { contentOffset: { y: 100 }, layoutMeasurement: { height: 600 }, contentSize: { height: 3000 } } });
+      rangesAre({ isFetching: true });
+      rerender(<ScheduleView anchor={TODAY} includeEnded={false} />);
+
+      expect(screen.getByLabelText('Cargando reservas anteriores')).toBeTruthy();
+    });
+
+    it('does not show a spinner for the background refresh of the days it already had', () => {
+      rangesAre({ isFetching: true });
+
+      renderList();
+
+      expect(screen.queryByLabelText('Cargando reservas posteriores')).toBeNull();
+      expect(screen.queryByLabelText('Cargando reservas anteriores')).toBeNull();
     });
   });
 
