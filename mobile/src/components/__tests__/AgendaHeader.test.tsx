@@ -110,21 +110,24 @@ describe('AgendaViewMenu', () => {
   it('shows the switch of the ended bookings off by default and turns it on without closing', () => {
     const onClose = jest.fn();
     render(<AgendaViewMenu visible onClose={onClose} />);
-    const toggle = screen.getByLabelText(/Mostrar todas las reservas/);
+    const toggle = screen.getByRole('switch', { name: /Mostrar todas las reservas/ });
 
-    expect(toggle.props.value).toBe(false);
-    fireEvent(toggle, 'valueChange', true);
+    expect(toggle.props.accessibilityState).toMatchObject({ checked: false });
+    fireEvent.press(toggle);
 
     expect(changeAgendaShowAll).toHaveBeenCalledWith(true);
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('shows the switch on when the ended bookings are shown', () => {
+  it('shows the switch on when the ended bookings are shown, and turns it off when it is tapped', () => {
     agendaIs({ showAll: true });
 
     render(<AgendaViewMenu visible onClose={jest.fn()} />);
+    const toggle = screen.getByRole('switch', { name: /Mostrar todas las reservas/ });
+    fireEvent.press(toggle);
 
-    expect(screen.getByLabelText(/Mostrar todas las reservas/).props.value).toBe(true);
+    expect(toggle.props.accessibilityState).toMatchObject({ checked: true });
+    expect(changeAgendaShowAll).toHaveBeenCalledWith(false);
   });
 
   it('closes when the dimmed screen is tapped', () => {
