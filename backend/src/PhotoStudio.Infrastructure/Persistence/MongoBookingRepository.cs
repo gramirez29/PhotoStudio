@@ -97,6 +97,37 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Booking>> ListInRangeAsync(
+        Guid photographerId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        IReadOnlyCollection<BookingStatus>? statuses,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var filters = Builders<BookingDocument>.Filter;
+
+        // Overlap of half-open intervals: the session starts before the range ends and ends after the range starts.
+        var filter = filters.Eq(booking => booking.PhotographerId, photographerId)
+            & filters.Lt(booking => booking.SlotStart, to.UtcDateTime)
+            & filters.Gt(booking => booking.SlotEnd, from.UtcDateTime);
+        if (statuses is not null)
+        {
+            filter &= filters.In(booking => booking.Status, statuses.Select(status => status.ToString()));
+        }
+
+        // Served by the (photographerId, slotStart) or the (photographerId, slotEnd) index, whichever the range makes cheaper.
+        var documents = await _collection
+            .Find(filter)
+            .SortBy(booking => booking.SlotStart)
+            .ThenBy(booking => booking.Id)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+
+        return [.. documents.Select(document => document.ToDomain())];
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Booking>> ListExpiredTentativeAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken)
     {
         // Served by the (status, expiresAt) index created at startup. Bookings with a proof of payment waiting for review are
