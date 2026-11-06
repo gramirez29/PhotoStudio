@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { ReactElement } from 'react';
-import { Modal, Pressable, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { changeAgendaShowAll, changeAgendaView } from '../agenda/agendaManager';
 import { useAgendaStore } from '../agenda/agendaStore';
 import { AGENDA_VIEWS } from '../constants/agenda';
@@ -13,6 +13,7 @@ import type { AgendaViewMenuProps } from '../types/components/agenda.types';
 import { AGENDA_VIEW_LABELS } from '../utils/agenda/labels';
 import { effectiveAgendaView, isViewImplemented } from '../utils/agenda/views';
 import { withAlpha } from '../utils/color';
+import { ToggleRow } from './ToggleRow';
 
 /** Height of the bar of the header, so the menu opens right under it. */
 const HEADER_HEIGHT = 56;
@@ -72,16 +73,12 @@ export function AgendaViewMenu({ visible, onClose }: AgendaViewMenuProps): React
             );
           })}
           <View style={styles.divider} />
-          <View style={styles.item}>
-            <Text style={styles.itemLabel}>Mostrar todas las reservas</Text>
-            <Switch
-              accessibilityLabel="Mostrar todas las reservas, también las completadas, canceladas y vencidas"
-              value={showAll}
-              onValueChange={(value) => void changeAgendaShowAll(value)}
-              trackColor={{ false: palette.outline, true: palette.primary }}
-              thumbColor={palette.surface}
-            />
-          </View>
+          <ToggleRow
+            label="Mostrar todas las reservas"
+            accessibilityLabel="Mostrar todas las reservas, también las completadas, canceladas y vencidas"
+            value={showAll}
+            onValueChange={(value) => void changeAgendaShowAll(value)}
+          />
         </Pressable>
       </Pressable>
     </Modal>

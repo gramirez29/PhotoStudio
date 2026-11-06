@@ -32,6 +32,7 @@ import { ScreenMessage } from '../ScreenMessage';
 import { SelectField } from '../SelectField';
 import { StatusBadge } from '../StatusBadge';
 import { ThemeSelector } from '../ThemeSelector';
+import { ToggleRow } from '../ToggleRow';
 
 jest.mock('../../hooks/useNotifications', () => ({ useNotifications: () => ({ data: { pages: [{ items: [], unreadCount: 2, nextCursor: null }] } }) }));
 jest.mock('../../hooks/useRefunds', () => ({ useRefunds: () => ({ data: { items: [], pendingCount: 1 } }) }));
@@ -120,6 +121,12 @@ const SCENES: Readonly<Record<string, () => ReactElement>> = {
     </>
   ),
   agendaMenu: () => <AgendaViewMenu visible onClose={jest.fn()} />,
+  toggles: () => (
+    <>
+      <ToggleRow label="Apagado" value={false} onValueChange={jest.fn()} />
+      <ToggleRow label="Encendido" value onValueChange={jest.fn()} />
+    </>
+  ),
   selector: () => <ThemeSelector />,
   menu: () => (
     <>
