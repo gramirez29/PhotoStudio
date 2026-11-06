@@ -26,6 +26,9 @@ function stubApi(booking: BookingResponse): BookingsApi {
     listBookings: jest.fn().mockResolvedValue([]),
     getBooking: jest.fn().mockResolvedValue(booking),
     getContract: jest.fn(),
+    getCalendar: jest.fn(),
+    getStats: jest.fn(),
+    getAttention: jest.fn(),
   };
 }
 

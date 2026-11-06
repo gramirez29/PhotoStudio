@@ -94,6 +94,21 @@ describe('the web area of the photographer', () => {
     expect(screen.getByText(/solo para el fotógrafo/)).toBeInTheDocument();
   });
 
+  it('shows what was typed in the password field with the eye, and hides it again', async () => {
+    const user = userEvent.setup();
+    answer({ [SESSION]: [jsonResponse(401, { code: 'x' })] });
+    renderPage();
+    const field = await screen.findByLabelText('Contraseña');
+    await user.type(field, 'correct horse');
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar contraseña' }));
+    expect(field).toHaveAttribute('type', 'text');
+    expect(field).toHaveValue('correct horse');
+
+    await user.click(screen.getByRole('button', { name: 'Ocultar contraseña' }));
+    expect(field).toHaveAttribute('type', 'password');
+  });
+
   it('asks the server who is signed in before it shows anything', async () => {
     answer({ [SESSION]: [jsonResponse(401, { code: 'x' })] });
 

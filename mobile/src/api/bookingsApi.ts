@@ -21,6 +21,10 @@ import type {
   PaymentResponse,
 } from '../types/api/booking';
 import type { BookingsApi } from '../types/api/bookingsApi';
+import type { CalendarResponse } from '../types/api/calendar';
+import type { BookingAttentionResponse } from '../types/api/attention';
+import type { BookingStatsResponse } from '../types/api/stats';
+import type { QueryRange } from '../types/utils/agenda.types';
 import type { HttpClient } from '../types/api/http';
 import { buildFilterParams, NO_BOOKING_FILTER } from '../utils/bookingFilters';
 import { buildPagedPath } from '../utils/pagination';
@@ -232,6 +236,69 @@ export function parseBookingList(value: unknown): BookingListResponse {
 }
 
 /**
+ * Parses the bookings of a range of the calendar.
+ * @param value Unknown response body.
+ * @returns The typed bookings, in the order the backend sent them, and whether some were left out.
+ */
+export function parseCalendar(value: unknown): CalendarResponse {
+  const path = 'calendar';
+  const record = expectRecord(value, path);
+  return {
+    items: readArray(record, 'items', path).map((item, index) => parseBookingSummary(item, `${path}.items[${index}]`)),
+    truncated: readBoolean(record, 'truncated', path),
+  };
+}
+
+/**
+ * Validates the counts of the bookings by status.
+ * @param value Parsed JSON of the response.
+ * @returns The typed counts.
+ */
+export function parseBookingStats(value: unknown): BookingStatsResponse {
+  const path = 'stats';
+  const record = expectRecord(value, path);
+  return {
+    total: readNumber(record, 'total', path),
+    byStatus: readArray(record, 'byStatus', path).map((item, index) => {
+      const entryPath = `${path}.byStatus[${index}]`;
+      const entry = expectRecord(item, entryPath);
+      return { status: readLiteral(entry, 'status', BOOKING_STATUSES, entryPath), count: readNumber(entry, 'count', entryPath) };
+    }),
+  };
+}
+
+/**
+ * Validates what is waiting for the photographer.
+ * @param value Parsed JSON of the response.
+ * @returns The typed counts.
+ */
+export function parseBookingAttention(value: unknown): BookingAttentionResponse {
+  const path = 'attention';
+  const record = expectRecord(value, path);
+  return { pendingProofs: readNumber(record, 'pendingProofs', path), expiringSoon: readNumber(record, 'expiringSoon', path) };
+}
+
+/**
+ * Builds the path that asks for the counts of the bookings of a period.
+ * @param range The period, as ISO 8601 instants, or `null` for all the bookings.
+ * @returns The path, with its query string when there is a period.
+ */
+export function buildStatsPath(range: QueryRange | null): string {
+  return range === null ? '/api/bookings/stats' : `/api/bookings/stats?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
+}
+
+/**
+ * Builds the path that asks for the bookings of a range.
+ * @param range The range, as ISO 8601 instants.
+ * @param includeEnded Whether the bookings that are over are wanted too.
+ * @returns The path with its query string, with the instants encoded.
+ */
+export function buildCalendarPath(range: QueryRange, includeEnded: boolean): string {
+  const query = `from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`;
+  return `/api/bookings/calendar?${query}${includeEnded ? '&includeEnded=true' : ''}`;
+}
+
+/**
  * Creates the bookings API on top of an HTTP client.
  * @param client HTTP client.
  * @returns The bookings API.
@@ -273,6 +340,9 @@ export function createBookingsApi(client: HttpClient): BookingsApi {
       ),
     listBookings: (cursor, filter = NO_BOOKING_FILTER, signal) =>
       client.get(buildPagedPath('/api/bookings', cursor, buildFilterParams(filter)), parseBookingList, signal),
+    getCalendar: (range, includeEnded, signal) => client.get(buildCalendarPath(range, includeEnded), parseCalendar, signal),
+    getAttention: (signal) => client.get('/api/bookings/attention', parseBookingAttention, signal),
+    getStats: (range, signal) => client.get(buildStatsPath(range), parseBookingStats, signal),
     getBooking: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}`, parseBooking, signal),
     getContract: (id, signal) => client.get(`/api/bookings/${encodeURIComponent(id)}/contract`, parseBookingContract, signal),
   };

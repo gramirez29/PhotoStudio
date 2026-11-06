@@ -7,7 +7,8 @@ import { restoreAppearance } from '../appearance/appearanceManager';
 import { AppBackground } from '../components/AppBackground';
 import { AppThemeProvider } from '../components/AppThemeProvider';
 import { AppMenu } from '../components/AppMenu';
-import { HeaderBrand } from '../components/HeaderBrand';
+import { AgendaHeaderActions } from '../components/AgendaHeaderActions';
+import { AgendaHeaderTitle } from '../components/AgendaHeaderTitle';
 import { MenuButton } from '../components/MenuButton';
 import { Placeholder } from '../components/Placeholder';
 import { PushRegistration } from '../components/PushRegistration';
@@ -67,10 +68,9 @@ export default function RootLayout(): ReactElement {
         }}
       >
         <Stack.Protected guard={status === 'signedIn' && emailVerified}>
-          <Stack.Screen
-            name="index"
-            options={{ title: 'PhotoSense Studio', headerTitle: HeaderBrand, headerLeft: MenuButton }}
-          />
+          <Stack.Screen name="index" options={{ title: 'Inicio', headerLeft: MenuButton }} />
+          <Stack.Screen name="agenda" options={{ title: 'Agenda', headerTitle: AgendaHeaderTitle, headerRight: AgendaHeaderActions }} />
+          <Stack.Screen name="bookings/index" options={{ title: 'Todas las reservas' }} />
           <Stack.Screen name="notifications" options={{ title: 'Avisos' }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="change-password" options={{ title: 'Cambiar contraseña' }} />

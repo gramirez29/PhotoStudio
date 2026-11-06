@@ -37,6 +37,59 @@ public interface IBookingRepository
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Lists a photographer's bookings whose session overlaps a range of time, ordered by the start of the session, for the calendar.
+    /// A session overlaps the range when it starts before the end of the range and ends after the start of it, so one that ends exactly
+    /// when the range starts, or starts exactly when it ends, is not part of it.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="from">Start of the range.</param>
+    /// <param name="to">End of the range, exclusive.</param>
+    /// <param name="statuses">Only the bookings in one of these statuses, or <see langword="null"/> for any status.</param>
+    /// <param name="limit">Maximum number of bookings to return.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The bookings, possibly empty.</returns>
+    Task<IReadOnlyList<Booking>> ListInRangeAsync(
+        Guid photographerId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        IReadOnlyCollection<BookingStatus>? statuses,
+        int limit,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Counts a photographer's bookings by status, for the summary of the home screen. A booking belongs to a period by the start of its
+    /// session. Statuses without bookings are not in the answer.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="from">Only the sessions that start at or after this instant, or <see langword="null"/> for no lower limit.</param>
+    /// <param name="to">Only the sessions that start before this instant, or <see langword="null"/> for no upper limit.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The number of bookings in each status that has any.</returns>
+    Task<IReadOnlyDictionary<BookingStatus, int>> CountByStatusAsync(
+        Guid photographerId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Counts a photographer's bookings that have a proof of payment waiting for them to verify or reject.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The number of bookings with at least one proof pending verification.</returns>
+    Task<int> CountWithPendingProofAsync(Guid photographerId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Counts a photographer's tentative bookings whose hold ends at or before an instant and that can really expire, which leaves out
+    /// the ones with a proof of payment waiting for review.
+    /// </summary>
+    /// <param name="photographerId">Photographer (tenant) identifier.</param>
+    /// <param name="holdEndsBy">The latest end of a hold that counts.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The number of bookings that expire by that instant.</returns>
+    Task<int> CountExpiringTentativeAsync(Guid photographerId, DateTimeOffset holdEndsBy, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lists tentative bookings whose hold ended at or before the given instant, oldest hold first. Whether each one can
     /// really expire is decided by the domain (a pending proof of payment blocks it).
     /// </summary>

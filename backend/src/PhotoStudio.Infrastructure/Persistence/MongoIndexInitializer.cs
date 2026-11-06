@@ -38,6 +38,13 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             new CreateIndexOptions { Name = "ix_photographer_slot" });
 
         // Serves the list of bookings of a photographer, the most recently created first, page by page.
+        // Serves the calendar by the end of the session: with the index above, Mongo picks the one that narrows the range more.
+        var photographerSlotEndIndex = new CreateIndexModel<BookingDocument>(
+            Builders<BookingDocument>.IndexKeys
+                .Ascending(booking => booking.PhotographerId)
+                .Ascending(booking => booking.SlotEnd),
+            new CreateIndexOptions { Name = "ix_photographer_slot_end" });
+
         var photographerCreatedIndex = new CreateIndexModel<BookingDocument>(
             Builders<BookingDocument>.IndexKeys
                 .Ascending(booking => booking.PhotographerId)
@@ -269,7 +276,7 @@ public sealed partial class MongoIndexInitializer(IMongoDatabase database, ILogg
             await passwordResets.Indexes.CreateManyAsync([passwordResetRetentionIndex], cancellationToken: cancellationToken);
             await loginFailures.Indexes.CreateManyAsync([loginFailureRetentionIndex, loginFailureUserIndex], cancellationToken: cancellationToken);
             await pushDevices.Indexes.CreateManyAsync([pushPhotographerIndex], cancellationToken: cancellationToken);
-            await bookings.Indexes.CreateManyAsync([photographerSlotIndex, photographerCreatedIndex, expirationIndex], cancellationToken: cancellationToken);
+            await bookings.Indexes.CreateManyAsync([photographerSlotIndex, photographerSlotEndIndex, photographerCreatedIndex, expirationIndex], cancellationToken: cancellationToken);
             await outbox.Indexes.CreateManyAsync([outboxClaimIndex, outboxRetentionIndex], cancellationToken: cancellationToken);
             await users.Indexes.CreateManyAsync([usernameIndex, emailIndex], cancellationToken: cancellationToken);
             await notifications.Indexes.CreateManyAsync(

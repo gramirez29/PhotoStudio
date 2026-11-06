@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import type { BookingStatus } from '../types/api/booking';
 import type { ReasonAction } from '../types/utils/bookingActions.types';
 
 /**
@@ -7,6 +8,26 @@ import type { ReasonAction } from '../types/utils/bookingActions.types';
  */
 export function openBooking(bookingId: string): void {
   router.push({ pathname: '/bookings/[id]', params: { id: bookingId } });
+}
+
+/** Opens the agenda on top of the current screen. */
+export function openAgenda(): void {
+  router.push('/agenda');
+}
+
+/**
+ * Opens the list of all the bookings, with its search and filters, on top of the current screen.
+ * @param status Status the list starts filtered by; every booking when omitted.
+ */
+export function openAllBookings(status?: BookingStatus): void {
+  router.push(status === undefined ? '/bookings' : { pathname: '/bookings', params: { status } });
+}
+
+/** Goes back to the home screen, the first of the stack, closing every screen that was opened on top of it. */
+export function openHome(): void {
+  if (router.canDismiss()) {
+    router.dismissAll();
+  }
 }
 
 /** Opens the create-booking form. */

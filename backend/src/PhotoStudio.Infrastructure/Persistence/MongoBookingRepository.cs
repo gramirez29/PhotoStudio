@@ -97,6 +97,98 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Booking>> ListInRangeAsync(
+        Guid photographerId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        IReadOnlyCollection<BookingStatus>? statuses,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        var filters = Builders<BookingDocument>.Filter;
+
+        // Overlap of half-open intervals: the session starts before the range ends and ends after the range starts.
+        var filter = filters.Eq(booking => booking.PhotographerId, photographerId)
+            & filters.Lt(booking => booking.SlotStart, to.UtcDateTime)
+            & filters.Gt(booking => booking.SlotEnd, from.UtcDateTime);
+        if (statuses is not null)
+        {
+            filter &= filters.In(booking => booking.Status, statuses.Select(status => status.ToString()));
+        }
+
+        // Served by the (photographerId, slotStart) or the (photographerId, slotEnd) index, whichever the range makes cheaper.
+        var documents = await _collection
+            .Find(filter)
+            .SortBy(booking => booking.SlotStart)
+            .ThenBy(booking => booking.Id)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+
+        return [.. documents.Select(document => document.ToDomain())];
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<BookingStatus, int>> CountByStatusAsync(
+        Guid photographerId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        CancellationToken cancellationToken)
+    {
+        var filters = Builders<BookingDocument>.Filter;
+        var filter = filters.Eq(booking => booking.PhotographerId, photographerId);
+        if (from is not null)
+        {
+            filter &= filters.Gte(booking => booking.SlotStart, from.Value.UtcDateTime);
+        }
+
+        if (to is not null)
+        {
+            filter &= filters.Lt(booking => booking.SlotStart, to.Value.UtcDateTime);
+        }
+
+        // Served by the (photographerId, slotStart) index; the grouping happens in the database, so no booking travels.
+        var groups = await _collection
+            .Aggregate()
+            .Match(filter)
+            .Group(booking => booking.Status, group => new { Status = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+
+        var counts = new Dictionary<BookingStatus, int>();
+        foreach (var group in groups)
+        {
+            if (Enum.TryParse<BookingStatus>(group.Status, out var status))
+            {
+                counts[status] = group.Count;
+            }
+        }
+
+        return counts;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountWithPendingProofAsync(Guid photographerId, CancellationToken cancellationToken)
+    {
+        var count = await _collection.CountDocumentsAsync(
+            booking => booking.PhotographerId == photographerId
+                && booking.Payments.Any(payment => payment.Status == nameof(PaymentStatus.PendingVerification)),
+            cancellationToken: cancellationToken);
+        return (int)count;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountExpiringTentativeAsync(Guid photographerId, DateTimeOffset holdEndsBy, CancellationToken cancellationToken)
+    {
+        // Same rule as the expiration job: a booking with a proof waiting for review cannot expire, so it is not about to.
+        var count = await _collection.CountDocumentsAsync(
+            booking => booking.PhotographerId == photographerId
+                && booking.Status == nameof(BookingStatus.Tentative)
+                && booking.ExpiresAt <= holdEndsBy.UtcDateTime
+                && !booking.Payments.Any(payment => payment.Status == nameof(PaymentStatus.PendingVerification)),
+            cancellationToken: cancellationToken);
+        return (int)count;
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Booking>> ListExpiredTentativeAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken)
     {
         // Served by the (status, expiresAt) index created at startup. Bookings with a proof of payment waiting for review are

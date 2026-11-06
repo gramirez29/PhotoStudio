@@ -13,6 +13,7 @@ jest.mock('expo-secure-store', () => ({
 jest.mock('../../navigation/appNavigation', () => ({ openChangePassword: jest.fn() }));
 jest.mock('../../hooks/useApiHealth');
 
+
 /**
  * Makes the module of the maintenance button a stand-in that shows a text, so the test sees where it goes without its hooks.
  * @returns The module.

@@ -1,183 +1,279 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, renderHook, screen } from '@testing-library/react-native';
+import { Alert, BackHandler, Platform, ToastAndroid } from 'react-native';
 import HomeScreen from '../../app/index';
-import { useBookings } from '../../hooks/useBookings';
-import { useSessionStore } from '../../session/sessionStore';
+import { env } from '../../config/env';
+import { useArchivableGalleries } from '../../hooks/useArchivableGalleries';
+import { useBookingAttention } from '../../hooks/useBookingAttention';
+import { useBookingStats } from '../../hooks/useBookingStats';
+import { useExitOnDoubleBack } from '../../hooks/useExitOnDoubleBack';
+import { useMenuCounters } from '../../hooks/useMenuCounters';
+import {
+  openAgenda,
+  openAllBookings,
+  openArchivableGalleries,
+  openNewBooking,
+  openNotifications,
+  openRefunds,
+} from '../../navigation/appNavigation';
+import { openExternalUrl } from '../../navigation/externalLinks';
+import type { BookingStatsResponse } from '../../types/api/stats';
+import { AppThemeProvider } from '../AppThemeProvider';
 
-jest.mock('../../hooks/useBookings');
-jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn() }));
+jest.mock('../../hooks/useBookingStats');
+jest.mock('../../hooks/useBookingAttention');
+jest.mock('../../hooks/useArchivableGalleries');
+jest.mock('../../hooks/useMenuCounters');
+jest.mock('../../navigation/externalLinks', () => ({ openExternalUrl: jest.fn() }));
+jest.mock('../../navigation/appNavigation', () => ({
+  openAgenda: jest.fn(),
+  openAllBookings: jest.fn(),
+  openArchivableGalleries: jest.fn(),
+  openNewBooking: jest.fn(),
+  openNotifications: jest.fn(),
+  openRefunds: jest.fn(),
+}));
+jest.mock('expo-router', () => ({
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    // The effect runs once, as it does when the screen comes to the front.
+    const React: typeof import('react') = jest.requireActual('react');
+    React.useEffect(effect, [effect]);
+  },
+}));
+jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn(), deleteItemAsync: jest.fn() }));
+
+/** Counts for the tests: ten bookings in four statuses. */
+const STATS: BookingStatsResponse = {
+  total: 10,
+  byStatus: [
+    { status: 'Tentative', count: 2 },
+    { status: 'Confirmed', count: 5 },
+    { status: 'Completed', count: 0 },
+    { status: 'Cancelled', count: 3 },
+    { status: 'Expired', count: 0 },
+    { status: 'ClientAbsent', count: 0 },
+  ],
+};
 
 /**
- * Builds the pages of bookings a query holds.
- * @param names Client names, one booking each, all in a single page.
- * @returns The query data.
+ * Makes the counts answer with what a test needs.
+ * @param result Parts of the query result.
  */
-function pagesOf(...names: string[]): unknown {
-  const items = names.map((clientName, index) => ({
-    id: `b${index}`,
-    clientName,
-    packageName: 'Retrato Familiar',
-    status: 'Tentative',
-    sessionStart: '2026-10-17T21:00:00+00:00',
-    sessionEnd: '2026-10-17T23:00:00+00:00',
-    packagePrice: { amount: 100000, currency: 'CRC' },
-    balance: { amount: 100000, currency: 'CRC' },
-  }));
-  return { pages: [{ items, nextCursor: null }], pageParams: [null] };
+function statsAre(result: Partial<ReturnType<typeof useBookingStats>>): void {
+  jest.mocked(useBookingStats).mockReturnValue({ data: undefined, isError: false, refetch: jest.fn(), ...result } as ReturnType<typeof useBookingStats>);
 }
 
 /**
- * Makes the list of bookings answer with what the test needs.
- * @param state Parts of the query to replace.
+ * Makes what is waiting for the photographer answer with what a test needs.
+ * @param attention The counts of proofs and holds about to end.
+ * @param archivable How many galleries could be archived.
  */
-function bookingsAre(state: Partial<ReturnType<typeof useBookings>>): void {
-  jest.mocked(useBookings).mockReturnValue({
-    data: pagesOf(),
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    isFetchNextPageError: false,
-    fetchNextPage: jest.fn(),
-    isPending: false,
-    isError: false,
-    isRefetching: false,
-    refetch: jest.fn(),
-    ...state,
-  } as unknown as ReturnType<typeof useBookings>);
+function waitingIs(attention: { pendingProofs: number; expiringSoon: number }, archivable: number): void {
+  jest.mocked(useBookingAttention).mockReturnValue({ data: attention } as ReturnType<typeof useBookingAttention>);
+  jest.mocked(useArchivableGalleries).mockReturnValue({ data: Array.from({ length: archivable }, () => ({})) } as unknown as ReturnType<typeof useArchivableGalleries>);
+}
+
+/** Renders the home screen inside the theme. */
+function renderHome(): void {
+  render(
+    <AppThemeProvider>
+      <HomeScreen />
+    </AppThemeProvider>,
+  );
 }
 
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useSessionStore.setState({ session: null });
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 11, 10, 0));
+    jest.mocked(useMenuCounters).mockReturnValue({ unreadCount: 0, pendingRefunds: 0, needsAttention: false });
+    statsAre({ data: STATS });
+    waitingIs({ pendingProofs: 0, expiringSoon: 0 }, 0);
   });
 
-  it('keeps the button to create a booking within reach, as a floating button, in every state of the list', () => {
-    bookingsAre({ isPending: true, data: undefined });
-    const { rerender } = render(<HomeScreen />);
-    expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
-
-    bookingsAre({ isError: true, data: undefined });
-    rerender(<HomeScreen />);
-    expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
-
-    bookingsAre({ data: pagesOf() as never });
-    rerender(<HomeScreen />);
-    expect(screen.getByLabelText('Nueva reserva')).toBeTruthy();
-  });
-
-  it('says there are no bookings when there are none', () => {
-    bookingsAre({ data: pagesOf() as never });
-
-    render(<HomeScreen />);
-
-    expect(screen.getByText('Todavía no tienes reservas.')).toBeTruthy();
-    expect(screen.getByText('Mis reservas')).toBeTruthy();
-  });
-
-  it('is only the list of bookings: notices, refunds, settings and signing out are in the side menu', () => {
-    bookingsAre({ data: pagesOf() as never });
-    useSessionStore.setState({
-      session: {
-        accessToken: 't',
-        accessTokenExpiresAt: 1,
-        photographerId: 'p',
-        username: 'u',
-        email: 'u@example.com',
-        name: 'n',
-        isSystemOperator: true,
-        emailVerified: true,
-      },
-    });
-
-    render(<HomeScreen />);
-
-    expect(screen.queryByText(/Avisos/)).toBeNull();
-    expect(screen.queryByText(/Reembolsos pendientes/)).toBeNull();
-    expect(screen.queryByText('Liberar reservas vencidas')).toBeNull();
-    expect(screen.queryByText(/Servidor/)).toBeNull();
-    expect(screen.queryByText('Apariencia')).toBeNull();
-    expect(screen.queryByText('Cambiar contraseña')).toBeNull();
-  });
-
-  it('shows the bookings of every page loaded, and the button to see more only while there is another page', () => {
-    const fetchNextPage = jest.fn();
-    bookingsAre({ data: pagesOf('Ana Vargas', 'Luis Mora') as never, hasNextPage: true, fetchNextPage });
-
-    const { rerender } = render(<HomeScreen />);
-
-    expect(screen.getByText('Ana Vargas')).toBeTruthy();
-    expect(screen.getByText('Luis Mora')).toBeTruthy();
-    fireEvent.press(screen.getByText('Ver más'));
-    expect(fetchNextPage).toHaveBeenCalledTimes(1);
-
-    bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: false });
-    rerender(<HomeScreen />);
-    expect(screen.queryByText('Ver más')).toBeNull();
-  });
-
-  it('says it is loading the next page while it comes', () => {
-    bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: true, isFetchingNextPage: true });
-
-    render(<HomeScreen />);
-
-    expect(screen.getByText('Cargando…')).toBeTruthy();
-  });
-
-  it('keeps what is shown and offers to try again when the next page fails', () => {
-    bookingsAre({ data: pagesOf('Ana Vargas') as never, hasNextPage: true, isFetchNextPageError: true });
-
-    render(<HomeScreen />);
-
-    expect(screen.getByText('Ana Vargas')).toBeTruthy();
-    expect(screen.getByText('Reintentar')).toBeTruthy();
-  });
-
-  it('opens the filters from the funnel button, which has a name, and searches by status when a chip is chosen', () => {
-    bookingsAre({ data: pagesOf('Ana Vargas') as never });
-    render(<HomeScreen />);
-    expect(screen.queryByLabelText('Limpiar filtros')).toBeNull();
-
-    fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
-    expect(screen.getByRole('button', { name: 'Filtrar' }).props.accessibilityState).toMatchObject({ expanded: true });
-    fireEvent.press(screen.getByText('Completada'));
-
-    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: 'Completed', name: '' });
-    expect(screen.getByTestId('filter-count')).toBeTruthy();
-  });
-
-  it('searches by name after the pause in typing', () => {
-    jest.useFakeTimers();
-    bookingsAre({ data: pagesOf('Ana Vargas') as never });
-    render(<HomeScreen />);
-
-    fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
-    fireEvent.changeText(screen.getByLabelText('Buscar por nombre'), 'ana');
-    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: null, name: '' });
-    act(() => jest.advanceTimersByTime(400));
-
-    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: null, name: 'ana' });
+  afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('shows the broom only while a filter is applied, and the broom takes every filter off', () => {
-    bookingsAre({ data: pagesOf() as never });
-    render(<HomeScreen />);
-    fireEvent.press(screen.getByRole('button', { name: 'Filtrar' }));
-    fireEvent.press(screen.getByText('Cancelada'));
+  it('shows the total and each status that has bookings, with its count and share', () => {
+    renderHome();
 
-    expect(screen.getByText('Ninguna reserva coincide con los filtros.')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Limpiar filtros'));
-
-    expect(jest.mocked(useBookings)).toHaveBeenLastCalledWith({ status: null, name: '' });
-    expect(screen.queryByLabelText('Limpiar filtros')).toBeNull();
-    expect(screen.getByText('Todavía no tienes reservas.')).toBeTruthy();
+    expect(screen.getByLabelText(/10 citas: 2 tentativa, 5 confirmada, 3 cancelada/)).toBeTruthy();
+    expect(screen.getByLabelText('Confirmada: 5, 50 %')).toBeTruthy();
+    expect(screen.getByLabelText('Cancelada: 3, 30 %')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Vencida/)).toBeNull();
   });
 
-  it('offers to retry when the bookings could not be loaded', () => {
-    bookingsAre({ isError: true, data: undefined });
+  it('asks for this month at first and for the period the photographer picks', () => {
+    renderHome();
+    expect(jest.mocked(useBookingStats).mock.calls.at(-1)?.[0]).toEqual({
+      from: new Date(2026, 10, 1).toISOString(),
+      to: new Date(2026, 11, 1).toISOString(),
+    });
 
-    render(<HomeScreen />);
+    fireEvent.press(screen.getByLabelText('Periodo: Todo'));
 
-    expect(screen.getByText(/No se pudieron cargar las reservas/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeTruthy();
+    expect(jest.mocked(useBookingStats).mock.calls.at(-1)?.[0]).toBeNull();
+  });
+
+  it('says so when there are no bookings in the period', () => {
+    statsAre({ data: { total: 0, byStatus: STATS.byStatus.map((entry) => ({ ...entry, count: 0 })) } });
+
+    renderHome();
+
+    expect(screen.getByText('No hay citas en este periodo.')).toBeTruthy();
+  });
+
+  it('shows a spinner while the counts load, and offers to try again when they cannot be loaded', () => {
+    statsAre({ data: undefined });
+    const { unmount } = render(
+      <AppThemeProvider>
+        <HomeScreen />
+      </AppThemeProvider>,
+    );
+    expect(screen.getByLabelText('Cargando las citas')).toBeTruthy();
+    unmount();
+
+    const refetch = jest.fn();
+    statsAre({ data: undefined, isError: true, refetch });
+    renderHome();
+    fireEvent.press(screen.getByText('Reintentar'));
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing is waiting, or lists the notices and refunds that are', () => {
+    renderHome();
+    expect(screen.getByText('No tienes nada pendiente.')).toBeTruthy();
+  });
+
+  it('opens the notices and the refunds that are waiting', () => {
+    jest.mocked(useMenuCounters).mockReturnValue({ unreadCount: 2, pendingRefunds: 1, needsAttention: true });
+
+    renderHome();
+    fireEvent.press(screen.getByText('Avisos sin leer'));
+    fireEvent.press(screen.getByText('Reembolsos pendientes'));
+
+    expect(openNotifications).toHaveBeenCalledTimes(1);
+    expect(openRefunds).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('No tienes nada pendiente.')).toBeNull();
+  });
+
+  it('lists the proofs to verify, the bookings about to expire and the galleries to archive, each where it is dealt with', () => {
+    waitingIs({ pendingProofs: 2, expiringSoon: 3 }, 4);
+
+    renderHome();
+    expect(screen.queryByText('No tienes nada pendiente.')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Comprobantes por verificar (2)'));
+    fireEvent.press(screen.getByLabelText('Reservas tentativas por vencer en 24 horas (3)'));
+    fireEvent.press(screen.getByLabelText('Galerías por archivar (4)'));
+
+    expect(openNotifications).toHaveBeenCalledTimes(1);
+    expect(openAllBookings).toHaveBeenCalledWith('Tentative');
+    expect(openArchivableGalleries).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes on to the agenda, all the bookings and a new booking', () => {
+    renderHome();
+
+    fireEvent.press(screen.getByLabelText('Agenda'));
+    fireEvent.press(screen.getByLabelText('Todas las reservas'));
+    fireEvent.press(screen.getByLabelText('Nueva reserva'));
+
+    expect(openAgenda).toHaveBeenCalledTimes(1);
+    expect(openAllBookings).toHaveBeenCalledTimes(1);
+    expect(openNewBooking).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the link to the web area when the app does not know its address', () => {
+    renderHome();
+
+    expect(screen.queryByLabelText('Abrir la web del fotógrafo')).toBeNull();
+  });
+
+  describe('with the address of the web area', () => {
+    const original = env.studioUrl;
+
+    beforeEach(() => {
+      (env as { studioUrl: string | null }).studioUrl = 'https://photosensestudio.com/studio';
+    });
+
+    afterEach(() => {
+      (env as { studioUrl: string | null }).studioUrl = original;
+    });
+
+    it('opens it in the browser of the phone', () => {
+      jest.mocked(openExternalUrl).mockResolvedValue(true);
+      renderHome();
+
+      fireEvent.press(screen.getByLabelText('Abrir la web del fotógrafo'));
+
+      expect(openExternalUrl).toHaveBeenCalledWith('https://photosensestudio.com/studio');
+    });
+
+    it('tells the photographer when the phone could not open it', async () => {
+      jest.mocked(openExternalUrl).mockResolvedValue(false);
+      const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+      renderHome();
+
+      fireEvent.press(screen.getByLabelText('Abrir la web del fotógrafo'));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(alert).toHaveBeenCalledWith('No se pudo abrir el enlace', expect.any(String));
+    });
+  });
+});
+
+describe('useExitOnDoubleBack', () => {
+  const originalOs = Platform.OS;
+  let handler: (() => boolean | null | undefined) | undefined;
+  const remove = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    handler = undefined;
+    jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, callback) => {
+      handler = () => callback({} as never);
+      return { remove };
+    });
+    jest.spyOn(ToastAndroid, 'show').mockImplementation(() => undefined);
+    jest.useFakeTimers().setSystemTime(new Date(2026, 10, 11, 10, 0));
+    Platform.OS = 'android';
+  });
+
+  afterEach(() => {
+    Platform.OS = originalOs;
+    jest.useRealTimers();
+  });
+
+  it('keeps the app open and warns on the first press, and leaves on a second one within two seconds', () => {
+    renderHook(() => useExitOnDoubleBack());
+
+    expect(handler?.()).toBe(true);
+    expect(ToastAndroid.show).toHaveBeenCalledWith('Presiona de nuevo para salir', ToastAndroid.SHORT);
+
+    jest.setSystemTime(new Date(2026, 10, 11, 10, 0, 1));
+    expect(handler?.()).toBe(false);
+  });
+
+  it('warns again when the second press comes too late', () => {
+    renderHook(() => useExitOnDoubleBack());
+    handler?.();
+
+    jest.setSystemTime(new Date(2026, 10, 11, 10, 0, 5));
+
+    expect(handler?.()).toBe(true);
+    expect(ToastAndroid.show).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops listening when the screen goes away, and does nothing outside Android', () => {
+    const { unmount } = renderHook(() => useExitOnDoubleBack());
+    unmount();
+    expect(remove).toHaveBeenCalledTimes(1);
+
+    Platform.OS = 'ios';
+    handler = undefined;
+    renderHook(() => useExitOnDoubleBack());
+    expect(handler).toBeUndefined();
   });
 });

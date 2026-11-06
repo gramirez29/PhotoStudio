@@ -8,12 +8,13 @@ import { countActiveCriteria, normalizeNameFilter } from '../utils/bookingFilter
  * Holds what the photographer chose to narrow the list of bookings: the text to search in the client name, the status, and
  * whether the panel is open. The status applies at once; the text is passed to the list only after the photographer pauses
  * typing, so the list is not asked again for every letter. Clearing applies at once, without waiting for the pause.
+ * @param initialStatus The status the list starts filtered by, or `null` for any.
  * @returns The state of the filters and the functions to change it.
  */
-export function useBookingFilters(): BookingFiltersState {
+export function useBookingFilters(initialStatus: BookingStatus | null = null): BookingFiltersState {
   const [text, setTextState] = useState('');
   const [searched, setSearched] = useState('');
-  const [status, setStatus] = useState<BookingStatus | null>(null);
+  const [status, setStatus] = useState<BookingStatus | null>(initialStatus);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

@@ -13,6 +13,10 @@ import type {
   RevertClientAbsentRequest,
   SignContractInPersonRequest,
 } from './booking';
+import type { QueryRange } from '../utils/agenda.types';
+import type { CalendarResponse } from './calendar';
+import type { BookingAttentionResponse } from './attention';
+import type { BookingStatsResponse } from './stats';
 
 /** Booking endpoints used by the photographer app. */
 export interface BookingsApi {
@@ -120,6 +124,33 @@ export interface BookingsApi {
    * @returns The page of booking summaries.
    */
   listBookings(cursor: string | null, filter?: BookingListFilter, signal?: AbortSignal): Promise<BookingListResponse>;
+
+  /**
+   * Loads the bookings of the signed-in photographer whose session overlaps a range of time, for the agenda: no pages, by start of the
+   * session, at most 62 days at a time.
+   * @param range The range, as ISO 8601 instants; the end is not included.
+   * @param includeEnded Whether to also bring the bookings that are over (completed, client absent, cancelled and expired); by default only the tentative and the confirmed ones.
+   * @param signal Optional signal to cancel the request.
+   * @returns The bookings of the range, and whether the backend left some out for being too many.
+   */
+  getCalendar(range: QueryRange, includeEnded: boolean, signal?: AbortSignal): Promise<CalendarResponse>;
+
+  /**
+   * Counts the bookings of the signed-in photographer by status, for the chart of the home screen. A booking belongs to a period by the
+   * day its session starts.
+   * @param range The period, as ISO 8601 instants; the end is not included. `null` counts all the bookings.
+   * @param signal Optional signal to cancel the request.
+   * @returns The total and one count per status, zero included.
+   */
+  getStats(range: QueryRange | null, signal?: AbortSignal): Promise<BookingStatsResponse>;
+
+  /**
+   * Counts what in the bookings of the signed-in photographer is waiting for them, for the home screen: bookings with a proof of payment
+   * to verify and tentative bookings whose hold ends within 24 hours.
+   * @param signal Optional signal to cancel the request.
+   * @returns The two counts.
+   */
+  getAttention(signal?: AbortSignal): Promise<BookingAttentionResponse>;
 
   /**
    * Corrects the data of a booking: the client always, the package and the price only while the booking allows it.
