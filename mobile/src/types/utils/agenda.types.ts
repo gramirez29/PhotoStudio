@@ -63,3 +63,18 @@ export interface MonthCell {
   /** The bookings that touch the day, by start. */
   readonly bookings: readonly BookingSummaryResponse[];
 }
+
+/** One row of the list view: the banner of a month, or a day with its bookings. */
+export type ScheduleRow =
+  | { readonly kind: 'month'; readonly key: string; readonly label: string; readonly date: Date }
+  | { readonly kind: 'day'; readonly key: string; readonly date: Date; readonly section: DaySection };
+
+/** What a list reports while it scrolls: how far it is and how big it is, all in points. */
+export interface ScrollMetrics {
+  /** Distance scrolled from the top of the content. */
+  readonly offset: number;
+  /** Height of the visible part of the list. */
+  readonly viewport: number;
+  /** Height of the whole content. */
+  readonly content: number;
+}

@@ -1,131 +1,41 @@
-import type { ReactElement } from 'react';
-import { ActivityIndicator, FlatList, Text, View } from 'react-native';
-import { BookingFilterPanel } from '../components/BookingFilterPanel';
-import { BookingListItem } from '../components/BookingListItem';
-import { ClearFiltersButton } from '../components/ClearFiltersButton';
-import { FilterButton } from '../components/FilterButton';
-import { ListSeparator } from '../components/ListSeparator';
-import { LoadMoreFooter } from '../components/LoadMoreFooter';
+import { useEffect, type ReactElement } from 'react';
+import { View } from 'react-native';
+import { restoreAgendaPreferences } from '../agenda/agendaManager';
+import { useAgendaStore } from '../agenda/agendaStore';
 import { NewBookingFab } from '../components/NewBookingFab';
-import { Placeholder } from '../components/Placeholder';
-import { useBookingFilters } from '../hooks/useBookingFilters';
-import { useBookings } from '../hooks/useBookings';
-import { openBooking } from '../navigation/appNavigation';
-import { isFilterActive } from '../utils/bookingFilters';
-import { flattenPages } from '../utils/pagination';
-import { spacing } from '../theme/tokens';
-import type { BookingSummaryResponse } from '../types/api/booking';
+import { ScheduleView } from '../components/ScheduleView';
 import { makeStyles } from '../theme/makeStyles';
-import { FONT_FAMILIES } from '../theme/fonts';
-import { useAppTheme } from '../hooks/useAppTheme';
-import { useBottomInset } from '../hooks/useBottomInset';
-
-/** Room left at the end of the list so the floating button never hides the last booking. */
-const LIST_END_SPACE = 96;
+import { effectiveAgendaView } from '../utils/agenda/views';
 
 /**
- * Home screen: the bookings of the photographer, the most recently created first and five at a time, with the floating button
- * to create one. Above the list, the "Filtrar" button opens a panel to search by client name and to choose a status, and a broom
- * clears the filters; the results keep the same order. Notices, refunds, settings and signing out are in the side menu.
+ * Home screen: the agenda of the photographer, like the calendar of the phone. It opens on today, on the view the photographer chose
+ * the last time (the list of days the first time), and shows the bookings that still hold the schedule, or all of them when the switch
+ * in the menu of the header is on. The header carries the month, the button to go back to today and the menu of views; the floating
+ * button creates a booking. All the bookings, with their search and filters, are in "Todas las reservas" of the side menu.
  * @returns The screen.
  */
-export default function HomeScreen(): ReactElement {
-  const bottomInset = useBottomInset();
+export default function AgendaScreen(): ReactElement {
   const styles = useStyles();
-  const { palette } = useAppTheme();
-  const filters = useBookingFilters();
-  const query = useBookings(filters.filter);
-  const bookings: readonly BookingSummaryResponse[] = flattenPages(query.data?.pages);
+  const view = useAgendaStore((state) => effectiveAgendaView(state.view));
+  const anchor = useAgendaStore((state) => state.anchor);
+  const showAll = useAgendaStore((state) => state.showAll);
 
-  let empty: ReactElement;
-  if (query.isPending) {
-    empty = <ActivityIndicator color={palette.primary} accessibilityLabel="Cargando reservas" style={styles.loader} />;
-  } else if (query.isError) {
-    empty = (
-      <Placeholder
-        message="No se pudieron cargar las reservas. Revisa la conexión e inténtalo de nuevo."
-        onRetry={() => void query.refetch()}
-      />
-    );
-  } else if (isFilterActive(filters.filter)) {
-    empty = <Placeholder message="Ninguna reserva coincide con los filtros." />;
-  } else {
-    empty = <Placeholder message="Todavía no tienes reservas." />;
-  }
+  // The choices saved on the device apply as soon as they are read; until then the agenda shows the defaults.
+  useEffect(() => {
+    void restoreAgendaPreferences();
+  }, []);
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.sectionTitle}>Mis reservas</Text>
-          <View style={styles.tools}>
-            {filters.activeCount > 0 && <ClearFiltersButton onPress={filters.clear} />}
-            <FilterButton activeCount={filters.activeCount} open={filters.open} onPress={filters.togglePanel} />
-          </View>
-        </View>
-        <BookingFilterPanel
-          open={filters.open}
-          text={filters.text}
-          status={filters.status}
-          onTextChange={filters.setText}
-          onToggleStatus={filters.toggleStatus}
-        />
-      </View>
-      <FlatList
-        data={bookings}
-        keyExtractor={(booking) => booking.id}
-        renderItem={({ item }) => <BookingListItem booking={item} onPress={openBooking} />}
-        ItemSeparatorComponent={ListSeparator}
-        ListEmptyComponent={empty}
-        ListFooterComponent={
-          <LoadMoreFooter
-            hasMore={query.hasNextPage}
-            isLoading={query.isFetchingNextPage}
-            failed={query.isFetchNextPageError}
-            onLoadMore={() => void query.fetchNextPage()}
-          />
-        }
-        keyboardShouldPersistTaps="handled"
-        refreshing={query.isRefetching && !query.isFetchingNextPage}
-        onRefresh={() => void query.refetch()}
-        contentContainerStyle={[styles.container, { paddingBottom: LIST_END_SPACE + bottomInset }]}
-      />
+      {view === 'schedule' && <ScheduleView key={anchor.getTime()} anchor={anchor} includeEnded={showAll} />}
       <NewBookingFab />
     </View>
   );
 }
 
-/** Styles of the home screen. */
-const useStyles = makeStyles((palette) => ({
+/** Styles of the screen. */
+const useStyles = makeStyles(() => ({
   screen: {
     flex: 1,
-  },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-  },
-  titleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  tools: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  container: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
-    paddingBottom: LIST_END_SPACE,
-  },
-  sectionTitle: {
-    color: palette.onSurface,
-    fontSize: 17,
-    fontFamily: FONT_FAMILIES.titleBold,
-  },
-  loader: {
-    marginTop: spacing.lg,
   },
 }));

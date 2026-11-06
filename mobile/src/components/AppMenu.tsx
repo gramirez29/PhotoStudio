@@ -7,7 +7,13 @@ import { useBottomInset } from '../hooks/useBottomInset';
 import { useMenuCounters } from '../hooks/useMenuCounters';
 import { useTopInset } from '../hooks/useTopInset';
 import { useMenuStore } from '../menu/menuStore';
-import { openArchivableGalleries, openNotifications, openRefunds, openSettings } from '../navigation/appNavigation';
+import {
+  openAllBookings,
+  openArchivableGalleries,
+  openNotifications,
+  openRefunds,
+  openSettings,
+} from '../navigation/appNavigation';
 import { confirmSignOut } from '../session/confirmSignOut';
 import { useSessionStore } from '../session/sessionStore';
 import { FONT_FAMILIES } from '../theme/fonts';
@@ -47,7 +53,8 @@ function menuIcon(name: keyof typeof MaterialIcons.glyphMap): (props: MenuIconPr
 
 /** The icons of the items of the menu. */
 const ICONS = {
-  home: menuIcon('home'),
+  agenda: menuIcon('event'),
+  bookings: menuIcon('list-alt'),
   notices: menuIcon('notifications'),
   refunds: menuIcon('attach-money'),
   archive: menuIcon('inventory-2'),
@@ -70,7 +77,7 @@ function counter(count: number, background: string, color: string): () => ReactN
 
 /**
  * The side menu of the app: a panel that slides in from the left over a dimmed screen. At the top, on the band of the brand, the
- * logo, the name of the studio and who is signed in; then Inicio, Avisos and Reembolsos pendientes (with what is waiting), Ajustes
+ * logo, the name of the studio and who is signed in; then Agenda, Todas las reservas, Avisos and Reembolsos pendientes (with what is waiting), Ajustes
  * and, apart at the end, Cerrar sesión. It closes by choosing something, by tapping the dimmed screen or with the back button.
  * The panel slides in when the menu opens and the whole menu fades out when it closes. It is drawn above the whole app, so the
  * button of the header can be anywhere. Without a signed-in photographer it shows nothing.
@@ -152,11 +159,12 @@ export function AppMenu(): ReactElement | null {
 
           <View style={[styles.items, { paddingBottom: bottomInset + spacing.md }]}>
             <Drawer.Item
-              label="Inicio"
+              label="Agenda"
               active
-              icon={ICONS.home}
+              icon={ICONS.agenda}
               onPress={closeMenu}
             />
+            <Drawer.Item label="Todas las reservas" icon={ICONS.bookings} onPress={choose(openAllBookings)} />
             <Drawer.Item
               label="Avisos"
               accessibilityLabel={inboxLabel(unreadCount)}

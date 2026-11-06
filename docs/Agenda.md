@@ -75,6 +75,24 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 - **Para las fases siguientes:** el paginador usa `shiftAnchor` y `periodsBetween` (índice de página relativo a un ancla, sin lista infinita real); el mes pide
   su cuadrícula completa (4 a 6 semanas, máx. 42 días) y la lista pide trozos de 30 días.
 
+### Lo que deja la fase 3 (ya visible en la app)
+
+- **La agenda es la pantalla de inicio** (`app/index.tsx`). La lista de antes pasó a `app/bookings/index.tsx`, con el título "Todas las reservas", y se abre desde el
+  menú lateral (que ahora dice **Agenda** y **Todas las reservas**).
+- **Cabecera tipo Google** (en la barra de siempre, con el menú ☰ a la izquierda): el **mes** de lo que se está mirando (en la vista Agenda sigue al día de
+  arriba al deslizar; con otro año agrega el año), el botón **Ir a hoy** y el botón de **vistas** (⋮). Sustituye al logo y el nombre del estudio que tenía el
+  inicio (`HeaderBrand` ya no se usa en la app; sigue en el menú lateral el logo con el nombre).
+- **Menú de vistas** (`AgendaViewMenu`): Agenda, Día, 3 días, Semana y Mes, con la elegida marcada. Las que aún no tienen pantalla salen atenuadas y no se pueden
+  elegir (`IMPLEMENTED_AGENDA_VIEWS` en `constants/agenda.ts`; cada fase agrega las suyas, y una vista guardada que aún no existe cae a la lista). Debajo, el
+  interruptor **Mostrar todas las reservas** (apagado: solo tentativas y confirmadas), que recuerda su valor.
+- **Vista Agenda** (`ScheduleView`): los días que tienen reservas y siempre hoy ("Sin reservas" si no hay), con **día de la semana y número** (hoy en un círculo del color
+  principal), un **banner al cambiar de mes**, y cada reserva como un **bloque del color de su estado** con cliente, horas, paquete y el nombre del estado
+  (la cancelada o vencida lleva el nombre tachado). Tocar un bloque abre la reserva. Abre en hoy; carga **30 días más** al acercarse a un extremo
+  **solo después de deslizar a mano** (así no cargue sola una lista corta), o con los botones "Ver reservas anteriores/posteriores"; mantiene lo que se ve
+  donde está al agregar días arriba; hasta 24 trozos de 30 días (unos dos años) a cada lado; deslizar hacia abajo recarga; avisa si el backend dejó reservas fuera.
+- **Datos:** `useAgendaRanges` (varios rangos juntos con `useQueries`, sin repetir una reserva que cruza dos rangos) y `useToday` (el día de hoy, que solo cambia a
+  la medianoche).
+
 ## 5. Fases
 
 Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).
@@ -82,12 +100,12 @@ Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y
 | # | Fase | Tamaño | Estado |
 |---|---|---|---|
 | 0 | Este plan | — | Hecho (#92) |
-| 1 | **Backend:** `GET /api/bookings/calendar`, índice, pruebas y documentación | Pequeño | En revisión (#93) |
-| 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | En revisión (este PR) |
-| 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú | Mediano | Pendiente |
+| 1 | **Backend:** `GET /api/bookings/calendar`, índice, pruebas y documentación | Pequeño | Hecho (#93) |
+| 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | Hecho (#94) |
+| 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú. Incluye el interruptor "Mostrar todas las reservas" | Mediano | En revisión (este PR) |
 | 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | Pendiente |
 | 5 | **Mes + mini-mes** para saltar de fecha | Mediano | Pendiente |
-| 6 | **Crear desde un hueco** (el formulario acepta hora y duración iniciales), interruptor "Mostrar todas", pulido y accesibilidad | Mediano | Pendiente |
+| 6 | **Crear desde un hueco** (el formulario acepta hora y duración iniciales), pulido y accesibilidad. El interruptor "Mostrar todas" ya llegó en la fase 3 | Mediano | Pendiente |
 | — | Prueba de todo el conjunto y PR de la rama a `develop` | — | Pendiente |
 
 ## 6. Anotado para después

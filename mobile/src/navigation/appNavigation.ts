@@ -9,6 +9,11 @@ export function openBooking(bookingId: string): void {
   router.push({ pathname: '/bookings/[id]', params: { id: bookingId } });
 }
 
+/** Opens the list of all the bookings, with its search and filters. */
+export function openAllBookings(): void {
+  router.push('/bookings');
+}
+
 /** Opens the create-booking form. */
 export function openNewBooking(): void {
   router.push('/bookings/new');

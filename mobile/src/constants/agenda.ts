@@ -21,3 +21,12 @@ export const AGENDA_REFETCH_INTERVAL_MS = 60_000;
 
 /** Milliseconds the bookings of a range are considered fresh, so swiping back and forth does not ask for the same range again. */
 export const AGENDA_STALE_TIME_MS = 30_000;
+
+/** The views that already have a screen. The menu of views lists the others as not available yet; a phase adds its views here. */
+export const IMPLEMENTED_AGENDA_VIEWS = ['schedule'] as const;
+
+/** Chunks of the list view that can be loaded on each side of the day it opened on: 24 of 30 days is about two years each way. */
+export const SCHEDULE_MAX_CHUNKS_EACH_WAY = 24;
+
+/** Points from the edge of the list at which the next chunk of days starts loading, so it is there before the photographer arrives. */
+export const SCHEDULE_LOAD_THRESHOLD = 600;

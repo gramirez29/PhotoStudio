@@ -6,7 +6,7 @@ import { useMenuCounters } from '../../hooks/useMenuCounters';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useRefunds } from '../../hooks/useRefunds';
 import { useMenuStore } from '../../menu/menuStore';
-import { openNotifications, openRefunds, openSettings } from '../../navigation/appNavigation';
+import { openAllBookings, openNotifications, openRefunds, openSettings } from '../../navigation/appNavigation';
 import { signOutOfDevice } from '../../push/pushSignOut';
 import { useSessionStore } from '../../session/sessionStore';
 import { LIGHT_PALETTE } from '../../theme/palettes';
@@ -17,7 +17,12 @@ import { MenuButton } from '../MenuButton';
 jest.mock('../../hooks/useNotifications');
 jest.mock('../../hooks/useRefunds');
 jest.mock('../../push/pushSignOut', () => ({ signOutOfDevice: jest.fn() }));
-jest.mock('../../navigation/appNavigation', () => ({ openNotifications: jest.fn(), openRefunds: jest.fn(), openSettings: jest.fn() }));
+jest.mock('../../navigation/appNavigation', () => ({
+  openAllBookings: jest.fn(),
+  openNotifications: jest.fn(),
+  openRefunds: jest.fn(),
+  openSettings: jest.fn(),
+}));
 
 /**
  * Makes the inbox and the list of refunds answer with the counts a test needs.
@@ -138,7 +143,7 @@ describe('the side menu', () => {
     it('draws nothing while it is closed', () => {
       renderMenu();
 
-      expect(screen.queryByText('Inicio')).toBeNull();
+      expect(screen.queryByText('Agenda')).toBeNull();
     });
 
     it('shows the studio and who is signed in, and every option, when it opens', () => {
@@ -149,7 +154,7 @@ describe('the side menu', () => {
       expect(screen.getByText('PhotoSense Studio')).toBeTruthy();
       expect(screen.getByText('Guillermo Ramírez')).toBeTruthy();
       expect(screen.getByText('guille@example.com')).toBeTruthy();
-      for (const label of ['Inicio', 'Avisos', 'Reembolsos pendientes', 'Ajustes', 'Cerrar sesión']) {
+      for (const label of ['Agenda', 'Todas las reservas', 'Avisos', 'Reembolsos pendientes', 'Ajustes', 'Cerrar sesión']) {
         expect(screen.getByText(label)).toBeTruthy();
       }
     });
@@ -170,7 +175,7 @@ describe('the side menu', () => {
 
       renderMenu();
 
-      expect(screen.queryByText('Inicio')).toBeNull();
+      expect(screen.queryByText('Agenda')).toBeNull();
     });
 
     it('says how many notices are unread and how many refunds are owed, and says nothing when there are none', () => {
@@ -195,6 +200,7 @@ describe('the side menu', () => {
     });
 
     it.each([
+      ['Todas las reservas', openAllBookings],
       ['Avisos', openNotifications],
       ['Reembolsos pendientes', openRefunds],
       ['Ajustes', openSettings],
@@ -208,11 +214,11 @@ describe('the side menu', () => {
       expect(useMenuStore.getState().open).toBe(false);
     });
 
-    it('only closes the menu from Inicio: the photographer is already there', () => {
+    it('only closes the menu from Agenda: the photographer is already there', () => {
       useMenuStore.setState({ open: true });
       renderMenu();
 
-      fireEvent.press(screen.getByText('Inicio'));
+      fireEvent.press(screen.getByText('Agenda'));
 
       expect(useMenuStore.getState().open).toBe(false);
       expect(openNotifications).not.toHaveBeenCalled();
@@ -251,11 +257,11 @@ describe('the side menu', () => {
           <AppMenu />
         </AppThemeProvider>,
       );
-      expect(screen.queryByText('Inicio')).toBeNull();
+      expect(screen.queryByText('Agenda')).toBeNull();
 
       fireEvent.press(screen.getByRole('button', { name: 'Abrir el menú' }));
 
-      expect(screen.getByText('Inicio')).toBeTruthy();
+      expect(screen.getByText('Agenda')).toBeTruthy();
     });
   });
 });

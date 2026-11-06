@@ -4,6 +4,7 @@ import { parseBooking } from '../../api/bookingsApi';
 import { bookingPayload } from '../../api/__fixtures__/testResponses';
 import { useAppearanceStore } from '../../appearance/appearanceStore';
 import { BOOKING_STATUSES } from '../../constants/booking';
+import { novemberBooking } from '../../utils/agenda/__fixtures__/agendaFixtures';
 import { DARK_PALETTE, LIGHT_PALETTE } from '../../theme/palettes';
 import type { ColorScheme } from '../../types/theme/palette.types';
 import { useMenuStore } from '../../menu/menuStore';
@@ -12,6 +13,8 @@ import { ActionButton } from '../ActionButton';
 import { AmountRow } from '../AmountRow';
 import { AppCard } from '../AppCard';
 import { AppMenu } from '../AppMenu';
+import { AgendaEventChip } from '../AgendaEventChip';
+import { AgendaViewMenu } from '../AgendaViewMenu';
 import { AppThemeProvider } from '../AppThemeProvider';
 import { ContractCard } from '../ContractCard';
 import { DurationPicker } from '../DurationPicker';
@@ -20,6 +23,9 @@ import { ExtrasModal } from '../ExtrasModal';
 import { FormInput } from '../FormInput';
 import { HeaderBrand } from '../HeaderBrand';
 import { MenuButton } from '../MenuButton';
+import { ScheduleDayRow } from '../ScheduleDayRow';
+import { ScheduleEdgeButton } from '../ScheduleEdgeButton';
+import { ScheduleMonthBanner } from '../ScheduleMonthBanner';
 import { Placeholder } from '../Placeholder';
 import { ScreenLoader } from '../ScreenLoader';
 import { ScreenMessage } from '../ScreenMessage';
@@ -96,6 +102,24 @@ const SCENES: Readonly<Record<string, () => ReactElement>> = {
       <ExtrasModal selected={[]} onConfirm={jest.fn()} onClose={jest.fn()} />
     </>
   ),
+  agenda: () => (
+    <>
+      <ScheduleMonthBanner label="Noviembre" />
+      <ScheduleDayRow
+        section={{
+          date: new Date(2026, 10, 11),
+          key: '2026-11-11',
+          isToday: true,
+          bookings: BOOKING_STATUSES.map((status, index) => novemberBooking(`b${index}`, 11, 9 + index, 10 + index, status)),
+        }}
+        onOpenBooking={jest.fn()}
+      />
+      <ScheduleDayRow section={{ date: new Date(2026, 10, 12), key: '2026-11-12', isToday: false, bookings: [] }} onOpenBooking={jest.fn()} />
+      <AgendaEventChip booking={novemberBooking('x', 11, 9, 10, 'Cancelled')} onPress={jest.fn()} />
+      <ScheduleEdgeButton label="Ver reservas posteriores" onPress={jest.fn()} loading={false} />
+    </>
+  ),
+  agendaMenu: () => <AgendaViewMenu visible onClose={jest.fn()} />,
   selector: () => <ThemeSelector />,
   menu: () => (
     <>
