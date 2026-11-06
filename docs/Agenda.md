@@ -117,7 +117,7 @@ Nada de esto se ve todavía en la app; es lo que las pantallas de las fases sigu
 
 ## 5. Fases
 
-Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).
+Un PR por fase, hacia `feat/agenda-calendar-main`. Sobre esa misma rama se hicieron también la pantalla Home (`docs/Home.md`, #101 a #103) y el ojito de las contraseñas (#104 y #105), que no son parte de la agenda pero viajan en el mismo PR a `develop`. Cada uno pasa `tsc`, ESLint y todas las pruebas (y las del backend en la fase 1).
 
 | # | Fase | Tamaño | Estado |
 |---|---|---|---|
@@ -126,9 +126,9 @@ Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y
 | 2 | **Base de la app:** tipos, API, hook de datos, estado y utilidades puras con sus pruebas (sin interfaz) | Mediano | Hecho (#94) |
 | 3 | **Vista Agenda** + cabecera (mes, vistas, hoy) + ruta como inicio + "Todas las reservas" en el menú. Incluye el interruptor "Mostrar todas las reservas" | Mediano | Hecho (#95) |
 | 4 | **Día / 3 días / Semana:** cuadrícula, línea de "ahora", solapes lado a lado, días en la cabecera. Empieza con un *spike* | Grande | Hecho (#99) |
-| 5 | **Mes + mini-mes** para saltar de fecha | Mediano | En revisión (este PR) |
+| 5 | **Mes + mini-mes** para saltar de fecha | Mediano | Hecho (#100) |
 | 6 | **Crear desde un hueco** (el formulario acepta hora y duración iniciales), pulido y accesibilidad. El interruptor "Mostrar todas" ya llegó en la fase 3 | Mediano | Pendiente |
-| — | Prueba de todo el conjunto y PR de la rama a `develop` | — | Pendiente |
+| — | Prueba de todo el conjunto y PR de la rama a `develop` | — | PR abierto (#106); la fase 6 va después, como un PR pequeño sobre `develop` |
 
 ## 6. Anotado para después
 
@@ -139,11 +139,9 @@ Un PR por fase, hacia `feat/agenda-calendar-main`. Cada uno pasa `tsc`, ESLint y
 
 ## 7. Riesgos
 
-- **Cuadrícula de horas:** requiere un scroll vertical compartido entre páginas (horas fijas a la izquierda, días fijos arriba, deslizar de
-  lado). Se resuelve primero con un *spike* en la fase 4; si no queda fluido en Android, plan B: una columna de horas por página y el scroll
-  vertical sincronizado con Reanimated.
+- **Cuadrícula de horas:** requería un scroll vertical compartido entre páginas. **Se resolvió con el plan B simple, sin Reanimated:** cada página lleva su columna de horas y su propio `ScrollView` vertical, y una referencia compartida recuerda hasta dónde se había desplazado para que cada página nueva aparezca en el mismo punto. Falta confirmar la fluidez en un Android real; si la columna de horas deslizándose con la página molesta, se arregla en la fase 6.
 - **Rendimiento:** muchos bloques posicionados de forma absoluta. Un fotógrafo tiene pocas reservas por día, así que no se espera problema; se
-  mide con 200 reservas en un teléfono real antes de cerrar la fase 4.
+  mide con 200 reservas en un teléfono real (aún no hecho).
 - **Zona horaria:** las reservas viajan en UTC y se pintan en la hora del teléfono. Costa Rica no tiene horario de verano; si el teléfono cambia de
   zona, la agenda cambia con él (igual que Google).
 

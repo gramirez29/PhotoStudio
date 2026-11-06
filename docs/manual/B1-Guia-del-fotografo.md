@@ -34,7 +34,7 @@ Entras después con usuario y contraseña. Cinco contraseñas malas seguidas des
 En el inicio de sesión toca **¿Olvidaste tu contraseña?**, escribe tu usuario o tu correo y te enviamos un **código de 6 dígitos** al correo de la cuenta (revisa también el correo no deseado). Escríbelo con la contraseña nueva dos veces. Cierra todas tus sesiones, quita un bloqueo por intentos fallidos y te avisamos por correo del cambio; después entras con la contraseña nueva. Solo funciona si **verificaste tu correo**; por seguridad la app nunca dice si la cuenta existe.
 
 ### Cambiar el tema o la contraseña
-Menú ☰ → **Ajustes**: tema Sistema / Claro / Oscuro; **Cambiar contraseña** (pide la actual y la nueva dos veces; cierra tus otras sesiones).
+Menú ☰ → **Ajustes**: tema Sistema / Claro / Oscuro; **Cambiar contraseña** (pide la actual y la nueva dos veces; cierra tus otras sesiones). En todos los campos de contraseña (aquí, al entrar, al crear la cuenta y al recuperarla, y también en la web del fotógrafo) el **ojito** del final muestra lo que escribiste para comprobarlo; tócalo otra vez para ocultarlo.
 
 ### Para usar la web
 En la computadora abre `/studio` del sitio. Pone tu usuario y contraseña; si el navegador es nuevo te llega **otro código por correo**. Marca "recordar este navegador" para no repetirlo 30 días. Tu correo debe estar verificado.
@@ -68,10 +68,16 @@ Una reserva **Tentativa** vence cuando se cumple su plazo: **48 horas** desde qu
 - Al vencer se cancelan los recordatorios de esa sesión. **No se envía ningún aviso al cliente**: si quieres avisarle, hazlo tú por WhatsApp.
 - Un operador de sistema puede forzar la revisión desde Ajustes → **Liberar reservas vencidas**.
 
-### La agenda (pantalla de inicio)
-Al abrir la app ves **Inicio**: una dona con tus citas por estado (este mes, mes pasado o todo), lo que tienes pendiente y accesos a la agenda, a todas las reservas, a crear una reserva y a la web del fotógrafo. Desde ahí, **Agenda** (menú o acceso) abre tu agenda, parecida al calendario del teléfono, en la vista **Semana**. En Inicio, el gesto de atrás pide confirmar antes de salir de la app.
+### Inicio
+Al abrir la app ves **Inicio**:
+- **Tus citas:** una dona con tus citas por estado (tentativa, confirmada, completada, cancelada, vencida y cliente ausente), con el total al centro y debajo cuántas hay de cada una y qué porcentaje es. Arriba eliges el periodo: **Este mes**, **Mes pasado** o **Todo**. Una cita cuenta en el periodo por el día en que empieza su sesión.
+- **Pendientes:** lo que espera algo de ti. Cada fila aparece solo si tiene algo, con su cantidad, y al tocarla abre donde se atiende: **Avisos sin leer**, **Comprobantes por verificar** (te lleva a Avisos, donde cada comprobante tiene «Revisar comprobante»), **Tentativas por vencer en 24 h** (te lleva a Todas las reservas, ya filtradas por «Tentativa»), **Reembolsos pendientes** y **Galerías por archivar**. Si no hay nada, lo dice.
+- **Ir a:** Agenda, Todas las reservas, Nueva reserva y **Abrir la web del fotógrafo** (se abre en el navegador del teléfono; solo aparece si la app tiene configurada su dirección).
 
- En la vista **Agenda**: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
+Todas las pantallas se abren encima de Inicio y su flecha «Atrás» vuelve a la anterior. En Inicio, el gesto de atrás de Android muestra «Presiona de nuevo para salir»: un segundo toque dentro de 2 segundos cierra la app. El menú ☰ tiene **Inicio**, **Agenda** y **Todas las reservas** al principio y marca la que tienes abierta.
+
+### La agenda
+Menú ☰ → **Agenda** (o «Ir a» en Inicio) abre tu agenda, parecida al calendario del teléfono, en la vista **Semana**. En la vista **Agenda**: los días con reservas, uno debajo del otro, con el día de la semana y el número (hoy marcado en un círculo), un título de mes cada vez que cambia el mes, y cada reserva como un bloque de **color según su estado** (con el nombre del estado escrito). Toca una reserva para abrirla.
 
 - **Arriba:** el **mes** (cambia al deslizar), el botón **Ir a hoy** (el calendario con una marca) y el menú ⋮ para elegir la vista.
 - **Vistas:** **Semana** (la de inicio), **3 días**, **Día** y **Agenda** (la lista de días con reservas). **Mes** muestra cada día con sus reservas como barras de color (con "+2" si no caben todas); toca un día para abrirlo en la vista Día.
