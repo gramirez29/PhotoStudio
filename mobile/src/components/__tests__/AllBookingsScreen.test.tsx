@@ -3,6 +3,7 @@ import AllBookingsScreen from '../../app/bookings/index';
 import { useBookings } from '../../hooks/useBookings';
 import { useSessionStore } from '../../session/sessionStore';
 
+jest.mock('../../hooks/useFollowHomeScreen', () => ({ useFollowHomeScreen: jest.fn() }));
 jest.mock('../../hooks/useBookings');
 jest.mock('../../navigation/appNavigation', () => ({ openBooking: jest.fn(), openNewBooking: jest.fn() }));
 

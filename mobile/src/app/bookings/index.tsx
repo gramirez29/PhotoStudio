@@ -8,6 +8,7 @@ import { ListSeparator } from '../../components/ListSeparator';
 import { LoadMoreFooter } from '../../components/LoadMoreFooter';
 import { NewBookingFab } from '../../components/NewBookingFab';
 import { Placeholder } from '../../components/Placeholder';
+import { useFollowHomeScreen } from '../../hooks/useFollowHomeScreen';
 import { useBookingFilters } from '../../hooks/useBookingFilters';
 import { useBookings } from '../../hooks/useBookings';
 import { openBooking } from '../../navigation/appNavigation';
@@ -31,6 +32,7 @@ const LIST_END_SPACE = 96;
  */
 export default function AllBookingsScreen(): ReactElement {
   const bottomInset = useBottomInset();
+  useFollowHomeScreen('bookings');
   const styles = useStyles();
   const { palette } = useAppTheme();
   const filters = useBookingFilters();

@@ -36,13 +36,15 @@ export function MonthPage({ month, bookings, width, height, onOpenDay }: MonthPa
           </Text>
         ))}
       </View>
-      {weeks.map((week) => (
-        <View key={week[0]?.key} style={styles.week}>
-          {week.map((cell) => (
-            <MonthDayCell key={cell.key} cell={cell} width={cellWidth} height={cellHeight} onPress={onOpenDay} />
-          ))}
-        </View>
-      ))}
+      <View style={styles.weeks}>
+        {weeks.map((week) => (
+          <View key={week[0]?.key} style={styles.week}>
+            {week.map((cell) => (
+              <MonthDayCell key={cell.key} cell={cell} width={cellWidth} height={cellHeight} onPress={onOpenDay} />
+            ))}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -59,6 +61,12 @@ const useStyles = makeStyles((palette) => ({
     fontSize: 12,
     paddingTop: 6,
     textAlign: 'center',
+  },
+  weeks: {
+    borderBottomColor: palette.outlineVariant,
+    borderBottomWidth: 1,
+    borderRightColor: palette.outlineVariant,
+    borderRightWidth: 1,
   },
   week: {
     flexDirection: 'row',

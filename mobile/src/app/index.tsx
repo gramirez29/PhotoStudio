@@ -1,5 +1,6 @@
 import { useEffect, type ReactElement } from 'react';
 import { View } from 'react-native';
+import { useFollowHomeScreen } from '../hooks/useFollowHomeScreen';
 import { restoreAgendaPreferences } from '../agenda/agendaManager';
 import { restoreHomeScreen } from '../home/homeManager';
 import { useHomeStore } from '../home/homeStore';
@@ -26,6 +27,7 @@ export default function AgendaScreen(): ReactElement {
   const revision = useAgendaStore((state) => state.revision);
   const showAll = useAgendaStore((state) => state.showAll);
   const homeLoaded = useHomeStore((state) => state.loaded);
+  useFollowHomeScreen('agenda');
 
   // The choices saved on the device apply as soon as they are read; until then the agenda shows the defaults.
   useEffect(() => {

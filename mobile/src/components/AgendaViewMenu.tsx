@@ -105,7 +105,7 @@ const useStyles = makeStyles((palette) => ({
   heading: {
     color: palette.onSurfaceVariant,
     fontFamily: FONT_FAMILIES.bodyMedium,
-    fontSize: 12,
+    fontSize: 14,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     textTransform: 'uppercase',
@@ -126,7 +126,7 @@ const useStyles = makeStyles((palette) => ({
   itemLabel: {
     color: palette.onSurface,
     fontFamily: FONT_FAMILIES.body,
-    fontSize: 16,
+    fontSize: 18,
   },
   selectedLabel: {
     color: palette.primary,
