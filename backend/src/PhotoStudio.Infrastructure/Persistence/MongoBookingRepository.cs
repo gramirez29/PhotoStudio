@@ -128,6 +128,44 @@ public sealed class MongoBookingRepository(IMongoDatabase database) : IBookingRe
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<BookingStatus, int>> CountByStatusAsync(
+        Guid photographerId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
+        CancellationToken cancellationToken)
+    {
+        var filters = Builders<BookingDocument>.Filter;
+        var filter = filters.Eq(booking => booking.PhotographerId, photographerId);
+        if (from is not null)
+        {
+            filter &= filters.Gte(booking => booking.SlotStart, from.Value.UtcDateTime);
+        }
+
+        if (to is not null)
+        {
+            filter &= filters.Lt(booking => booking.SlotStart, to.Value.UtcDateTime);
+        }
+
+        // Served by the (photographerId, slotStart) index; the grouping happens in the database, so no booking travels.
+        var groups = await _collection
+            .Aggregate()
+            .Match(filter)
+            .Group(booking => booking.Status, group => new { Status = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+
+        var counts = new Dictionary<BookingStatus, int>();
+        foreach (var group in groups)
+        {
+            if (Enum.TryParse<BookingStatus>(group.Status, out var status))
+            {
+                counts[status] = group.Count;
+            }
+        }
+
+        return counts;
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Booking>> ListExpiredTentativeAsync(DateTimeOffset now, int limit, CancellationToken cancellationToken)
     {
         // Served by the (status, expiresAt) index created at startup. Bookings with a proof of payment waiting for review are
