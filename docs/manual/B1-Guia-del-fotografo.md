@@ -58,7 +58,7 @@ Agenda (pantalla de inicio) → botón **+** → **Agregar reserva**.
 Al crear, la reserva queda **Tentativa**: el horario queda apartado por **48 horas** (o hasta el inicio de la sesión). Si el cliente no firma y paga a tiempo, **vence sola** y el horario se libera. No se puede crear una reserva que se traslape con otra tuya activa (409).
 
 ### Editar una reserva
-Detalle → **Editar reserva**. Puedes corregir los datos del cliente siempre que la reserva esté viva. El **paquete, precio, extras y descuento** solo se pueden cambiar mientras no haya contrato firmado ni pagos (de ellos salen el texto del contrato y el anticipo); si ya los hay, aparecen bloqueados con el motivo. Cambiar el correo cancela el código enviado al anterior.
+Detalle → **Editar datos de reserva**. Puedes corregir los datos del cliente siempre que la reserva esté viva. El **paquete, precio, extras y descuento** solo se pueden cambiar mientras no haya contrato firmado ni pagos (de ellos salen el texto del contrato y el anticipo); si ya los hay, aparecen bloqueados con el motivo. Cambiar el correo cancela el código enviado al anterior.
 
 ### Reservas vencidas
 Una reserva **Tentativa** vence cuando se cumple su plazo: **48 horas** desde que se creó o el inicio de la sesión, lo que ocurra primero. Al vencer pasa a **Vencida**, se libera el horario y ya no admite acciones ni se puede revertir; si el cliente aún quiere la sesión, crea una reserva nueva.
@@ -125,7 +125,7 @@ Al cumplirse contrato y anticipo, la reserva queda Confirmada de inmediato. Siem
 ## 7. Antes y durante la sesión
 
 - **Recordatorio:** 24 horas antes de la sesión te llega un aviso con botón **Enviar por WhatsApp** para recordárselo al cliente (mensaje ya redactado).
-- **Reprogramar:** Acciones → **Reprogramar** (solo reservas confirmadas). Tú no tienes límite de reprogramaciones; no puede chocar con otra reserva ni quedar en el pasado. (Cuando exista la reprogramación por el cliente, tendrá límite: 1 vez y con 48 h de aviso.) **Pendiente:** mover los recordatorios al reprogramar.
+- **Reprogramar:** Acciones → **Reprogramar** (solo reservas confirmadas). Tú no tienes límite de reprogramaciones ni de aviso, **pero solo hasta que empiece la sesión**: desde la hora de inicio el botón desaparece (el cliente ya está ahí). Si adelantaste la sesión y quieres completarla antes de la hora, reprograma a unos minutos en el futuro y completa cuando llegue esa hora; no puede chocar con otra reserva ni quedar en el pasado. (Cuando exista la reprogramación por el cliente, tendrá límite: 1 vez y con 48 h de aviso.) **Pendiente:** mover los recordatorios al reprogramar.
 - **Cancelar:** Acciones → **Cancelar**. Si está confirmada, el **motivo es obligatorio**. Libera el horario. Si hubo dinero pagado, se genera una liquidación (sección 10).
 - **Cliente ausente:** pasada la tolerancia (30 minutos tras el inicio), **Cliente ausente**. Libera el horario y, por defecto, se retiene el anticipo.
 - **Revertir ausencia:** si te equivocaste, hasta 7 días después, con motivo obligatorio. Retoma el horario (si otra reserva ya lo tomó, no se puede).

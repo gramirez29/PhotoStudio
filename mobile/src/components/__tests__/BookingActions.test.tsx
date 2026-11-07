@@ -70,7 +70,7 @@ describe('BookingActions', () => {
     mockedUseBookingActions.mockReturnValue(state);
     render(<BookingActions booking={bookingWith(['EditDetails', 'EditPackage', 'Cancel'])} />);
 
-    fireEvent.press(screen.getByText('Editar reserva'));
+    fireEvent.press(screen.getByText('Editar datos de reserva'));
 
     expect(state.editDetails).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/Próximamente/)).toBeNull();

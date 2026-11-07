@@ -644,6 +644,13 @@ public sealed class Booking : AggregateRoot<Guid>
         EnsureStatus(nameof(Reschedule), BookingStatus.Confirmed);
         EnsureActor(nameof(Reschedule), actor, Actor.Client, Actor.Photographer);
 
+        // Once the session has started the client is at it: it is not moved any more, by anyone. The photographer has no limit of
+        // reschedules or notice, but only until the session starts.
+        if (now >= Slot.Start)
+        {
+            throw new DomainException(DomainErrorCodes.GuardFailed, "The session has already started.");
+        }
+
         if (newSlot.Start <= now)
         {
             throw new DomainException(DomainErrorCodes.SessionInPast, "The new session must start in the future.");
@@ -752,7 +759,7 @@ public sealed class Booking : AggregateRoot<Guid>
             case BookingStatus.Confirmed:
                 AddPaymentActions(actions, actor, hasBalance);
 
-                if (actor == Actor.Photographer || (actor == Actor.Client && ClientCanReschedule(now)))
+                if ((actor == Actor.Photographer && now < Slot.Start) || (actor == Actor.Client && ClientCanReschedule(now)))
                 {
                     actions.Add(BookingAction.Reschedule);
                 }

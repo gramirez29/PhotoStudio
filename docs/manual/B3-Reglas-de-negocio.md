@@ -38,7 +38,7 @@ Este documento junta las reglas que gobiernan el producto. Las del dominio está
 | B6 | Confirmar | Tentativa → Confirmada | Sistema | Contrato firmado **y** pagos verificados ≥ anticipo |
 | B7 | Vencer | Tentativa → Vencida | Sistema | Ya pasó el vencimiento **y** no hay comprobante pendiente; libera el horario |
 | B8 | Cancelar | Tentativa → Cancelada | Cliente o fotógrafo | Motivo opcional; libera; sin cargo |
-| B9 | Reprogramar | Confirmada | Cliente (con límite) o fotógrafo (sin límite) | Nueva fecha futura. Cliente: máximo 1 reprogramación y 48 h de aviso |
+| B9 | Reprogramar | Confirmada | Cliente (con límite) o fotógrafo (sin límite) | Nueva fecha futura, y solo **antes** de que empiece la sesión (para cualquiera). Cliente: máximo 1 reprogramación y 48 h de aviso |
 | B10 | Cancelar | Confirmada → Cancelada | Cliente o fotógrafo | **Motivo obligatorio**; evento con quién canceló y con cuánta anticipación |
 | B11 | Completar | Confirmada → Completada | Fotógrafo | Desde el inicio de la sesión; crea la galería |
 | B12 | Cliente ausente | Confirmada → Ausente | Fotógrafo | Pasada la tolerancia (30 min); libera el horario |
