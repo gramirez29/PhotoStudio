@@ -21,6 +21,6 @@ export const BOOKING_ACTION_LABELS: Readonly<Record<BookingAction, string>> = {
   Complete: 'Marcar sesión completada',
   MarkClientAbsent: 'Marcar cliente ausente',
   RevertClientAbsent: 'Revertir ausencia',
-  EditDetails: 'Editar reserva',
+  EditDetails: 'Editar datos de reserva',
   EditPackage: 'Editar paquete y precio',
 };

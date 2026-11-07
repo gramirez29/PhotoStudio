@@ -46,6 +46,40 @@ public sealed class BookingSessionTests
     }
 
     /// <summary>
+    /// Nobody reschedules a session that has already started, not even the photographer, who has no limit of notice or of reschedules before it.
+    /// </summary>
+    [Fact]
+    public void Reschedule_AfterTheSessionStarted_Throws_ForTheClientAndThePhotographer()
+    {
+        var booking = CreateConfirmed();
+        var newStart = SessionStart.AddDays(3);
+        var slot = TimeSlot.Create(newStart, newStart.AddHours(2));
+
+        foreach (var actor in new[] { Actor.Client, Actor.Photographer })
+        {
+            Should.Throw<DomainException>(() => booking.Reschedule(slot, actor, SessionStart)).Code.ShouldBe(DomainErrorCodes.GuardFailed);
+            Should.Throw<DomainException>(() => booking.Reschedule(slot, actor, SessionStart.AddMinutes(20))).Code.ShouldBe(DomainErrorCodes.GuardFailed);
+        }
+
+        booking.Slot.Start.ShouldBe(SessionStart);
+        booking.RescheduleCount.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// The photographer can still reschedule right up to the start of the session, with no minimum notice.
+    /// </summary>
+    [Fact]
+    public void Reschedule_ByPhotographerMinutesBeforeTheStart_MovesTheSlot()
+    {
+        var booking = CreateConfirmed();
+        var newStart = SessionStart.AddHours(3);
+
+        booking.Reschedule(TimeSlot.Create(newStart, newStart.AddHours(2)), Actor.Photographer, SessionStart.AddMinutes(-5));
+
+        booking.Slot.Start.ShouldBe(newStart);
+    }
+
+    /// <summary>
     /// The client cannot reschedule with less notice than the policy requires.
     /// </summary>
     [Fact]

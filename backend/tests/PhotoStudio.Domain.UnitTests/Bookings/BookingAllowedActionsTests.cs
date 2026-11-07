@@ -53,6 +53,20 @@ public sealed class BookingAllowedActionsTests
     }
 
     /// <summary>
+    /// The photographer is offered to reschedule only until the session starts: once the client is at it, it is not moved any more.
+    /// </summary>
+    [Fact]
+    public void Confirmed_ForPhotographer_RescheduleIsOfferedOnlyBeforeTheSessionStarts()
+    {
+        var booking = CreateConfirmed();
+
+        booking.GetAllowedActions(Actor.Photographer, Now).ShouldContain(BookingAction.Reschedule);
+        booking.GetAllowedActions(Actor.Photographer, SessionStart.AddMinutes(-1)).ShouldContain(BookingAction.Reschedule);
+        booking.GetAllowedActions(Actor.Photographer, SessionStart).ShouldNotContain(BookingAction.Reschedule);
+        booking.GetAllowedActions(Actor.Photographer, SessionStart.AddMinutes(30)).ShouldNotContain(BookingAction.Reschedule);
+    }
+
+    /// <summary>
     /// Final states offer no actions.
     /// </summary>
     [Fact]
